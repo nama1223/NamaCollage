@@ -271,7 +271,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 <body>
 
 <div id="header">
-  <div id="logo">🍱</div>
+  <div id="logo"><img src="./NamaCollageLogo192.png" alt="NC" style="width:34px;height:34px;border-radius:9px;display:block;object-fit:cover"></div>
   <div><div id="app-name">NamaCollage</div><div id="sub-name">ナマコ — 画像結合ツール</div></div>
   <span id="count-badge"></span>
 </div>
@@ -376,6 +376,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
     </div>
 
     <button class="btn btn-ghost btn-full" id="btn-reset">↺ 設定をすべてリセット</button>
+    <button class="btn btn-ghost btn-full" id="btn-install" style="border-color:var(--violet);color:var(--violet)">⬇️ アプリとしてインストール</button>
   </section>
 
   <!-- ② 画像 -->
@@ -835,8 +836,12 @@ function renderGridView() {
   const nat = calcNaturalDimensions();
   const containerW = (gv.parentElement?.offsetWidth || 360) - 28;
   const btnW = 28, btnCount = cols + 1;
-  const cellDispW = Math.min(CELL_MAX_W, Math.max(CELL_MIN_W, Math.floor((containerW - btnCount * btnW - 8) / cols)));
-  const dispScale = nat ? cellDispW / nat.cellW : 0.1;
+  const availW = Math.max(1, containerW - btnCount * btnW - 8);
+  // 列ごとの最大幅を基準にスケールを決める（余白なく比率を表示）
+  const maxColW = nat ? Math.max(...nat.colWidths) : 100;
+  const dispScale = nat
+    ? Math.min(CELL_MAX_W / maxColW, availW / nat.contentW)
+    : availW / Math.max(1, cols * 100);
   gv.innerHTML = '';
   gv.appendChild(makeGvAddRow(0));
   state.grid.forEach((row, ri) => {
@@ -845,8 +850,9 @@ function renderGridView() {
     row.forEach((img, ci) => {
       rowDiv.appendChild(makeGvAddCol(ri, ci));
       const ne = nat?.rowData?.[ri]?.[ci] ?? null;
-      const dW = ne ? Math.max(CELL_MIN_W, Math.round(ne.sw * dispScale)) : cellDispW;
-      const dH = ne ? Math.max(30, Math.round(ne.sh * dispScale)) : Math.round(img.h / img.w * cellDispW);
+      const fallW = Math.max(CELL_MIN_W, Math.round((nat?.colWidths?.[ci] || 100) * dispScale));
+      const dW = ne ? Math.max(CELL_MIN_W, Math.round(ne.sw * dispScale)) : fallW;
+      const dH = ne ? Math.max(30, Math.round(ne.sh * dispScale)) : Math.round(img.h / img.w * fallW);
       const gn = state.grid.slice(0, ri).reduce((s,r)=>s+r.length,0) + ci + 1;
       const sx = ne ? ne.sw / (img.w || 1) : 1;
       const ss = Math.abs(sx-1) < 0.005 ? '等倍' : (sx > 1 ? '×'+sx.toFixed(2)+' 拡大' : '×'+sx.toFixed(2)+' 縮小');
@@ -969,8 +975,14 @@ function calcNaturalDimensions() {
     sizeOf.set(img.id, { sw: img.w * s, sh: img.h * s });
   });
   const cols = Math.max(...state.grid.map(r => r.length));
-  const cellW = Math.max(...flat.map(img => sizeOf.get(img.id).sw));
-  const totalRowW = cols * cellW + (cols - 1) * gap;
+  // 列ごとの最大幅（余白が出ないよう cellW 均一化をやめた）
+  const colWidths = Array(cols).fill(0);
+  state.grid.forEach(row => {
+    row.forEach((img, ci) => {
+      colWidths[ci] = Math.max(colWidths[ci], sizeOf.get(img.id).sw);
+    });
+  });
+  const totalRowW = colWidths.reduce((s, w) => s + w, 0) + (cols - 1) * gap;
   const rowData = state.grid.map(row => {
     const n = row.length;
     let entries = row.map(img => {
@@ -982,9 +994,11 @@ function calcNaturalDimensions() {
         const dW = (totalRowW - (n - 1) * gap) / n;
         entries.forEach(e => { const s = dW / (e.sw||1); e.sw=dW; e.sh*=s; e.isSized=true; });
       } else if (lastRowFill === 'span' && n > 0) {
-        const rC = cols - (n - 1), last = entries[n - 1];
-        const sW = rC * cellW + (rC - 1) * gap, s = sW / (last.sw||1);
-        last.sw = sW; last.sh *= s; last.colSpan = rC; last.isSized = true;
+        const usedCols = n - 1;
+        const remainCols = cols - usedCols;
+        const sW = colWidths.slice(usedCols).reduce((s,w)=>s+w,0) + (remainCols-1)*gap;
+        const last = entries[n-1], s = sW/(last.sw||1);
+        last.sw = sW; last.sh *= s; last.colSpan = remainCols; last.isSized = true;
       }
     }
     return entries;
@@ -994,7 +1008,7 @@ function calcNaturalDimensions() {
   const contentH = rowHeights.reduce((s,h)=>s+h,0) + gap * Math.max(0, state.grid.length - 1);
   const totalW = contentW + padding * 2 + outerBorder * 2;
   const totalH = contentH + padding * 2 + outerBorder * 2;
-  return { rowData, rowHeights, contentW, contentH, totalW, totalH, cellW, cols, numRows: state.grid.length, gap };
+  return { rowData, rowHeights, contentW, contentH, totalW, totalH, colWidths, cols, numRows: state.grid.length, gap };
 }
 
 async function renderAt(scale, fmt) {
@@ -1017,17 +1031,19 @@ async function renderAt(scale, fmt) {
   }
   const ox = Math.round((padding + outerBorder) * scale);
   const oy = Math.round((padding + outerBorder) * scale);
-  const sCellW = nat.cellW * scale, sGap = nat.gap * scale;
+  const sColWidths = nat.colWidths.map(w => w * scale);
+  const sGap = nat.gap * scale;
   let curY = oy;
   nat.rowData.forEach((rowEntries, ri) => {
     const rowH = Math.round(nat.rowHeights[ri] * scale);
     let curX = ox;
-    rowEntries.forEach(e => {
+    rowEntries.forEach((e, ci) => {
       const sw = Math.round(e.sw * scale), sh = Math.round(e.sh * scale);
-      const useSized = e.isSized || e.colSpan > 1;
-      const cW = useSized ? sw : Math.round(sCellW);
+      // isSized: distribute/span で幅が確定済み → sw をそのまま使う
+      // 通常: 列の最大幅を使い、画像はその中で alignment に従って配置
+      const cW = e.isSized ? sw : Math.round(sColWidths[ci] || sw);
       let imgX;
-      if (useSized)               imgX = Math.round(curX);
+      if (e.isSized)             imgX = Math.round(curX);
       else if (alignment==='center') imgX = Math.round(curX + (cW - sw) / 2);
       else if (alignment==='start')  imgX = Math.round(curX);
       else                           imgX = Math.round(curX + cW - sw);
@@ -1174,9 +1190,13 @@ $$('.format-pill').forEach(pill => {
     updateSaveTab();
   });
 });
+let saveQualityTimer = null;
 $('save-quality').addEventListener('input', () => {
   saveQuality = parseInt($('save-quality').value);
   $('save-quality-val').textContent = saveQuality;
+  // 形式・保存後サイズ目安の表示を追従（500msデバウンス）
+  clearTimeout(saveQualityTimer);
+  saveQualityTimer = setTimeout(updateSaveTab, 500);
 });
 
 function updateSaveTab() {
@@ -1235,6 +1255,71 @@ $('btn-download').addEventListener('click', async () => {
 });
 
 // =============================================
+// PWA インストール
+// =============================================
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e; updateInstallBtn();
+});
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null; updateInstallBtn();
+});
+
+function isIOS() {
+  return /ipad|iphone|ipod/.test(navigator.userAgent.toLowerCase()) && !window.MSStream;
+}
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+}
+
+function updateInstallBtn() {
+  const btn = $('btn-install'); if (!btn) return;
+  if (isStandalone()) {
+    btn.textContent = '✓ インストール済みで実行中'; btn.disabled = true; btn.style.opacity = '0.5';
+  } else if (deferredPrompt) {
+    btn.textContent = '⬇️ アプリとしてインストール'; btn.disabled = false; btn.style.opacity = '';
+  } else if (isIOS()) {
+    btn.textContent = '📱 iOSへのインストール手順'; btn.disabled = false; btn.style.opacity = '';
+  } else {
+    btn.textContent = '⬇️ アプリとしてインストール（Chrome推奨）'; btn.disabled = false; btn.style.opacity = '';
+  }
+}
+
+$('btn-install').addEventListener('click', async () => {
+  if (isStandalone()) return;
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') { deferredPrompt = null; updateInstallBtn(); }
+  } else if (isIOS()) {
+    showInstallModal('📱 iOSへのインストール方法',
+      '<ol style="padding-left:1.4em;margin:0">' +
+      '<li>Safari 下部の <strong>共有ボタン</strong>（□に↑）をタップ</li>' +
+      '<li><strong>「ホーム画面に追加」</strong> を選択</li>' +
+      '<li>右上の <strong>「追加」</strong> をタップして完了</li>' +
+      '</ol>' +
+      '<p style="margin-top:10px;font-size:12px;color:var(--muted)">※ Safari からのみインストールできます。Chrome 等は非対応です。</p>'
+    );
+  } else {
+    showInstallModal('⬇️ インストール方法',
+      '<p style="margin-bottom:8px"><strong>Chrome / Edge の場合:</strong></p>' +
+      '<ul style="padding-left:1.4em;margin:0">' +
+      '<li>アドレスバー右端の <strong>インストールアイコン</strong>（📥）をクリック</li>' +
+      '<li>またはブラウザメニュー →「<strong>NamaCollage をインストール</strong>」</li>' +
+      '</ul>' +
+      '<p style="margin-top:12px;font-size:12px;color:var(--muted)">Firefox や Safari (Mac) はPWAインストールに対応していません。</p>'
+    );
+  }
+});
+
+function showInstallModal(title, body) {
+  $('modal-title').textContent = title;
+  $('modal-body').innerHTML = body;
+  $('install-modal').style.display = 'flex';
+}
+
+// =============================================
 // 初期化
 // =============================================
 (function init() {
@@ -1246,7 +1331,20 @@ $('btn-download').addEventListener('click', async () => {
   $('save-empty').classList.remove('hidden');
   $('save-content').classList.add('hidden');
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  updateInstallBtn();
 })();
 </script>
+<!-- PWAインストール手順モーダル -->
+<div id="install-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:999;align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
+  <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:22px 24px;max-width:360px;width:100%;box-sizing:border-box">
+    <div id="modal-title" style="font-size:16px;font-weight:700;color:var(--prime);margin-bottom:12px"></div>
+    <div id="modal-body" style="font-size:13.5px;line-height:1.75;color:var(--text)"></div>
+    <button onclick="$('install-modal').style.display='none'"
+      style="margin-top:18px;width:100%;padding:11px;border:none;border-radius:9px;
+             background:var(--surf2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">
+      閉じる
+    </button>
+  </div>
+</div>
 </body>
 </html>
