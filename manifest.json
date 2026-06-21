@@ -1,6 +1,6 @@
 {
   "name": "NamaCollage",
-  "short_name": "NamaCollage",
+  "short_name": "ナマコ",
   "description": "複数の画像を縦・横・グリッドに結合するPWAアプリ。",
   "start_url": "./",
   "scope": "./",
@@ -9,11 +9,7 @@
   "background_color": "#0000FF",
   "theme_color": "#FF6940",
   "lang": "ja",
-  "categories": [
-    "photo",
-    "productivity",
-    "utilities"
-  ],
+  "categories": ["photo", "productivity", "utilities"],
   "icons": [
     {
       "src": "./NamaCollageLogo192.png",
@@ -36,9 +32,7 @@
       "files": [
         {
           "name": "images",
-          "accept": [
-            "image/*"
-          ]
+          "accept": ["image/*"]
         }
       ]
     }
