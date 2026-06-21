@@ -11,61 +11,38 @@
 <link rel="icon" href="./NamaCollageLogo192.png" type="image/png">
 <link rel="apple-touch-icon" href="./NamaCollageLogo192.png">
 <style>
-/* ===== Light-blue theme ===== */
 :root{
-  --bg:      #D8EFFC;
-  --surf:    #FFFFFF;
-  --surf2:   #EBF6FF;
-  --surf3:   #C4E3F5;
-  --border:  rgba(0,110,190,0.13);
-  --border2: rgba(0,110,190,0.26);
-  --text:    #0B1E2D;
-  --muted:   #3D6080;
-  --muted2:  #7AAAC8;
-  --prime:   #FF6940;
-  --prime2:  #E05030;
-  --violet:  #5548D6;
-  --green:   #0D9E65;
-  --warn:    #B07000;
-  --danger:  #C41C00;
-  --radius:  11px;
-  --sb-thumb:rgba(0,110,190,0.32);
-  --sb-track:var(--surf3);
+  --bg:#D8EFFC; --surf:#FFFFFF; --surf2:#EBF6FF; --surf3:#C4E3F5;
+  --border:rgba(0,110,190,0.13); --border2:rgba(0,110,190,0.26);
+  --text:#0B1E2D; --muted:#3D6080; --muted2:#7AAAC8;
+  --prime:#FF6940; --violet:#5548D6; --green:#0D9E65; --warn:#B07000; --danger:#C41C00;
+  --radius:11px; --sb-thumb:rgba(0,110,190,0.32); --sb-track:var(--surf3);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;height:100dvh;overflow:hidden;}
-body{
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  background:var(--bg);color:var(--text);
-  display:flex;flex-direction:column;
-  -webkit-user-select:none;user-select:none;
-  -webkit-tap-highlight-color:transparent;
-}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--text);display:flex;flex-direction:column;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;}
 
-/* === Header === */
+/* Header */
 #header{flex-shrink:0;background:var(--surf);border-bottom:1px solid var(--border);
   padding:10px 16px;display:flex;align-items:center;gap:10px;min-height:52px;
   box-shadow:0 1px 6px rgba(0,80,160,0.08);}
-#logo{width:40px;height:40px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+#logo{width:40px;height:40px;flex-shrink:0;}
 #logo img{width:40px;height:40px;object-fit:contain;display:block;}
-#app-name{font-size:18px;font-weight:800;letter-spacing:-0.3px;
+#app-name{font-size:18px;font-weight:800;
   background:linear-gradient(135deg,var(--prime) 30%,#FF9860 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 #sub-name{font-size:10px;color:var(--muted);margin-top:1px;}
 #count-badge{margin-left:auto;background:var(--prime);color:#fff;
   font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;display:none;flex-shrink:0;}
 
-/* === Main / Tabs (スクロール根本修正) === */
+/* Main / scroll fix */
 #main{flex:1;min-height:0;overflow:hidden;}
-.tab{
-  height:100%;box-sizing:border-box;
-  overflow-y:auto;overflow-x:hidden;
-  padding:14px 14px 28px;
-  display:none;
+.tab{height:100%;box-sizing:border-box;overflow-y:auto;overflow-x:hidden;
+  padding:14px 14px 28px;display:none;
   -webkit-overflow-scrolling:touch;
-  scrollbar-width:thin;
-  scrollbar-color:var(--sb-thumb) var(--sb-track);
-}
+  scrollbar-width:thin;scrollbar-color:var(--sb-thumb) var(--sb-track);}
 .tab::-webkit-scrollbar{width:8px;}
 .tab::-webkit-scrollbar-track{background:var(--sb-track);border-radius:4px;}
 .tab::-webkit-scrollbar-thumb{background:var(--sb-thumb);border-radius:4px;}
@@ -73,62 +50,46 @@ body{
 .tab.active{display:block;}
 .tab>*+*{margin-top:12px;}
 
-/* === Nav === */
-#nav{flex-shrink:0;background:var(--surf);border-top:1px solid var(--border);
-  display:flex;padding-bottom:env(safe-area-inset-bottom,0);
-  box-shadow:0 -1px 6px rgba(0,80,160,0.07);}
+/* Nav */
+#nav{flex-shrink:0;background:var(--surf);border-top:1px solid var(--border);display:flex;
+  padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -1px 6px rgba(0,80,160,0.07);}
 .nav-btn{flex:1;padding:9px 2px 7px;display:flex;flex-direction:column;align-items:center;gap:3px;
   border:none;background:none;color:var(--muted2);font-size:10px;font-weight:600;cursor:pointer;transition:color 0.15s;}
 .nav-btn svg{width:22px;height:22px;stroke-width:1.8;}
 .nav-btn.active{color:var(--prime);}
 .nav-btn.active svg{filter:drop-shadow(0 0 4px rgba(255,105,64,0.4));}
 
-/* === Cards === */
+/* Cards */
 .card{background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;
   box-shadow:0 1px 4px rgba(0,80,160,0.06);}
-.card-head{padding:9px 14px;background:rgba(255,105,64,0.06);
-  border-bottom:1px solid var(--border);
+.card-head{padding:9px 14px;background:rgba(255,105,64,0.06);border-bottom:1px solid var(--border);
   font-size:11px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;
   color:var(--prime);display:flex;align-items:center;gap:7px;}
 .card-body{padding:12px 14px;display:flex;flex-direction:column;gap:0;}
-
-/* === 設定フォーム行（CSS Grid → 隠れ防止） === */
-.row{
-  display:grid;grid-template-columns:1fr auto;
-  align-items:center;gap:8px 10px;
-  min-height:42px;padding:5px 0;
-  border-bottom:1px solid var(--border);
-}
+.row{display:grid;grid-template-columns:1fr auto;align-items:center;
+  gap:8px 10px;min-height:42px;padding:5px 0;border-bottom:1px solid var(--border);}
 .row:last-child{border-bottom:none;}
 .row-label{font-size:13px;color:var(--text);line-height:1.4;min-width:0;}
 .row-sub{font-size:10.5px;color:var(--muted);margin-top:2px;line-height:1.35;}
-
-select{
-  background:var(--surf2);border:1px solid var(--border2);color:var(--text);
+select{background:var(--surf2);border:1px solid var(--border2);color:var(--text);
   border-radius:8px;padding:6px 22px 6px 8px;font-size:12px;width:160px;
   cursor:pointer;appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%233D6080'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 6px center;
-}
-input[type="number"]{
-  background:var(--surf2);border:1px solid var(--border2);color:var(--text);
-  border-radius:8px;padding:6px;font-size:13px;width:74px;text-align:center;
-}
-input[type="color"]{
-  border:2px solid var(--border2);border-radius:7px;background:none;
-  width:36px;height:33px;cursor:pointer;padding:2px;
-}
+  background-repeat:no-repeat;background-position:right 6px center;}
+input[type="number"]{background:var(--surf2);border:1px solid var(--border2);color:var(--text);
+  border-radius:8px;padding:6px;font-size:13px;width:74px;text-align:center;}
+input[type="color"]{border:2px solid var(--border2);border-radius:7px;background:none;
+  width:36px;height:33px;cursor:pointer;padding:2px;}
 input[type="checkbox"]{accent-color:var(--prime);width:18px;height:18px;cursor:pointer;}
 input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4px;}
-.range-block{display:flex;flex-direction:column;gap:6px;
-  padding:6px 0;border-bottom:1px solid var(--border);}
+.range-block{display:flex;flex-direction:column;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);}
 .range-block:last-child{border-bottom:none;}
 .range-header{display:flex;justify-content:space-between;align-items:center;}
 .range-label{font-size:13px;color:var(--text);}
 .range-val{font-size:12px;font-weight:700;color:var(--prime);min-width:36px;text-align:right;}
 .hidden{display:none!important;}
 
-/* === Buttons === */
+/* Buttons */
 .btn{padding:9px 18px;border-radius:9px;border:none;font-size:14px;font-weight:600;cursor:pointer;
   display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.12s;}
 .btn-primary{background:var(--prime);color:#fff;box-shadow:0 2px 8px rgba(255,105,64,0.3);}
@@ -140,15 +101,11 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 .btn-pick{background:var(--surf2);color:var(--muted);border:1px solid var(--border2);
   font-size:12px;padding:6px 12px;border-radius:8px;}
 .btn-pick.active{border-color:var(--prime);color:var(--prime);background:rgba(255,105,64,0.1);}
-.btn-full{width:100%;}
-.btn-lg{padding:13px 24px;font-size:15px;border-radius:11px;}
+.btn-full{width:100%;}.btn-lg{padding:13px 24px;font-size:15px;border-radius:11px;}
 
-/* === グリッドビルダー === */
-#gv-empty{
-  border:2px dashed var(--border2);border-radius:var(--radius);
-  padding:42px 20px 36px;text-align:center;transition:all 0.18s;cursor:pointer;
-  background:var(--surf);
-}
+/* Grid builder */
+#gv-empty{border:2px dashed var(--border2);border-radius:var(--radius);
+  padding:42px 20px 36px;text-align:center;transition:all 0.18s;cursor:pointer;background:var(--surf);}
 #gv-empty.over{border-color:var(--prime);background:rgba(255,105,64,0.04);}
 .dz-icon{font-size:44px;margin-bottom:12px;line-height:1;}
 .dz-title{font-size:15px;font-weight:600;margin-bottom:6px;}
@@ -159,47 +116,45 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
   scrollbar-width:thin;scrollbar-color:var(--sb-thumb) transparent;}
 #grid-view::-webkit-scrollbar{height:5px;}
 #grid-view::-webkit-scrollbar-thumb{background:var(--sb-thumb);border-radius:3px;}
-
-.gv-add-row{
-  display:flex;align-items:center;gap:6px;height:30px;cursor:pointer;
-  color:rgba(255,105,64,0.3);transition:all 0.15s;padding:0 2px;border-radius:6px;flex-shrink:0;
-}
+.gv-add-row{display:flex;align-items:center;gap:6px;height:30px;cursor:pointer;
+  color:rgba(255,105,64,0.3);transition:all 0.15s;padding:0 2px;border-radius:6px;flex-shrink:0;}
 .gv-add-row:hover,.gv-add-row.drag-target{color:var(--prime);background:rgba(255,105,64,0.06);}
 .gv-line{flex:1;height:2px;background:currentColor;border-radius:1px;}
 .gv-row-label{font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;padding:0 5px;}
 .gv-row{display:flex;align-items:stretch;flex-shrink:0;}
-.gv-add-col{
-  width:28px;min-height:70px;display:flex;align-items:center;justify-content:center;
-  cursor:pointer;font-size:16px;font-weight:700;
-  color:rgba(255,105,64,0.3);border-radius:6px;transition:all 0.15s;flex-shrink:0;
-}
+.gv-add-col{width:28px;min-height:70px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:16px;font-weight:700;color:rgba(255,105,64,0.3);
+  border-radius:6px;transition:all 0.15s;flex-shrink:0;}
 .gv-add-col:hover,.gv-add-col.drag-target{color:var(--prime);background:rgba(255,105,64,0.1);}
-.gv-cell{
-  position:relative;overflow:hidden;border-radius:8px;
-  background:#000;flex-shrink:0;margin:2px;
-  border:1.5px solid var(--border2);transition:border-color 0.15s;
-}
+.gv-cell{position:relative;overflow:hidden;border-radius:8px;background:#000;flex-shrink:0;
+  margin:2px;border:1.5px solid var(--border2);transition:border-color 0.15s;}
 .gv-cell:hover{border-color:var(--prime);}
 .gv-cell img{display:block;width:100%;height:100%;object-fit:contain;}
-.gv-overlay{
-  position:absolute;bottom:0;left:0;right:0;
-  background:linear-gradient(transparent 0%,rgba(0,0,0,0.85) 45%);
-  padding:22px 6px 5px;font-size:9.5px;color:rgba(255,255,255,0.92);line-height:1.5;
-  pointer-events:none;
-}
+
+/* セルオーバーレイ - グラデ削除、文字縁取りで視認性確保 */
+.gv-overlay{position:absolute;bottom:0;left:0;right:0;padding:5px 6px;
+  font-size:9.5px;color:#fff;line-height:1.5;pointer-events:none;}
+.gv-overlay *{text-shadow:
+  -1px -1px 0 #000,0 -1px 0 #000,1px -1px 0 #000,
+  -1px  0  0 #000,          1px  0  0 #000,
+  -1px  1px 0 #000,0  1px 0 #000,1px  1px 0 #000;}
 .gv-num{font-size:11px;font-weight:700;color:var(--prime);}
-.gv-moves{display:flex;gap:2px;margin-top:4px;pointer-events:auto;}
-.gv-move-btn{font-size:9px;padding:2px 5px;
-  background:rgba(255,255,255,0.14);border:none;border-radius:3px;
-  color:white;cursor:pointer;transition:background 0.1s;}
-.gv-move-btn:hover{background:rgba(255,255,255,0.3);}
-.gv-move-btn:disabled{opacity:0.2;pointer-events:none;}
+.gv-moves{display:flex;gap:3px;margin-top:5px;pointer-events:auto;}
+/* 移動ボタン — より目立つ色・コントラスト */
+.gv-move-btn{font-size:10px;padding:2px 6px;font-weight:800;letter-spacing:0.3px;
+  background:rgba(255,105,64,0.82);border:1px solid rgba(255,255,255,0.55);
+  border-radius:4px;color:#fff;cursor:pointer;transition:background 0.1s;}
+.gv-move-btn:hover{background:rgba(255,105,64,1);}
+.gv-move-btn:disabled{opacity:0.22;pointer-events:none;}
 .gv-del{position:absolute;top:4px;right:4px;width:20px;height:20px;
   border:none;border-radius:50%;background:rgba(200,40,40,0.82);color:#fff;
   font-size:12px;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;}
 .gv-del:hover{background:var(--danger);}
+.gv-crop-badge{position:absolute;top:4px;left:4px;background:rgba(255,105,64,0.88);
+  color:#fff;font-size:10px;width:18px;height:18px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;z-index:5;}
 
-/* === Alerts === */
+/* Alerts */
 .alert{padding:10px 13px;border-radius:9px;font-size:12.5px;line-height:1.55;display:flex;gap:8px;align-items:flex-start;}
 .alert-icon{flex-shrink:0;font-size:15px;line-height:1.4;}
 .alert-warn{background:#FFF3D5;border:1px solid #E8A000;color:#7A4F00;}
@@ -207,64 +162,89 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 .alert-info{background:#E8E5FF;border:1px solid #5548D6;color:#2C1FA0;}
 .alert-ok{background:#D8F5EA;border:1px solid #0D9E65;color:#065A38;}
 
-/* === Preview === */
-.preview-bg{
-  background:repeating-conic-gradient(#CFE8F5 0% 25%,#BCDAEC 0% 50%) 0 0/18px 18px;
-  border-radius:8px;overflow:hidden;
-  display:flex;align-items:center;justify-content:center;min-height:140px;position:relative;
-}
-#preview-canvas{max-width:100%;max-height:55dvh;display:block;border-radius:3px;}
+/* Preview */
+.preview-bg{background:repeating-conic-gradient(#CFE8F5 0% 25%,#BCDAEC 0% 50%) 0 0/18px 18px;
+  border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  min-height:120px;position:relative;}
+#preview-canvas{max-width:100%;max-height:45dvh;display:block;border-radius:3px;}
 #preview-canvas.picking{cursor:crosshair;}
 .preview-meta{display:flex;justify-content:space-between;align-items:center;
   font-size:11.5px;color:var(--muted);flex-wrap:wrap;gap:4px;}
-.meta-chip{background:var(--surf2);border:1px solid var(--border);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
-#preview-loading{
-  position:absolute;inset:0;background:rgba(200,230,248,0.75);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:8px;
-}
+.meta-chip{background:var(--surf2);border:1px solid var(--border);padding:2px 8px;
+  border-radius:20px;font-size:11px;font-weight:600;}
+#preview-loading{position:absolute;inset:0;background:rgba(200,230,248,0.75);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:8px;}
 .spinner{width:32px;height:32px;border:3px solid rgba(0,110,190,0.2);
   border-top-color:var(--prime);border-radius:50%;animation:spin 0.75s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .loading-text{font-size:13px;color:var(--muted);}
+
+/* 調整パネル（プレビュータブ内） */
+#adj-panel{background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 12px;display:flex;flex-direction:column;gap:8px;}
+.adj-row{display:flex;align-items:center;gap:6px;}
+.adj-label{font-size:10.5px;font-weight:700;color:var(--muted);width:36px;flex-shrink:0;text-align:right;}
+.adj-btns{display:flex;gap:3px;flex-wrap:wrap;flex:1;}
+.adj-btn{padding:3px 8px;border:1px solid var(--border2);border-radius:6px;
+  background:var(--surf2);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.12s;}
+.adj-btn.active{border-color:var(--prime);background:rgba(255,105,64,0.12);color:var(--prime);}
+.adj-select{background:var(--surf2);border:1px solid var(--border2);color:var(--text);
+  border-radius:7px;padding:4px 20px 4px 7px;font-size:11.5px;cursor:pointer;
+  appearance:none;flex:1;max-width:165px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%233D6080'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 5px center;}
+.adj-slider{accent-color:var(--prime);flex:1;height:4px;cursor:pointer;}
+.adj-val{font-size:11px;font-weight:700;color:var(--prime);width:28px;text-align:right;flex-shrink:0;}
+.adj-divider{height:1px;background:var(--border);margin:2px 0;}
 #color-pick-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 
-/* === クイック設定パネル === */
-#preview-qs{
-  background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;
-  display:flex;flex-direction:column;gap:7px;box-shadow:0 1px 4px rgba(0,80,160,0.06);
-}
-.qs-row{display:flex;align-items:center;gap:8px;}
-.qs-label{font-size:10.5px;font-weight:700;color:var(--muted);width:38px;flex-shrink:0;text-align:right;}
-.qs-btns{display:flex;gap:3px;flex-wrap:wrap;flex:1;}
-.qs-btn{
-  padding:3px 9px;border:1px solid var(--border2);border-radius:6px;
-  background:var(--surf2);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.12s;
-}
-.qs-btn.active{border-color:var(--prime);background:rgba(255,105,64,0.12);color:var(--prime);}
-.qs-slider{accent-color:var(--prime);flex:1;height:4px;cursor:pointer;}
-.qs-val{font-size:11px;font-weight:700;color:var(--prime);width:28px;text-align:right;flex-shrink:0;}
-
-/* === 保存 === */
+/* Save summary */
 .save-summary{background:var(--surf2);border-radius:9px;border:1px solid var(--border);
   padding:12px 14px;display:flex;flex-direction:column;gap:6px;}
 .save-row{display:flex;justify-content:space-between;font-size:13px;}
-.save-key{color:var(--muted);}
-.save-val{font-weight:600;color:var(--text);}
+.save-key{color:var(--muted);}.save-val{font-weight:600;color:var(--text);}
 .format-pills{display:flex;gap:6px;}
 .format-pill{flex:1;padding:7px 4px;border:1.5px solid var(--border2);border-radius:8px;
   background:var(--surf2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all 0.12s;}
 .format-pill.active{border-color:var(--prime);background:rgba(255,105,64,0.1);color:var(--prime);}
 
-/* === モーダル === */
-#install-modal{
-  display:none;position:fixed;inset:0;background:rgba(0,20,60,0.45);
-  z-index:999;align-items:center;justify-content:center;padding:20px;
-}
+/* コンテキストメニュー */
+#ctx-menu{position:fixed;background:var(--surf);border:1px solid var(--border2);
+  border-radius:11px;box-shadow:0 4px 20px rgba(0,0,0,0.15);padding:6px;z-index:500;min-width:160px;}
+.ctx-item{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;
+  border:none;background:none;text-align:left;font-size:14px;cursor:pointer;
+  border-radius:7px;color:var(--text);}
+.ctx-item:hover{background:var(--surf2);}
+.ctx-sep{height:1px;background:var(--border);margin:4px 0;}
+
+/* トリミングモーダル */
+/* トリム modal: absolute 配置でボタンが canvas に隠れないようにする */
+#trim-modal{position:fixed;inset:0;background:rgba(0,20,60,0.9);z-index:900;overflow:hidden;}
+#trim-header{position:absolute;top:0;left:0;right:0;z-index:10;height:54px;
+  background:var(--surf);border-bottom:1px solid var(--border);
+  padding:8px 12px;display:flex;align-items:center;gap:6px;}
+#trim-title{flex:1;font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.trim-hbtn{padding:6px 12px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;touch-action:manipulation;}
+#trim-canvas-wrap{position:absolute;top:54px;bottom:106px;left:0;right:0;z-index:1;
+  overflow:auto;display:flex;align-items:center;justify-content:center;padding:16px;
+  -webkit-overflow-scrolling:touch;}
+#trim-canvas{cursor:crosshair;touch-action:none;display:block;max-width:100%;height:auto;}
+#trim-footer{position:absolute;bottom:0;left:0;right:0;z-index:10;height:106px;
+  background:var(--surf);border-top:1px solid var(--border);
+  padding:10px 14px;display:flex;flex-direction:column;gap:8px;}
+.trim-inputs{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;}
+.trim-inp-wrap{display:flex;flex-direction:column;gap:2px;}
+.trim-inp-label{font-size:9.5px;font-weight:700;color:var(--muted);text-align:center;}
+.trim-inp{background:var(--surf2);border:1px solid var(--border2);color:var(--text);
+  border-radius:7px;padding:5px 4px;font-size:12px;width:100%;text-align:center;}
+.trim-info{font-size:10.5px;color:var(--muted);text-align:center;}
+
+/* インストールモーダル */
+#install-modal{display:none;position:fixed;inset:0;background:rgba(0,20,60,0.45);
+  z-index:999;align-items:center;justify-content:center;padding:20px;}
 #install-modal.open{display:flex;}
-.modal-box{
-  background:var(--surf);border-radius:16px;padding:24px;max-width:400px;width:100%;
-  box-shadow:0 8px 40px rgba(0,0,0,0.2);
-}
+.modal-box{background:var(--surf);border-radius:16px;padding:24px;max-width:400px;width:100%;
+  box-shadow:0 8px 40px rgba(0,0,0,0.2);}
 .modal-title{font-size:17px;font-weight:700;margin-bottom:12px;color:var(--text);}
 .modal-body{font-size:13px;line-height:1.8;color:var(--muted);}
 .modal-body ol{padding-left:18px;margin-top:8px;}
@@ -272,128 +252,37 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
   background:var(--prime);color:#fff;font-size:15px;font-weight:600;cursor:pointer;}
 
 /* Misc */
-.key-badge{
-  display:inline-flex;align-items:center;background:rgba(255,105,64,0.12);color:var(--prime);
+.key-badge{display:inline-flex;align-items:center;background:rgba(255,105,64,0.12);color:var(--prime);
   font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;
-  border:1px solid rgba(255,105,64,0.25);margin-left:6px;
-}
+  border:1px solid rgba(255,105,64,0.25);margin-left:6px;}
 .empty-state{text-align:center;padding:50px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;color:var(--muted);}
-.empty-icon{font-size:52px;line-height:1;}
-.empty-text{font-size:14px;line-height:1.7;}
+.empty-icon{font-size:52px;line-height:1;}.empty-text{font-size:14px;line-height:1.7;}
 </style>
 </head>
 <body>
 
-<!-- ===== Header ===== -->
 <div id="header">
   <div id="logo"><img src="./NamaCollageLogo192.png" alt="NamaCollage"></div>
-  <div>
-    <div id="app-name">NamaCollage</div>
-    <div id="sub-name">ナマコ — 画像結合ツール</div>
-  </div>
+  <div><div id="app-name">NamaCollage</div><div id="sub-name">ナマコ — 画像結合ツール</div></div>
   <span id="count-badge"></span>
 </div>
 
-<!-- ===== Main ===== -->
 <div id="main">
 
-  <!-- ① 設定 -->
+  <!-- ① 設定（枠線 + インストール のみ） -->
   <section class="tab" id="tab-settings">
     <div class="card">
       <div class="card-head">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        レイアウト・サイズ統一
-        <span class="key-badge">★ 主機能</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-4 0v2M8 7V5a2 2 0 014 0"/></svg>
+        枠線
       </div>
       <div class="card-body">
-        <div class="row">
-          <div class="row-label">列数が少ない行の処理<div class="row-sub">画像タブで列数が揃わない行</div></div>
-          <select id="s-last-row">
-            <option value="distribute">均等配置（推奨）</option>
-            <option value="span">最後の画像を拡大</option>
-            <option value="empty">空白のまま</option>
-          </select>
-        </div>
-        <div class="row">
-          <div class="row-label">サイズ統一の軸<div class="row-sub">異なるサイズを揃える基準</div></div>
-          <select id="s-normalization">
-            <option value="width">横幅を統一</option>
-            <option value="height">高さを統一</option>
-            <option value="longSide">長辺を統一</option>
-            <option value="shortSide">短辺を統一</option>
-            <option value="none">なし（そのまま）</option>
-          </select>
-        </div>
-        <div class="row">
-          <div class="row-label">基準サイズ<div class="row-sub">どの画像の大きさに合わせるか</div></div>
-          <select id="s-reference">
-            <option value="max">最大（一番大きい）</option>
-            <option value="min">最小（一番小さい）</option>
-            <option value="first">先頭の画像</option>
-            <option value="custom">カスタム（px指定）</option>
-          </select>
-        </div>
-        <div id="custom-size-row" class="row hidden">
-          <div class="row-label">カスタムサイズ (px)</div>
-          <input type="number" id="s-custom-size" value="1000" min="100" max="20000" step="100">
-        </div>
-        <div class="row">
-          <div class="row-label">セル内の水平配置</div>
-          <select id="s-alignment">
-            <option value="center">中央揃え</option>
-            <option value="start">左揃え</option>
-            <option value="end">右揃え</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-head"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 6H3M21 12H3M21 18H3"/></svg>余白・区切り</div>
-      <div class="card-body">
-        <div class="range-block">
-          <div class="range-header"><span class="range-label">画像間のスペース</span><span class="range-val" id="gap-val">0px</span></div>
-          <input type="range" id="s-gap" min="0" max="120" value="0">
-        </div>
-        <div class="range-block">
-          <div class="range-header"><span class="range-label">外側パディング</span><span class="range-val" id="padding-val">0px</span></div>
-          <input type="range" id="s-padding" min="0" max="200" value="0">
-        </div>
         <div class="row"><div class="row-label">外枠の太さ</div><input type="number" id="s-outer-border" value="0" min="0" max="100"></div>
         <div class="row"><div class="row-label">外枠の色</div><input type="color" id="s-outer-border-color" value="#000000"></div>
         <div class="row"><div class="row-label">セル枠線の太さ</div><input type="number" id="s-inner-border" value="0" min="0" max="50"></div>
         <div class="row" style="border-bottom:none"><div class="row-label">セル枠線の色</div><input type="color" id="s-inner-border-color" value="#888888"></div>
       </div>
     </div>
-
-    <div class="card">
-      <div class="card-head"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>背景</div>
-      <div class="card-body">
-        <div class="row"><div class="row-label">背景色</div><input type="color" id="s-bg-color" value="#ffffff"></div>
-        <div class="row" style="border-bottom:none">
-          <div class="row-label">透明背景<div class="row-sub">PNG・WebP保存時のみ有効</div></div>
-          <input type="checkbox" id="s-bg-transparent">
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-head"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>出力設定</div>
-      <div class="card-body">
-        <div class="row" style="border-bottom:none">
-          <div class="row-label">最大ピクセル数（上限）<div class="row-sub">超えた場合は縮小して保存</div></div>
-          <select id="s-max-pixels">
-            <option value="1000000">1MP</option>
-            <option value="2000000">2MP</option>
-            <option value="4000000">4MP</option>
-            <option value="8000000">8MP</option>
-            <option value="16000000">16MP</option>
-            <option value="0" selected>無制限</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
     <button class="btn btn-violet btn-full" id="btn-install">📲 アプリとしてインストール</button>
     <button class="btn btn-ghost btn-full" id="btn-reset">↺ 設定をすべてリセット</button>
   </section>
@@ -403,7 +292,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
     <div id="gv-empty">
       <div class="dz-icon">🖼️</div>
       <div class="dz-title">画像を追加してください</div>
-      <div class="dz-sub">ドラッグ＆ドロップ、またはタップで追加<br>共有アプリからの受け取りにも対応</div>
+      <div class="dz-sub">ドラッグ＆ドロップ、またはタップで追加<br>長押しで各画像のメニューを表示</div>
       <button class="btn btn-primary" id="btn-add-first">＋ 画像を選択</button>
     </div>
     <div id="gv-toolbar" style="display:none">
@@ -415,15 +304,13 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
     <input type="file" id="file-input" accept="image/*" multiple style="display:none">
   </section>
 
-  <!-- ③ プレビュー -->
+  <!-- ③ プレビュー（レイアウト・背景設定を統合） -->
   <section class="tab" id="tab-preview">
     <div id="preview-empty" class="empty-state hidden">
       <div class="empty-icon">🖼️</div>
       <div class="empty-text">「画像」タブで画像を追加してから<br>下のボタンでプレビューを生成してください</div>
     </div>
     <div id="preview-content" class="hidden">
-      <div id="warn-dim-danger" class="alert alert-danger hidden"><span class="alert-icon">🚫</span><span id="warn-dim-danger-text"></span></div>
-      <div id="warn-dim-warn" class="alert alert-warn hidden"><span class="alert-icon">⚠️</span><span id="warn-dim-warn-text"></span></div>
       <div class="preview-meta">
         <span id="preview-dim-chip" class="meta-chip"></span>
         <span id="preview-mp-chip" class="meta-chip"></span>
@@ -437,34 +324,63 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
         <span id="preview-imgs-info"></span>
         <span id="preview-scale-info"></span>
       </div>
-      <div id="preview-qs">
-        <div class="qs-row">
-          <span class="qs-label">統一</span>
-          <div class="qs-btns">
-            <button class="qs-btn" data-setting="normalization" data-val="width">横幅</button>
-            <button class="qs-btn" data-setting="normalization" data-val="height">高さ</button>
-            <button class="qs-btn" data-setting="normalization" data-val="longSide">長辺</button>
-            <button class="qs-btn" data-setting="normalization" data-val="shortSide">短辺</button>
-            <button class="qs-btn" data-setting="normalization" data-val="none">なし</button>
+      <!-- 調整パネル（レイアウト・背景を統合） -->
+      <div id="adj-panel">
+        <div class="adj-row">
+          <span class="adj-label">統一</span>
+          <div class="adj-btns">
+            <button class="adj-btn" data-s="normalization" data-v="width">横幅</button>
+            <button class="adj-btn" data-s="normalization" data-v="height">高さ</button>
+            <button class="adj-btn" data-s="normalization" data-v="longSide">長辺</button>
+            <button class="adj-btn" data-s="normalization" data-v="shortSide">短辺</button>
+            <button class="adj-btn" data-s="normalization" data-v="none">なし</button>
           </div>
         </div>
-        <div class="qs-row">
-          <span class="qs-label">基準</span>
-          <div class="qs-btns">
-            <button class="qs-btn" data-setting="reference" data-val="max">最大</button>
-            <button class="qs-btn" data-setting="reference" data-val="min">最小</button>
-            <button class="qs-btn" data-setting="reference" data-val="first">先頭</button>
+        <div class="adj-row">
+          <span class="adj-label">基準</span>
+          <div class="adj-btns">
+            <button class="adj-btn" data-s="reference" data-v="max">最大</button>
+            <button class="adj-btn" data-s="reference" data-v="min">最小</button>
+            <button class="adj-btn" data-s="reference" data-v="first">先頭</button>
+            <button class="adj-btn" data-s="reference" data-v="custom">指定px</button>
           </div>
+          <input type="number" id="adj-custom-size" value="1000" min="100" max="20000" step="100"
+            class="hidden" style="width:68px;margin-left:4px">
         </div>
-        <div class="qs-row">
-          <span class="qs-label">間隔</span>
-          <input type="range" class="qs-slider" id="qs-gap" min="0" max="120" value="0">
-          <span class="qs-val" id="qs-gap-val">0</span>
+        <div class="adj-row">
+          <span class="adj-label">最終行</span>
+          <select class="adj-select" id="adj-last-row">
+            <option value="distribute">均等配置</option>
+            <option value="span">最後を拡大</option>
+            <option value="empty">空白のまま</option>
+          </select>
         </div>
-        <div class="qs-row">
-          <span class="qs-label">余白</span>
-          <input type="range" class="qs-slider" id="qs-padding" min="0" max="200" value="0">
-          <span class="qs-val" id="qs-padding-val">0</span>
+        <div class="adj-row">
+          <span class="adj-label">配置</span>
+          <select class="adj-select" id="adj-alignment">
+            <option value="center">中央揃え</option>
+            <option value="start">左揃え</option>
+            <option value="end">右揃え</option>
+          </select>
+        </div>
+        <div class="adj-divider"></div>
+        <div class="adj-row">
+          <span class="adj-label">間隔</span>
+          <input type="range" class="adj-slider" id="adj-gap" min="0" max="120" value="0">
+          <span class="adj-val" id="adj-gap-val">0</span>
+        </div>
+        <div class="adj-row">
+          <span class="adj-label">余白</span>
+          <input type="range" class="adj-slider" id="adj-padding" min="0" max="200" value="0">
+          <span class="adj-val" id="adj-padding-val">0</span>
+        </div>
+        <div class="adj-divider"></div>
+        <div class="adj-row">
+          <span class="adj-label">背景色</span>
+          <input type="color" id="adj-bg-color" value="#ffffff">
+          <label style="display:flex;align-items:center;gap:5px;margin-left:8px;font-size:12px;color:var(--muted);cursor:pointer">
+            <input type="checkbox" id="adj-bg-transparent" style="width:15px;height:15px"> 透明
+          </label>
         </div>
       </div>
       <div id="color-pick-bar">
@@ -475,11 +391,27 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
     <button class="btn btn-primary btn-full btn-lg" id="btn-compose">🔄 プレビューを生成／更新</button>
   </section>
 
-  <!-- ④ 保存 -->
+  <!-- ④ 保存（出力設定・警告を統合） -->
   <section class="tab" id="tab-save">
     <div id="save-empty" class="empty-state hidden"><div class="empty-icon">💾</div><div class="empty-text">先に「プレビュー」タブで<br>画像を生成してください</div></div>
     <div id="save-content" class="hidden">
-      <div id="save-size-warn" class="alert alert-warn hidden"><span class="alert-icon">⚠️</span><span id="save-size-warn-text"></span></div>
+      <!-- 警告（プレビューから移動） -->
+      <div id="warn-size-danger" class="alert alert-danger hidden"><span class="alert-icon">🚫</span><span id="warn-size-danger-text"></span></div>
+      <div id="warn-size-warn" class="alert alert-warn hidden"><span class="alert-icon">⚠️</span><span id="warn-size-warn-text"></span></div>
+      <!-- 出力設定（設定タブから移動） -->
+      <div class="card">
+        <div class="card-head"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>出力設定</div>
+        <div class="card-body">
+          <div class="row" style="border-bottom:none">
+            <div class="row-label">最大ピクセル数（上限）<div class="row-sub">超えた場合は縮小して保存</div></div>
+            <select id="s-max-pixels">
+              <option value="1000000">1MP</option><option value="2000000">2MP</option>
+              <option value="4000000">4MP</option><option value="8000000">8MP</option>
+              <option value="16000000">16MP</option><option value="0" selected>無制限</option>
+            </select>
+          </div>
+        </div>
+      </div>
       <div id="save-size-ok" class="alert alert-ok hidden"><span class="alert-icon">✅</span><span id="save-size-ok-text"></span></div>
       <div class="save-summary" id="save-summary"></div>
       <div class="card">
@@ -497,13 +429,12 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
         </div>
       </div>
       <button class="btn btn-primary btn-full btn-lg" id="btn-download">⬇️ ダウンロード</button>
-      <div class="alert alert-info"><span class="alert-icon">💡</span><span>設定を変えて何度でもやり直せます。最大ピクセル数の上限が適用されます。</span></div>
-      <div class="alert alert-warn"><span class="alert-icon">📱</span><div><strong>PWA・ブラウザの注意</strong><br>縦横16,000px超またはメモリ超過でエラーになる場合があります。「最大ピクセル数」で上限を設けてください。</div></div>
+      <div class="alert alert-info"><span class="alert-icon">💡</span><span>プレビューの内容がダウンロードされます。最大ピクセル数の上限が適用されます。</span></div>
+      <div class="alert alert-warn"><span class="alert-icon">📱</span><div><strong>PWA・ブラウザの注意</strong><br>縦横16,000px超またはメモリ超過でエラーになることがあります。「最大ピクセル数」で上限を設けてください。</div></div>
     </div>
   </section>
 </div>
 
-<!-- ===== Nav ===== -->
 <nav id="nav">
   <button class="nav-btn" data-tab="settings">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 00-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
@@ -523,7 +454,32 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
   </button>
 </nav>
 
-<!-- ===== インストールモーダル ===== -->
+<!-- コンテキストメニュー -->
+<div id="ctx-menu" class="hidden">
+  <button class="ctx-item" id="ctx-trim">✂️ トリミング</button>
+</div>
+
+<!-- トリミングモーダル -->
+<div id="trim-modal" class="hidden">
+  <div id="trim-header">
+    <span id="trim-title">トリミング</span>
+    <button type="button" class="trim-hbtn" id="trim-reset-btn" style="background:var(--surf2);color:var(--muted)">リセット</button>
+    <button type="button" class="trim-hbtn" id="trim-apply-btn" style="background:var(--prime);color:#fff">適用</button>
+    <button type="button" class="trim-hbtn" id="trim-cancel-btn" style="background:var(--surf2);color:var(--muted)">✕ キャンセル</button>
+  </div>
+  <div id="trim-canvas-wrap"><canvas id="trim-canvas"></canvas></div>
+  <div id="trim-footer">
+    <div class="trim-inputs">
+      <div class="trim-inp-wrap"><div class="trim-inp-label">X (左)</div><input class="trim-inp" type="number" id="ti-x" min="0"></div>
+      <div class="trim-inp-wrap"><div class="trim-inp-label">Y (上)</div><input class="trim-inp" type="number" id="ti-y" min="0"></div>
+      <div class="trim-inp-wrap"><div class="trim-inp-label">幅 W</div><input class="trim-inp" type="number" id="ti-w" min="1"></div>
+      <div class="trim-inp-wrap"><div class="trim-inp-label">高さ H</div><input class="trim-inp" type="number" id="ti-h" min="1"></div>
+    </div>
+    <div class="trim-info" id="trim-info"></div>
+  </div>
+</div>
+
+<!-- インストールモーダル -->
 <div id="install-modal">
   <div class="modal-box">
     <div class="modal-title" id="modal-title"></div>
@@ -534,15 +490,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 
 <script>
 'use strict';
-// =============================================
-//  NamaCollage v4.1
-//  変更: 列幅を画像ごとに個別計算（余白修正）
-//        ライトテーマ / 実アイコン表示
-//        品質スライダー → リアルタイム更新
-//        クリップボードペースト対応
-//        Web Share Target 対応
-//        PWAインストールボタン
-// =============================================
+// ===== NamaCollage v4.2 =====
 
 const state = {
   grid:[], nextId:1, pendingAdd:null,
@@ -550,6 +498,7 @@ const state = {
   composed:null, composedW:0, composedH:0,
   previewNat:null, previewDirty:true,
 };
+
 const settings = {
   normalization:'width', reference:'max', customSize:1000,
   alignment:'center', gap:0, padding:0,
@@ -558,469 +507,465 @@ const settings = {
   bgColor:'#ffffff', bgTransparent:false,
   lastRowFill:'distribute', maxPixels:0,
 };
-const $  = id => document.getElementById(id);
-const $$ = s  => document.querySelectorAll(s);
+
+const $ = id => document.getElementById(id);
+const $$ = s => document.querySelectorAll(s);
+// 変数宣言を冒頭でまとめる（let は TDZ があるため早めに宣言）
+let composeTimer=null;
+let saveFormat='jpeg',saveQuality=92,sizeEstTimeout=null;
 const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const flatImages = () => state.grid.flat();
-const maxCols   = () => Math.max(0, ...state.grid.map(r => r.length));
+const maxCols = () => Math.max(0, ...state.grid.map(r => r.length));
 
-// =============================================
-// IndexedDB
-// =============================================
+// ===== IndexedDB =====
 let idb = null;
-(async function initDB() {
+(async function initDB(){
   try {
-    idb = await new Promise((res, rej) => {
-      const r = indexedDB.open('NamaCollage_v1', 2);
-      r.onupgradeneeded = e => {
-        const db = r.result;
-        if (!db.objectStoreNames.contains('imgs'))           db.createObjectStore('imgs',{keyPath:'id'});
-        if (!db.objectStoreNames.contains('meta'))           db.createObjectStore('meta');
-        if (!db.objectStoreNames.contains('pending_shares')) db.createObjectStore('pending_shares',{autoIncrement:true});
+    idb = await new Promise((res,rej)=>{
+      const r = indexedDB.open('NamaCollage_v1',2);
+      r.onupgradeneeded = ()=>{
+        const db=r.result;
+        if(!db.objectStoreNames.contains('imgs'))           db.createObjectStore('imgs',{keyPath:'id'});
+        if(!db.objectStoreNames.contains('meta'))           db.createObjectStore('meta');
+        if(!db.objectStoreNames.contains('pending_shares')) db.createObjectStore('pending_shares',{autoIncrement:true});
       };
-      r.onsuccess = () => res(r.result);
-      r.onerror   = () => rej(r.error);
+      r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
     });
     await restoreFromDB();
     await loadPendingShares();
-  } catch(e) { idb = null; console.warn('IndexedDB unavailable:', e); }
+  } catch(e){ idb=null; console.warn('IDB:',e); }
 })();
 
-function dbTx(store, mode, fn) {
-  if (!idb) return Promise.resolve();
-  return new Promise((res, rej) => {
-    const tx = idb.transaction(store, mode);
-    const s  = tx.objectStore(store);
-    const r  = fn(s);
-    if (r) { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }
-    else   { tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }
-  });
-}
-const dbPutImg   = img => dbTx('imgs','readwrite', s => s.put(img));
-const dbDelImg   = id  => dbTx('imgs','readwrite', s => s.delete(id));
-const dbClearImgs    = () => dbTx('imgs','readwrite', s => s.clear());
-const dbGetAllImgs   = () => idb ? new Promise((res)=>{const r=idb.transaction('imgs','readonly').objectStore('imgs').getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>res([]);}) : Promise.resolve([]);
-const dbGetMeta  = k  => idb ? new Promise((res)=>{const r=idb.transaction('meta','readonly').objectStore('meta').get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);}) : Promise.resolve(null);
-const dbPutMeta = (k,v) => dbTx('meta','readwrite', s => s.put(v,k));
-const dbClearMeta    = () => dbTx('meta','readwrite', s => s.clear());
-const dbGetAllPending = () => idb ? new Promise((res)=>{const r=idb.transaction('pending_shares','readonly').objectStore('pending_shares').getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>res([]);}) : Promise.resolve([]);
-const dbClearPending = () => dbTx('pending_shares','readwrite', s => s.clear());
+const dbGetAll = store => idb ? new Promise(res=>{const r=idb.transaction(store,'readonly').objectStore(store).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>res([]);}) : Promise.resolve([]);
+const dbGet    = (store,k) => idb ? new Promise(res=>{const r=idb.transaction(store,'readonly').objectStore(store).get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);}) : Promise.resolve(null);
+const dbTxW    = (store,fn) => { if(!idb) return Promise.resolve(); return new Promise((res,rej)=>{const tx=idb.transaction(store,'readwrite');fn(tx.objectStore(store));tx.oncomplete=res;tx.onerror=rej;}); };
 
-async function persistNewImages(imgs) {
-  if (!idb) return;
-  try { await Promise.all(imgs.map(async img => { const blob = await fetch(img.url).then(r=>r.blob()); await dbPutImg({id:img.id,name:img.name,blob}); })); }
-  catch(e) { console.warn('Persist error:', e); }
-}
-async function persistLayout() {
-  if (!idb) return;
-  try { await dbPutMeta('grid_layout', { layout:state.grid.map(row=>row.map(img=>img.id)), nextId:state.nextId }); }
-  catch(e) {}
-}
-async function restoreFromDB() {
-  const [imgs, meta] = await Promise.all([dbGetAllImgs(), dbGetMeta('grid_layout')]);
-  if (!imgs.length) return;
-  const map = new Map();
-  await Promise.all(imgs.map(async rec => {
-    const url = URL.createObjectURL(rec.blob);
-    const el  = new Image();
-    await new Promise(r => { el.onload = r; el.onerror = r; el.src = url; });
-    map.set(rec.id, {id:rec.id, name:rec.name, imgEl:el, url, w:el.naturalWidth, h:el.naturalHeight});
+async function persistNewImages(imgs){ try{ await dbTxW('imgs',s=>{imgs.forEach(async img=>{const blob=await fetch(img.url).then(r=>r.blob());s.put({id:img.id,name:img.name,blob});});}); } catch(e){} }
+async function persistLayout(){ try{ await dbTxW('meta',s=>s.put({layout:state.grid.map(row=>row.map(img=>({id:img.id,cropData:img.cropData||null}))),nextId:state.nextId},'grid_layout')); } catch(e){} }
+async function restoreFromDB(){
+  const [imgs,meta]=await Promise.all([dbGetAll('imgs'),dbGet('meta','grid_layout')]);
+  if(!imgs.length) return;
+  const map=new Map();
+  await Promise.all(imgs.map(async rec=>{
+    const url=URL.createObjectURL(rec.blob), el=new Image();
+    await new Promise(r=>{el.onload=r;el.onerror=r;el.src=url;});
+    map.set(rec.id,{id:rec.id,name:rec.name,imgEl:el,url,w:el.naturalWidth,h:el.naturalHeight,cropData:null});
   }));
-  if (meta?.nextId) state.nextId = meta.nextId;
-  if (meta?.layout) {
-    state.grid = meta.layout.map(row => row.map(id=>map.get(id)).filter(Boolean)).filter(r=>r.length>0);
-  } else {
-    state.grid = [Array.from(map.values())];
-  }
-  state.previewDirty = true;
-  renderGridView(); updateCountBadge();
+  if(meta?.nextId) state.nextId=meta.nextId;
+  if(meta?.layout){
+    state.grid=meta.layout.map(row=>row.map(item=>{
+      const img=map.get(typeof item==='number'?item:item.id); if(!img) return null;
+      if(item?.cropData) img.cropData=item.cropData; return img;
+    }).filter(Boolean)).filter(r=>r.length>0);
+  } else state.grid=[Array.from(map.values())];
+  state.previewDirty=true; renderGridView(); updateCountBadge();
 }
-
-// =============================================
-// Web Share Target: SW経由でDBに積まれた画像を取り込む
-// =============================================
-async function loadPendingShares() {
-  if (!idb) return;
-  const recs = await dbGetAllPending();
-  if (!recs.length) return;
-  await dbClearPending();
-  try {
-    const loaded = await Promise.all(recs.map(async rec => {
-      const url = URL.createObjectURL(rec.blob);
-      const el  = new Image();
-      await new Promise(r => { el.onload = r; el.onerror = r; el.src = url; });
-      return {id:state.nextId++, name:rec.name, imgEl:el, url, w:el.naturalWidth, h:el.naturalHeight};
+async function loadPendingShares(){
+  if(!idb) return;
+  const recs=await dbGetAll('pending_shares'); if(!recs.length) return;
+  await dbTxW('pending_shares',s=>s.clear());
+  try{
+    const loaded=await Promise.all(recs.map(async rec=>{
+      const url=URL.createObjectURL(rec.blob), el=new Image();
+      await new Promise(r=>{el.onload=r;el.onerror=r;el.src=url;});
+      return {id:state.nextId++,name:rec.name,imgEl:el,url,w:el.naturalWidth,h:el.naturalHeight,cropData:null};
     }));
-    if (!state.grid.length) state.grid = [loaded];
+    if(!state.grid.length) state.grid=[loaded];
     else state.grid[state.grid.length-1].push(...loaded);
-    state.previewDirty = true;
-    renderGridView(); updateCountBadge();
-    persistNewImages(loaded).then(() => persistLayout());
-    showTab('images');
-  } catch(e) { console.warn('loadPendingShares error:', e); }
+    state.previewDirty=true; renderGridView(); updateCountBadge();
+    persistNewImages(loaded).then(()=>persistLayout()); showTab('images');
+  } catch(e){ console.warn('loadPending:',e); }
 }
-
-// SWからのメッセージ（共有受信通知）
-navigator.serviceWorker?.addEventListener('message', async e => {
-  if (e.data?.type === 'share_received') await loadPendingShares();
+navigator.serviceWorker?.addEventListener('message',async e=>{if(e.data?.type==='share_received') await loadPendingShares();});
+document.addEventListener('paste',async e=>{
+  const files=Array.from(e.clipboardData?.items||[]).filter(it=>it.type.startsWith('image/')).map(it=>it.getAsFile()).filter(Boolean);
+  if(files.length){ await insertFilesAt(null,files); showTab('images'); }
 });
 
-// =============================================
-// クリップボードペースト
-// =============================================
-document.addEventListener('paste', async e => {
-  const items = Array.from(e.clipboardData?.items || []);
-  const imgItems = items.filter(it => it.type.startsWith('image/'));
-  if (!imgItems.length) return;
-  const files = imgItems.map(it => it.getAsFile()).filter(Boolean);
-  await insertFilesAt(null, files);
-  showTab('images');
-});
-
-// =============================================
-// タブ
-// =============================================
-function showTab(name) {
-  $$('.tab').forEach(t => t.classList.remove('active'));
-  $$('.nav-btn').forEach(b => b.classList.remove('active'));
+// ===== タブ =====
+function showTab(name){
+  $$('.tab').forEach(t=>t.classList.remove('active'));
+  $$('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   document.querySelector('.nav-btn[data-tab="'+name+'"]').classList.add('active');
-  if (name==='preview' && state.previewDirty && flatImages().length) scheduleCompose(150);
-  if (name==='save') updateSaveTab();
+  if(name==='preview'&&state.previewDirty&&flatImages().length) scheduleCompose(150);
+  if(name==='save') updateSaveTab();
 }
-$$('.nav-btn').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+$$('.nav-btn').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 
-// =============================================
-// 設定
-// =============================================
-function readSettings() {
-  settings.normalization    = $('s-normalization').value;
-  settings.reference        = $('s-reference').value;
-  settings.customSize       = Math.max(1, parseInt($('s-custom-size').value)||1000);
-  settings.alignment        = $('s-alignment').value;
-  settings.gap              = parseInt($('s-gap').value)||0;
-  settings.padding          = parseInt($('s-padding').value)||0;
-  settings.outerBorder      = Math.max(0, parseInt($('s-outer-border').value)||0);
-  settings.outerBorderColor = $('s-outer-border-color').value;
-  settings.innerBorder      = Math.max(0, parseInt($('s-inner-border').value)||0);
-  settings.innerBorderColor = $('s-inner-border-color').value;
-  settings.bgColor          = $('s-bg-color').value;
-  settings.bgTransparent    = $('s-bg-transparent').checked;
-  settings.lastRowFill      = $('s-last-row').value;
-  settings.maxPixels        = parseInt($('s-max-pixels').value)||0;
+// ===== 設定（枠線のみDOM読み） =====
+function readBorderSettings(){
+  settings.outerBorder=Math.max(0,parseInt($('s-outer-border').value)||0);
+  settings.outerBorderColor=$('s-outer-border-color').value;
+  settings.innerBorder=Math.max(0,parseInt($('s-inner-border').value)||0);
+  settings.innerBorderColor=$('s-inner-border-color').value;
 }
-function syncSettingsUI() {
-  $('gap-val').textContent     = settings.gap+'px';
-  $('padding-val').textContent = settings.padding+'px';
-  $('custom-size-row').classList.toggle('hidden', settings.reference!=='custom');
-  syncQS();
-}
-function onSettingChange() {
-  readSettings(); syncSettingsUI();
-  state.previewDirty = true;
-  if (flatImages().length) renderGridView();
-  if ($('tab-preview').classList.contains('active') && flatImages().length) scheduleCompose(300);
-}
-['s-normalization','s-reference','s-alignment','s-last-row','s-max-pixels']
-  .forEach(id => $(id).addEventListener('change', onSettingChange));
-['s-gap','s-padding','s-outer-border','s-outer-border-color','s-inner-border',
- 's-inner-border-color','s-bg-color','s-bg-transparent']
-  .forEach(id => $(id).addEventListener('input', onSettingChange));
-['s-custom-size','s-outer-border','s-inner-border']
-  .forEach(id => $(id).addEventListener('change', onSettingChange));
-$('btn-reset').addEventListener('click', () => {
-  if (!confirm('設定をリセットしますか?')) return;
-  [['s-normalization','width'],['s-reference','max'],['s-alignment','center'],['s-last-row','distribute']].forEach(([id,v])=>$(id).value=v);
-  $('s-custom-size').value=1000;$('s-gap').value=0;$('s-padding').value=0;
-  $('s-outer-border').value=0;$('s-outer-border-color').value='#000000';
-  $('s-inner-border').value=0;$('s-inner-border-color').value='#888888';
-  $('s-bg-color').value='#ffffff';$('s-bg-transparent').checked=false;$('s-max-pixels').value=0;
-  readSettings(); syncSettingsUI(); state.previewDirty=true; if(flatImages().length) renderGridView();
+['s-outer-border','s-outer-border-color','s-inner-border','s-inner-border-color'].forEach(id=>{
+  $(id).addEventListener('input',()=>{ readBorderSettings(); dirtyCompose(); });
+  $(id).addEventListener('change',()=>{ readBorderSettings(); dirtyCompose(); });
+});
+$('s-max-pixels').addEventListener('change',()=>{ settings.maxPixels=parseInt($('s-max-pixels').value)||0; updateSaveTab(); });
+$('btn-reset').addEventListener('click',()=>{
+  if(!confirm('設定をリセットしますか?')) return;
+  Object.assign(settings,{normalization:'width',reference:'max',customSize:1000,
+    alignment:'center',gap:0,padding:0,outerBorder:0,outerBorderColor:'#000000',
+    innerBorder:0,innerBorderColor:'#888888',bgColor:'#ffffff',bgTransparent:false,
+    lastRowFill:'distribute',maxPixels:0});
+  $('s-outer-border').value=0; $('s-outer-border-color').value='#000000';
+  $('s-inner-border').value=0; $('s-inner-border-color').value='#888888';
+  $('s-max-pixels').value=0;
+  syncAdjPanel(); dirtyCompose();
 });
 
-// =============================================
-// クイック設定
-// =============================================
-function syncQS() {
-  $$('.qs-btn').forEach(btn => btn.classList.toggle('active', settings[btn.dataset.setting]===btn.dataset.val));
-  $('qs-gap').value=$('s-gap').value; $('qs-gap-val').textContent=settings.gap;
-  $('qs-padding').value=$('s-padding').value; $('qs-padding-val').textContent=settings.padding;
+// ===== 調整パネル =====
+function syncAdjPanel(){
+  $$('.adj-btn').forEach(btn=>btn.classList.toggle('active',settings[btn.dataset.s]===btn.dataset.v));
+  $('adj-custom-size').classList.toggle('hidden',settings.reference!=='custom');
+  $('adj-custom-size').value=settings.customSize;
+  $('adj-last-row').value=settings.lastRowFill;
+  $('adj-alignment').value=settings.alignment;
+  $('adj-gap').value=settings.gap; $('adj-gap-val').textContent=settings.gap;
+  $('adj-padding').value=settings.padding; $('adj-padding-val').textContent=settings.padding;
+  $('adj-bg-color').value=settings.bgColor;
+  $('adj-bg-transparent').checked=settings.bgTransparent;
 }
-$$('.qs-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const key=btn.dataset.setting, val=btn.dataset.val;
-    settings[key]=val;
-    const el = document.getElementById('s-'+key);
-    if (el) el.value=val;
-    syncSettingsUI(); state.previewDirty=true; scheduleCompose(200);
-  });
-});
-$('qs-gap').addEventListener('input', () => {
-  settings.gap=parseInt($('qs-gap').value);
-  $('qs-gap-val').textContent=settings.gap; $('s-gap').value=settings.gap; $('gap-val').textContent=settings.gap+'px';
-  state.previewDirty=true; scheduleCompose(350);
-});
-$('qs-padding').addEventListener('input', () => {
-  settings.padding=parseInt($('qs-padding').value);
-  $('qs-padding-val').textContent=settings.padding; $('s-padding').value=settings.padding; $('padding-val').textContent=settings.padding+'px';
-  state.previewDirty=true; scheduleCompose(350);
-});
-
-// =============================================
-// PWAインストール
-// =============================================
-let deferredInstallPrompt = null;
-const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !/crios/i.test(navigator.userAgent);
-const isStandalone = window.matchMedia('(display-mode: standalone)').matches || ('standalone' in navigator && navigator.standalone);
-
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstallPrompt = e; });
-window.addEventListener('appinstalled', () => { deferredInstallPrompt = null; });
-
-function showModal(title, bodyHtml) {
-  $('modal-title').textContent = title;
-  $('modal-body').innerHTML = bodyHtml;
-  $('install-modal').classList.add('open');
+function dirtyCompose(){
+  state.previewDirty=true;
+  if(flatImages().length) renderGridView();
+  if($('tab-preview').classList.contains('active')&&flatImages().length) scheduleCompose(300);
 }
-$('modal-close').addEventListener('click', () => $('install-modal').classList.remove('open'));
-$('install-modal').addEventListener('click', e => { if (e.target===$('install-modal')) $('install-modal').classList.remove('open'); });
+$$('.adj-btn').forEach(btn=>btn.addEventListener('click',()=>{
+  settings[btn.dataset.s]=btn.dataset.v; syncAdjPanel(); dirtyCompose();
+}));
+$('adj-custom-size').addEventListener('change',()=>{ settings.customSize=Math.max(1,parseInt($('adj-custom-size').value)||1000); dirtyCompose(); });
+$('adj-last-row').addEventListener('change',()=>{ settings.lastRowFill=$('adj-last-row').value; dirtyCompose(); });
+$('adj-alignment').addEventListener('change',()=>{ settings.alignment=$('adj-alignment').value; dirtyCompose(); });
+$('adj-gap').addEventListener('input',()=>{ settings.gap=parseInt($('adj-gap').value); $('adj-gap-val').textContent=settings.gap; dirtyCompose(); });
+$('adj-padding').addEventListener('input',()=>{ settings.padding=parseInt($('adj-padding').value); $('adj-padding-val').textContent=settings.padding; dirtyCompose(); });
+$('adj-bg-color').addEventListener('input',()=>{ settings.bgColor=$('adj-bg-color').value; dirtyCompose(); });
+$('adj-bg-transparent').addEventListener('change',()=>{ settings.bgTransparent=$('adj-bg-transparent').checked; dirtyCompose(); });
 
-$('btn-install').addEventListener('click', async () => {
-  if (isStandalone) {
-    showModal('インストール済み', 'NamaCollage はすでにアプリとしてインストールされています。');
-    return;
-  }
-  if (deferredInstallPrompt) {
-    deferredInstallPrompt.prompt();
-    const { outcome } = await deferredInstallPrompt.userChoice;
-    if (outcome === 'accepted') deferredInstallPrompt = null;
-    return;
-  }
-  if (isIOS) {
-    showModal('iOSへのインストール方法',
-      '<p>Safariでこのページを開いてください。</p><ol>' +
-      '<li>画面下部の <strong>共有ボタン（□↑）</strong> をタップ</li>' +
-      '<li>「<strong>ホーム画面に追加</strong>」を選択</li>' +
-      '<li>右上の「<strong>追加</strong>」をタップ</li>' +
-      '</ol><p style="margin-top:10px;font-size:12px;color:var(--muted)">※ Chrome や Firefox では対応していません。</p>');
-    return;
-  }
-  // generic
+// ===== PWAインストール =====
+let deferredInstall=null;
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!/crios/i.test(navigator.userAgent);
+const isStandalone=window.matchMedia('(display-mode: standalone)').matches||('standalone' in navigator&&navigator.standalone);
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;});
+window.addEventListener('appinstalled',()=>{deferredInstall=null;});
+function showModal(t,b){$('modal-title').textContent=t;$('modal-body').innerHTML=b;$('install-modal').classList.add('open');}
+$('modal-close').addEventListener('click',()=>$('install-modal').classList.remove('open'));
+$('install-modal').addEventListener('click',e=>{if(e.target===$('install-modal'))$('install-modal').classList.remove('open');});
+$('btn-install').addEventListener('click',async()=>{
+  if(isStandalone){showModal('インストール済み','NamaCollage はすでにアプリとしてインストールされています。');return;}
+  if(deferredInstall){deferredInstall.prompt();const{outcome}=await deferredInstall.userChoice;if(outcome==='accepted')deferredInstall=null;return;}
+  if(isIOS){showModal('iOSへのインストール方法',
+    '<p>Safariでこのページを開いてください。</p><ol>'+
+    '<li>画面下部の <strong>共有ボタン（□↑）</strong> をタップ</li>'+
+    '<li>「<strong>ホーム画面に追加</strong>」を選択</li>'+
+    '<li>右上の「<strong>追加</strong>」をタップ</li>'+
+    '</ol><p style="margin-top:10px;font-size:12px;color:var(--muted)">※ Chrome・Firefoxでは対応していません。</p>');return;}
   showModal('PCへのインストール方法',
-    '<p>お使いのブラウザで以下の操作をしてください。</p><ol>' +
-    '<li><strong>Chrome：</strong> アドレスバー右端の「⊕」または「⋮」→「NamaCollageをインストール」</li>' +
-    '<li><strong>Edge：</strong> アドレスバー右端の「…」→「アプリ」→「このサイトをアプリとしてインストール」</li>' +
-    '<li><strong>Safari (Mac)：</strong> File → Add to Dock</li>' +
-    '</ol><p style="margin-top:10px;font-size:12px;color:var(--muted)">Firefox はPWAインストールに対応していません。</p>');
+    '<ol><li><strong>Chrome：</strong> アドレスバー右の「⊕」または「⋮」→「NamaCollageをインストール」</li>'+
+    '<li><strong>Edge：</strong> 「…」→「アプリ」→「このサイトをアプリとしてインストール」</li>'+
+    '<li><strong>Safari (Mac)：</strong> File → Add to Dock</li></ol>'+
+    '<p style="margin-top:10px;font-size:12px;color:var(--muted)">Firefox はPWAインストール非対応です。</p>');
 });
 
-// =============================================
-// 画像読み込み
-// =============================================
-async function loadImageFile(file) {
-  return new Promise((res,rej) => {
-    const url = URL.createObjectURL(file);
-    const el  = new Image();
-    el.onload  = () => res({id:state.nextId++, name:file.name, imgEl:el, url, w:el.naturalWidth, h:el.naturalHeight});
-    el.onerror = () => rej(new Error('読込失敗: '+file.name));
-    el.src = url;
+// ===== 画像読み込み =====
+async function loadImageFile(file){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file), el=new Image();
+    el.onload=()=>res({id:state.nextId++,name:file.name,imgEl:el,url,w:el.naturalWidth,h:el.naturalHeight,cropData:null});
+    el.onerror=()=>rej(new Error('読込失敗: '+file.name));
+    el.src=url;
   });
 }
-async function insertFilesAt(pa, files) {
-  if (!files.length) return;
-  try {
-    const loaded = await Promise.all(files.map(loadImageFile));
-    if (!state.grid.length)            state.grid = [loaded];
-    else if (!pa)                       state.grid[state.grid.length-1].push(...loaded);
-    else if (pa.type==='row')          state.grid.splice(pa.rowIdx, 0, loaded);
-    else {
-      if (pa.rowIdx>=state.grid.length) state.grid.push(loaded);
-      else                              state.grid[pa.rowIdx].splice(pa.colIdx, 0, ...loaded);
-    }
-    state.previewDirty=true;
-    renderGridView(); updateCountBadge();
+async function insertFilesAt(pa,files){
+  if(!files.length) return;
+  try{
+    const loaded=await Promise.all(files.map(loadImageFile));
+    if(!state.grid.length)            state.grid=[loaded];
+    else if(!pa)                       state.grid[state.grid.length-1].push(...loaded);
+    else if(pa.type==='row')          state.grid.splice(pa.rowIdx,0,loaded);
+    else { if(pa.rowIdx>=state.grid.length) state.grid.push(loaded); else state.grid[pa.rowIdx].splice(pa.colIdx,0,...loaded); }
+    state.previewDirty=true; renderGridView(); updateCountBadge();
     persistNewImages(loaded).then(()=>persistLayout());
-  } catch(err) { alert('画像の読み込みに失敗しました。\n'+err.message); }
+  } catch(err){ alert('読み込み失敗:\n'+err.message); }
 }
 
-// =============================================
-// グリッド操作
-// =============================================
-function updateCountBadge() {
-  const n=flatImages().length, b=$('count-badge');
-  if (n>0){b.textContent=n+'枚';b.style.display='inline-block';}else{b.style.display='none';}
-}
-function deleteCell(ri, ci) {
+// ===== グリッド操作 =====
+function updateCountBadge(){const n=flatImages().length,b=$('count-badge');if(n>0){b.textContent=n+'枚';b.style.display='inline-block';}else b.style.display='none';}
+function deleteCell(ri,ci){
   const img=state.grid[ri][ci]; URL.revokeObjectURL(img.url);
   state.grid[ri].splice(ci,1); if(!state.grid[ri].length) state.grid.splice(ri,1);
   state.previewDirty=true; renderGridView(); updateCountBadge();
-  dbDelImg(img.id).then(()=>persistLayout());
+  dbTxW('imgs',s=>s.delete(img.id)).then(()=>persistLayout());
 }
-function moveCellH(ri, ci, dir) {
-  const ni=ci+dir; if(ni<0||ni>=state.grid[ri].length) return;
-  const r=state.grid[ri]; [r[ci],r[ni]]=[r[ni],r[ci]];
-  state.previewDirty=true; renderGridView(); persistLayout();
+function moveCellH(ri,ci,dir){const ni=ci+dir;if(ni<0||ni>=state.grid[ri].length)return;const r=state.grid[ri];[r[ci],r[ni]]=[r[ni],r[ci]];state.previewDirty=true;renderGridView();persistLayout();}
+function moveCellV(ri,ci,dir){
+  const[img]=state.grid[ri].splice(ci,1);let dr=ri+dir;
+  if(!state.grid[ri].length){state.grid.splice(ri,1);if(dir>0)dr--;}
+  if(dr<0)state.grid.unshift([img]);else if(dr>=state.grid.length)state.grid.push([img]);
+  else{const ins=Math.min(ci,state.grid[dr].length);state.grid[dr].splice(ins,0,img);}
+  state.previewDirty=true;renderGridView();persistLayout();
 }
-function moveCellV(ri, ci, dir) {
-  const [img]=state.grid[ri].splice(ci,1); let dstRow=ri+dir;
-  if(!state.grid[ri].length){state.grid.splice(ri,1); if(dir>0) dstRow--;}
-  if      (dstRow<0)                   state.grid.unshift([img]);
-  else if (dstRow>=state.grid.length)  state.grid.push([img]);
-  else { const ins=Math.min(ci,state.grid[dstRow].length); state.grid[dstRow].splice(ins,0,img); }
-  state.previewDirty=true; renderGridView(); persistLayout();
-}
-function clearAll() {
-  if (!flatImages().length) return;
-  if (!confirm(flatImages().length+'枚の画像をすべて削除しますか?')) return;
+function clearAll(){
+  if(!flatImages().length) return;
+  if(!confirm(flatImages().length+'枚をすべて削除しますか?')) return;
   flatImages().forEach(img=>URL.revokeObjectURL(img.url));
-  state.grid=[]; state.composed=null; state.previewDirty=true;
-  renderGridView(); updateCountBadge();
-  updatePreviewEmptyState(); updateSaveEmptyState();
-  dbClearImgs().then(()=>dbClearMeta());
+  state.grid=[];state.composed=null;state.previewDirty=true;
+  renderGridView();updateCountBadge();
+  $('preview-empty').classList.remove('hidden');$('preview-content').classList.add('hidden');
+  $('save-empty').classList.remove('hidden');$('save-content').classList.add('hidden');
+  dbTxW('imgs',s=>s.clear()).then(()=>dbTxW('meta',s=>s.clear()));
 }
 
-// =============================================
-// グリッドビュー描画
-// =============================================
-const CELL_MAX_W=130, CELL_MIN_W=50;
-function renderGridView() {
-  const gv=$('grid-view'), tb=$('gv-toolbar'), em=$('gv-empty'), n=flatImages().length;
-  if (!n){gv.style.display='none';tb.style.display='none';em.classList.remove('hidden');return;}
-  em.classList.add('hidden'); gv.style.display=''; tb.style.display='';
+// ===== グリッドビュー描画 =====
+const CELL_MAX_W=130,CELL_MIN_W=50;
+function renderGridView(){
+  const gv=$('grid-view'),tb=$('gv-toolbar'),em=$('gv-empty'),n=flatImages().length;
+  if(!n){gv.style.display='none';tb.style.display='none';em.classList.remove('hidden');return;}
+  em.classList.add('hidden');gv.style.display='';tb.style.display='';
   const cols=maxCols();
-  $('gv-count-info').textContent = n+'枚 / '+state.grid.length+'行 × '+cols+'列';
+  $('gv-count-info').textContent=n+'枚 / '+state.grid.length+'行 × '+cols+'列';
   const nat=calcNaturalDimensions();
   const cW=(gv.parentElement?.offsetWidth||360)-28;
-  const cellDispW=Math.min(CELL_MAX_W, Math.max(CELL_MIN_W, Math.floor((cW-(cols+1)*28-8)/cols)));
-  gv.innerHTML='';
-  gv.appendChild(makeGvAddRow(0));
+  const cellDispW=Math.min(CELL_MAX_W,Math.max(CELL_MIN_W,Math.floor((cW-(cols+1)*28-8)/cols)));
+  gv.innerHTML='';gv.appendChild(makeGvAddRow(0));
   state.grid.forEach((row,ri)=>{
-    const rowDiv=document.createElement('div'); rowDiv.className='gv-row';
+    const rowDiv=document.createElement('div');rowDiv.className='gv-row';
     row.forEach((img,ci)=>{
       rowDiv.appendChild(makeGvAddCol(ri,ci));
       const ne=nat?.rowData?.[ri]?.[ci]??null;
-      // 各セルの表示幅は列の自然幅に比例させる
-      const natColW = nat?.colWidths?.[ci] ?? (ne?.sw ?? img.w);
-      const natTotalW = nat ? (nat.colWidths.reduce((s,w)=>s+w,0)+(cols-1)*settings.gap) : img.w;
-      const rowDispW = cols * cellDispW + (cols-1)*2;
-      const dW = ne?.isSized
-        ? Math.max(CELL_MIN_W, Math.round(ne.sw / (natTotalW||1) * rowDispW))
-        : Math.max(CELL_MIN_W, Math.round(natColW / (natTotalW||1) * rowDispW));
-      const dH = ne ? Math.max(30, Math.round(ne.sh / (natColW||1) * dW)) : Math.round(img.h/img.w*dW);
+      const natColW=nat?.colWidths?.[ci]??ne?.sw??img.w;
+      const natTotalW=nat?(nat.colWidths.reduce((s,w)=>s+w,0)+(cols-1)*settings.gap):img.w;
+      const rowDispW=cols*cellDispW+(cols-1)*2;
+      const dW=ne?.isSized?Math.max(CELL_MIN_W,Math.round(ne.sw/(natTotalW||1)*rowDispW)):Math.max(CELL_MIN_W,Math.round(natColW/(natTotalW||1)*rowDispW));
+      const dH=ne?Math.max(30,Math.round(ne.sh/(ne.sw||1)*dW)):Math.round(img.h/img.w*dW);
       const gn=state.grid.slice(0,ri).reduce((s,r)=>s+r.length,0)+ci+1;
-      const sx=ne?ne.sw/(img.w||1):1;
+      const ew=img.cropData?img.cropData.cw:img.w, eh=img.cropData?img.cropData.ch:img.h;
+      const sx=ne?ne.sw/(ew||1):1;
       const ss=Math.abs(sx-1)<0.005?'等倍':(sx>1?'×'+sx.toFixed(2)+' 拡大':'×'+sx.toFixed(2)+' 縮小');
       const nm=img.name.length>14?img.name.substring(0,12)+'…':img.name;
-      const cell=document.createElement('div');
-      cell.className='gv-cell';
-      cell.style.cssText='width:'+dW+'px;height:'+dH+'px;';
-      cell.innerHTML=
+      const cell=document.createElement('div');cell.className='gv-cell';cell.style.cssText='width:'+dW+'px;height:'+dH+'px;';
+      cell.innerHTML=(img.cropData?'<div class="gv-crop-badge">✂</div>':'')+
         '<img src="'+img.url+'" alt="" draggable="false">'+
         '<div class="gv-overlay">'+
           '<div class="gv-num">#'+gn+'</div>'+
           '<div>'+escHtml(nm)+'</div>'+
-          '<div>'+img.w+'×'+img.h+' '+ss+'</div>'+
+          '<div>'+(img.cropData?img.cropData.cw+'×'+img.cropData.ch+' ✂':img.w+'×'+img.h)+' '+ss+'</div>'+
           '<div class="gv-moves">'+
-            '<button class="gv-move-btn" data-mv="u" title="上の行へ">↑</button>'+
-            '<button class="gv-move-btn" data-mv="l"'+(ci===0?' disabled':'')+' title="左へ">←</button>'+
-            '<button class="gv-move-btn" data-mv="r"'+(ci===row.length-1?' disabled':'')+' title="右へ">→</button>'+
-            '<button class="gv-move-btn" data-mv="d" title="下の行へ">↓</button>'+
+            '<button class="gv-move-btn" data-mv="u">↑</button>'+
+            '<button class="gv-move-btn" data-mv="l"'+(ci===0?' disabled':'')+'>←</button>'+
+            '<button class="gv-move-btn" data-mv="r"'+(ci===row.length-1?' disabled':'')+'>→</button>'+
+            '<button class="gv-move-btn" data-mv="d">↓</button>'+
           '</div>'+
         '</div>'+
         '<button class="gv-del" title="削除">×</button>';
       cell.querySelector('.gv-del').onclick=e=>{e.stopPropagation();deleteCell(ri,ci);};
       cell.querySelectorAll('.gv-move-btn').forEach(btn=>{
-        btn.onclick=e=>{e.stopPropagation();
-          const mv=btn.dataset.mv;
-          if(mv==='l') moveCellH(ri,ci,-1);
-          else if(mv==='r') moveCellH(ri,ci,1);
-          else if(mv==='u') moveCellV(ri,ci,-1);
-          else if(mv==='d') moveCellV(ri,ci,1);
-        };
+        btn.onclick=e=>{e.stopPropagation();const mv=btn.dataset.mv;
+          if(mv==='l')moveCellH(ri,ci,-1);else if(mv==='r')moveCellH(ri,ci,1);
+          else if(mv==='u')moveCellV(ri,ci,-1);else if(mv==='d')moveCellV(ri,ci,1);};
       });
+      attachLongPress(cell,e=>showCtxMenu(e,ri,ci));
       rowDiv.appendChild(cell);
     });
     rowDiv.appendChild(makeGvAddCol(ri,row.length));
-    gv.appendChild(rowDiv);
-    gv.appendChild(makeGvAddRow(ri+1));
+    gv.appendChild(rowDiv);gv.appendChild(makeGvAddRow(ri+1));
   });
 }
-function makeGvAddRow(idx) {
-  const d=document.createElement('div'); d.className='gv-add-row';
+function makeGvAddRow(idx){
+  const d=document.createElement('div');d.className='gv-add-row';
   d.innerHTML='<div class="gv-line"></div><div class="gv-row-label">＋ 行を追加</div><div class="gv-line"></div>';
-  const pa={type:'row',rowIdx:idx};
-  d.onclick=()=>{state.pendingAdd=pa;$('file-input').click();};
+  const pa={type:'row',rowIdx:idx};d.onclick=()=>{state.pendingAdd=pa;$('file-input').click();};
   d.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();d.classList.add('drag-target');});
   d.addEventListener('dragleave',()=>d.classList.remove('drag-target'));
   d.addEventListener('drop',async e=>{e.preventDefault();e.stopPropagation();d.classList.remove('drag-target');
-    await insertFilesAt(pa, Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/')));});
+    await insertFilesAt(pa,Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/')));});
   return d;
 }
-function makeGvAddCol(ri, ci) {
-  const d=document.createElement('div'); d.className='gv-add-col'; d.textContent='＋'; d.title='ここに追加';
-  const pa={type:'col',rowIdx:ri,colIdx:ci};
-  d.onclick=()=>{state.pendingAdd=pa;$('file-input').click();};
+function makeGvAddCol(ri,ci){
+  const d=document.createElement('div');d.className='gv-add-col';d.textContent='＋';d.title='ここに追加';
+  const pa={type:'col',rowIdx:ri,colIdx:ci};d.onclick=()=>{state.pendingAdd=pa;$('file-input').click();};
   d.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();d.classList.add('drag-target');});
   d.addEventListener('dragleave',()=>d.classList.remove('drag-target'));
   d.addEventListener('drop',async e=>{e.preventDefault();e.stopPropagation();d.classList.remove('drag-target');
-    await insertFilesAt(pa, Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/')));});
+    await insertFilesAt(pa,Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/')));});
   return d;
 }
-$('file-input').addEventListener('change', async e=>{
+
+// ===== 長押し =====
+function attachLongPress(el,cb){
+  let timer=null,sx=0,sy=0;
+  el.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY;timer=setTimeout(()=>{cb(e);},650);},{passive:true});
+  el.addEventListener('pointermove',e=>{if(Math.abs(e.clientX-sx)>8||Math.abs(e.clientY-sy)>8)clearTimeout(timer);},{passive:true});
+  el.addEventListener('pointerup',()=>clearTimeout(timer),{passive:true});
+  el.addEventListener('pointercancel',()=>clearTimeout(timer),{passive:true});
+  el.addEventListener('contextmenu',e=>{e.preventDefault();cb(e);});
+}
+
+// ===== コンテキストメニュー =====
+let ctxTarget={ri:-1,ci:-1};
+function showCtxMenu(e,ri,ci){
+  const menu=$('ctx-menu');ctxTarget={ri,ci};menu.classList.remove('hidden');
+  const vw=window.innerWidth,vh=window.innerHeight;
+  const mx=Math.min(e.clientX,vw-170),my=Math.min(e.clientY,vh-60);
+  menu.style.left=mx+'px';menu.style.top=my+'px';
+}
+document.addEventListener('pointerdown',e=>{if(!$('ctx-menu').classList.contains('hidden')&&!$('ctx-menu').contains(e.target))$('ctx-menu').classList.add('hidden');});
+$('ctx-trim').addEventListener('click',()=>{$('ctx-menu').classList.add('hidden');openTrimModal(ctxTarget.ri,ctxTarget.ci);});
+
+// ===== トリミング =====
+const T={ri:-1,ci:-1,imgEl:null,imgW:0,imgH:0,cx:0,cy:0,cw:0,ch:0,scale:1,drag:null,ox:0,oy:0,oc:null};
+const HSIZE=16; // handle hit area px (display)
+
+function openTrimModal(ri,ci){
+  const img=state.grid[ri][ci]; T.ri=ri;T.ci=ci;T.imgEl=img.imgEl;T.imgW=img.w;T.imgH=img.h;
+  if(img.cropData){T.cx=img.cropData.cx;T.cy=img.cropData.cy;T.cw=img.cropData.cw;T.ch=img.cropData.ch;}
+  else{T.cx=0;T.cy=0;T.cw=img.w;T.ch=img.h;}
+  const maxW=Math.min(window.innerWidth-32,780),maxH=Math.floor(window.innerHeight*0.52);
+  T.scale=Math.min(1,maxW/img.w,maxH/img.h);
+  const tc=$('trim-canvas');tc.width=Math.round(img.w*T.scale);tc.height=Math.round(img.h*T.scale);
+  $('trim-title').textContent='トリミング — '+img.name;
+  $('trim-modal').classList.remove('hidden');
+  drawTrim();updateTrimInputs();
+}
+function drawTrim(){
+  const tc=$('trim-canvas'),ctx=tc.getContext('2d'),s=T.scale;
+  ctx.clearRect(0,0,tc.width,tc.height);ctx.drawImage(T.imgEl,0,0,tc.width,tc.height);
+  const cx=T.cx*s,cy=T.cy*s,cw=T.cw*s,ch=T.ch*s;
+  // 暗転外側
+  ctx.fillStyle='rgba(0,0,0,0.52)';
+  ctx.fillRect(0,0,tc.width,cy);ctx.fillRect(0,cy+ch,tc.width,tc.height-cy-ch);
+  ctx.fillRect(0,cy,cx,ch);ctx.fillRect(cx+cw,cy,tc.width-cx-cw,ch);
+  // 枠線
+  ctx.strokeStyle='#FF6940';ctx.lineWidth=2;ctx.strokeRect(cx,cy,cw,ch);
+  // 三等分ガイド
+  ctx.strokeStyle='rgba(255,105,64,0.38)';ctx.lineWidth=0.7;
+  for(let i=1;i<=2;i++){ctx.beginPath();ctx.moveTo(cx+cw*i/3,cy);ctx.lineTo(cx+cw*i/3,cy+ch);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx,cy+ch*i/3);ctx.lineTo(cx+cw,cy+ch*i/3);ctx.stroke();}
+  // 四隅ハンドル
+  const hs=8;ctx.fillStyle='#FF6940';
+  [[cx,cy],[cx+cw,cy],[cx,cy+ch],[cx+cw,cy+ch]].forEach(([hx,hy])=>ctx.fillRect(hx-hs,hy-hs,hs*2,hs*2));
+}
+function updateTrimInputs(){
+  $('ti-x').value=Math.round(T.cx);$('ti-y').value=Math.round(T.cy);
+  $('ti-w').value=Math.round(T.cw);$('ti-h').value=Math.round(T.ch);
+  $('trim-info').textContent='元画像: '+T.imgW+'×'+T.imgH+'px  |  クロップ後: '+Math.round(T.cw)+'×'+Math.round(T.ch)+'px';
+}
+function clamp(v,mn,mx){return Math.max(mn,Math.min(mx,v));}
+function getHandle(px,py){
+  const s=T.scale,cx=T.cx*s,cy=T.cy*s,cw=T.cw*s,ch=T.ch*s,h=HSIZE;
+  if(Math.abs(px-cx)<h&&Math.abs(py-cy)<h) return 'tl';
+  if(Math.abs(px-(cx+cw))<h&&Math.abs(py-cy)<h) return 'tr';
+  if(Math.abs(px-cx)<h&&Math.abs(py-(cy+ch))<h) return 'bl';
+  if(Math.abs(px-(cx+cw))<h&&Math.abs(py-(cy+ch))<h) return 'br';
+  if(px>cx&&px<cx+cw&&py>cy&&py<cy+ch) return 'move';
+  return null;
+}
+// ポインターは canvas-wrap で聞く → canvas 外のエッジ部分（ハンドルの半分）も反応
+const trimWrap=$('trim-canvas-wrap');
+function getTrimCanvasCoords(e){
+  const tc=$('trim-canvas'),r=tc.getBoundingClientRect();
+  return{px:(e.clientX-r.left)*tc.width/r.width, py:(e.clientY-r.top)*tc.height/r.height};
+}
+trimWrap.addEventListener('pointerdown',e=>{
+  const{px,py}=getTrimCanvasCoords(e);
+  T.drag=getHandle(px,py); if(!T.drag) return;
+  e.preventDefault();
+  T.ox=px;T.oy=py;T.oc={cx:T.cx,cy:T.cy,cw:T.cw,ch:T.ch};
+  trimWrap.setPointerCapture(e.pointerId);
+});
+trimWrap.addEventListener('pointermove',e=>{
+  if(!T.drag) return;
+  const{px,py}=getTrimCanvasCoords(e);
+  const s=T.scale,dx=(px-T.ox)/s,dy=(py-T.oy)/s,o=T.oc,iw=T.imgW,ih=T.imgH,MIN=10;
+  let{cx,cy,cw,ch}=o;
+  if(T.drag==='tl'){cx=clamp(o.cx+dx,0,o.cx+o.cw-MIN);cy=clamp(o.cy+dy,0,o.cy+o.ch-MIN);cw=o.cx+o.cw-cx;ch=o.cy+o.ch-cy;}
+  else if(T.drag==='tr'){cy=clamp(o.cy+dy,0,o.cy+o.ch-MIN);cw=clamp(o.cw+dx,MIN,iw-o.cx);ch=o.cy+o.ch-cy;}
+  else if(T.drag==='bl'){cx=clamp(o.cx+dx,0,o.cx+o.cw-MIN);cw=o.cx+o.cw-cx;ch=clamp(o.ch+dy,MIN,ih-o.cy);}
+  else if(T.drag==='br'){cw=clamp(o.cw+dx,MIN,iw-o.cx);ch=clamp(o.ch+dy,MIN,ih-o.cy);}
+  else if(T.drag==='move'){cx=clamp(o.cx+dx,0,iw-o.cw);cy=clamp(o.cy+dy,0,ih-o.ch);}
+  T.cx=Math.round(cx);T.cy=Math.round(cy);T.cw=Math.round(clamp(cw,1,iw-T.cx));T.ch=Math.round(clamp(ch,1,ih-T.cy));
+  drawTrim();updateTrimInputs();
+});
+trimWrap.addEventListener('pointerup',()=>{T.drag=null;});
+
+// 数値入力 → クロップ更新
+['ti-x','ti-y','ti-w','ti-h'].forEach(id=>{
+  $(id).addEventListener('change',()=>{
+    const x=Math.max(0,Math.min(parseInt($('ti-x').value)||0,T.imgW-1));
+    const y=Math.max(0,Math.min(parseInt($('ti-y').value)||0,T.imgH-1));
+    const w=Math.max(1,Math.min(parseInt($('ti-w').value)||1,T.imgW-x));
+    const h=Math.max(1,Math.min(parseInt($('ti-h').value)||1,T.imgH-y));
+    T.cx=x;T.cy=y;T.cw=w;T.ch=h;drawTrim();updateTrimInputs();
+  });
+  $(id).style.webkitUserSelect='text';
+  $(id).style.userSelect='text';
+  $(id).removeAttribute('data-x'); // inputs need text selection
+});
+
+$('trim-apply-btn').addEventListener('click',()=>{
+  const img=state.grid[T.ri][T.ci];
+  const isFullImage=T.cx===0&&T.cy===0&&T.cw===img.w&&T.ch===img.h;
+  img.cropData=isFullImage?null:{cx:T.cx,cy:T.cy,cw:T.cw,ch:T.ch};
+  state.previewDirty=true;$('trim-modal').classList.add('hidden');
+  renderGridView();persistLayout();
+  if($('tab-preview').classList.contains('active')) scheduleCompose(100);
+});
+$('trim-reset-btn').addEventListener('click',()=>{T.cx=0;T.cy=0;T.cw=T.imgW;T.ch=T.imgH;drawTrim();updateTrimInputs();});
+$('trim-cancel-btn').addEventListener('click',()=>$('trim-modal').classList.add('hidden'));
+
+// ===== ファイル入力・D&D =====
+$('file-input').addEventListener('change',async e=>{
   const files=Array.from(e.target.files).filter(f=>f.type.startsWith('image/'));
-  const pa=state.pendingAdd; state.pendingAdd=null; e.target.value='';
-  await insertFilesAt(pa,files);
+  const pa=state.pendingAdd;state.pendingAdd=null;e.target.value=''; await insertFilesAt(pa,files);
 });
 $('btn-add-first').addEventListener('click',()=>{state.pendingAdd=null;$('file-input').click();});
-$('btn-add-more').addEventListener('click', ()=>{state.pendingAdd=null;$('file-input').click();});
-$('btn-clear').addEventListener('click', clearAll);
+$('btn-add-more').addEventListener('click',()=>{state.pendingAdd=null;$('file-input').click();});
+$('btn-clear').addEventListener('click',clearAll);
 $('gv-empty').addEventListener('click',e=>{if(e.target.tagName==='BUTTON')return;state.pendingAdd=null;$('file-input').click();});
 document.body.addEventListener('dragover',e=>e.preventDefault());
-document.body.addEventListener('dragleave',e=>{if(!e.relatedTarget||!document.body.contains(e.relatedTarget))$('gv-empty').classList.remove('over');});
 document.body.addEventListener('drop',async e=>{
-  e.preventDefault(); $('gv-empty').classList.remove('over');
+  e.preventDefault();$('gv-empty').classList.remove('over');
   const files=Array.from(e.dataTransfer?.files||[]).filter(f=>f.type.startsWith('image/'));
   if(files.length) await insertFilesAt(null,files);
 });
 
-// =============================================
-// 合成エンジン（列幅を画像ごとに個別計算）
-// =============================================
-function calcNaturalDimensions() {
+// ===== 合成エンジン（列幅個別計算 + cropData対応） =====
+function calcNaturalDimensions(){
   const flat=flatImages(); if(!flat.length) return null;
-  const {normalization,reference,customSize,gap,lastRowFill,padding,outerBorder}=settings;
-  const getSrcDim=img=>({width:img.w,height:img.h,longSide:Math.max(img.w,img.h),shortSide:Math.min(img.w,img.h)}[normalization]??img.w);
+  const{normalization,reference,customSize,gap,lastRowFill,padding,outerBorder}=settings;
+  const eff=img=>({w:img.cropData?img.cropData.cw:img.w, h:img.cropData?img.cropData.ch:img.h});
+  const getSrcDim=img=>{const{w,h}=eff(img);
+    if(normalization==='width')    return w;
+    if(normalization==='height')   return h;
+    if(normalization==='longSide') return Math.max(w,h);
+    if(normalization==='shortSide')return Math.min(w,h);
+    return w;};
   const dims=flat.map(getSrcDim);
   let target=1;
   if(normalization!=='none'){
     target=reference==='max'?Math.max(...dims):reference==='min'?Math.min(...dims):reference==='first'?dims[0]:Math.max(1,customSize);
   }
   const sizeOf=new Map();
-  flat.forEach((img,i)=>{const s=normalization!=='none'?target/(dims[i]||1):1;sizeOf.set(img.id,{sw:img.w*s,sh:img.h*s});});
-
-  const numCols=maxCols();
-  const numRows=state.grid.length;
-
-  // 列幅 = その列位置に入る画像の最大スケール幅（余白を生まないため列ごとに個別計算）
+  flat.forEach((img,i)=>{const{w,h}=eff(img);const s=normalization!=='none'?target/(dims[i]||1):1;
+    sizeOf.set(img.id,{sw:w*s,sh:h*s,cropData:img.cropData||null});});
+  const numCols=maxCols(), numRows=state.grid.length;
   const colWidths=Array(numCols).fill(0);
-  state.grid.forEach(row=>{
-    row.forEach((img,ci)=>{const {sw}=sizeOf.get(img.id); colWidths[ci]=Math.max(colWidths[ci],sw);});
-  });
+  state.grid.forEach(row=>row.forEach((img,ci)=>{const{sw}=sizeOf.get(img.id);colWidths[ci]=Math.max(colWidths[ci],sw);}));
   const totalRowW=colWidths.reduce((s,w)=>s+w,0)+Math.max(0,numCols-1)*gap;
-
   const rowData=state.grid.map(row=>{
     const n=row.length;
-    let entries=row.map((img,ci)=>{
-      const {sw,sh}=sizeOf.get(img.id);
-      return {imgEl:img.imgEl,origW:img.w,origH:img.h,sw,sh,colW:colWidths[ci]??sw,colSpan:1,isSized:false};
-    });
+    let entries=row.map((img,ci)=>{const{sw,sh,cropData}=sizeOf.get(img.id);
+      return{imgEl:img.imgEl,origW:img.w,origH:img.h,sw,sh,colW:colWidths[ci]??sw,cropData,colSpan:1,isSized:false};});
     if(n<numCols){
       if(lastRowFill==='distribute'){
         const dW=(totalRowW-Math.max(0,n-1)*gap)/n;
         entries.forEach(e=>{const s=dW/(e.sw||1);e.sw=dW;e.sh*=s;e.colW=dW;e.isSized=true;});
       } else if(lastRowFill==='span'&&n>0){
         const usedW=colWidths.slice(0,n-1).reduce((s,w)=>s+w,0)+Math.max(0,n-1)*gap;
-        const spanW=totalRowW-usedW;
-        const last=entries[n-1]; const s=spanW/(last.sw||1);
+        const spanW=totalRowW-usedW,last=entries[n-1],s=spanW/(last.sw||1);
         last.sw=spanW;last.sh*=s;last.colW=spanW;last.colSpan=numCols-(n-1);last.isSized=true;
       }
     }
@@ -1029,97 +974,80 @@ function calcNaturalDimensions() {
   const rowHeights=rowData.map(row=>Math.max(...row.map(e=>e.sh)));
   const contentW=totalRowW;
   const contentH=rowHeights.reduce((s,h)=>s+h,0)+Math.max(0,numRows-1)*gap;
-  const totalW=contentW+padding*2+outerBorder*2;
-  const totalH=contentH+padding*2+outerBorder*2;
-  return {rowData,rowHeights,colWidths,contentW,contentH,totalW,totalH,numCols,numRows,gap};
+  const totalW=contentW+padding*2+outerBorder*2, totalH=contentH+padding*2+outerBorder*2;
+  return{rowData,rowHeights,colWidths,contentW,contentH,totalW,totalH,numCols,numRows,gap};
 }
 
-async function renderAt(scale,fmt) {
+async function renderAt(scale,fmt){
   const nat=calcNaturalDimensions(); if(!nat) return null;
-  const actualFmt=fmt||saveFormat;
+  const af=fmt||saveFormat;
   const W=Math.max(1,Math.round(nat.totalW*scale)), H=Math.max(1,Math.round(nat.totalH*scale));
-  const canvas=document.createElement('canvas'); canvas.width=W; canvas.height=H;
-  const ctx=canvas.getContext('2d'); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
-  const {bgColor,bgTransparent,outerBorder,outerBorderColor,innerBorder,innerBorderColor,padding,alignment}=settings;
-  const useTransparent=bgTransparent&&actualFmt!=='jpeg';
-  if(useTransparent) ctx.clearRect(0,0,W,H); else{ctx.fillStyle=bgColor;ctx.fillRect(0,0,W,H);}
+  const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+  const{bgColor,bgTransparent,outerBorder,outerBorderColor,innerBorder,innerBorderColor,padding,alignment}=settings;
+  if(bgTransparent&&af!=='jpeg') ctx.clearRect(0,0,W,H);
+  else{ctx.fillStyle=bgColor;ctx.fillRect(0,0,W,H);}
   const sOB=outerBorder*scale;
   if(sOB>=0.5){ctx.save();ctx.strokeStyle=outerBorderColor;ctx.lineWidth=sOB;ctx.strokeRect(sOB/2,sOB/2,W-sOB,H-sOB);ctx.restore();}
-  const ox=Math.round((padding+outerBorder)*scale), oy=Math.round((padding+outerBorder)*scale);
-  const sGap=nat.gap*scale;
-  let curY=oy;
+  const ox=Math.round((padding+outerBorder)*scale),oy=Math.round((padding+outerBorder)*scale);
+  const sGap=nat.gap*scale;let curY=oy;
   nat.rowData.forEach((rowEntries,ri)=>{
-    const rowH=Math.round(nat.rowHeights[ri]*scale); let curX=ox;
+    const rowH=Math.round(nat.rowHeights[ri]*scale);let curX=ox;
     rowEntries.forEach(e=>{
-      const sw=Math.round(e.sw*scale), sh=Math.round(e.sh*scale);
-      // 列幅を個別に使う（余白ゼロ）
-      const cW=Math.round(e.colW*scale);
+      const sw=Math.round(e.sw*scale),sh=Math.round(e.sh*scale),cW=Math.round(e.colW*scale);
       let imgX;
-      if(e.isSized)               imgX=Math.round(curX);
+      if(e.isSized) imgX=Math.round(curX);
       else if(alignment==='center') imgX=Math.round(curX+(cW-sw)/2);
       else if(alignment==='start')  imgX=Math.round(curX);
       else                          imgX=Math.round(curX+cW-sw);
       const imgY=Math.round(curY+(rowH-sh)/2);
-      ctx.drawImage(e.imgEl,imgX,imgY,sw,sh);
-      if(innerBorder>0){
-        const sIB=Math.max(0.5,innerBorder*scale);
+      // cropData対応: 9引数drawImage
+      if(e.cropData){const{cx,cy,cw,ch}=e.cropData;ctx.drawImage(e.imgEl,cx,cy,cw,ch,imgX,imgY,sw,sh);}
+      else ctx.drawImage(e.imgEl,imgX,imgY,sw,sh);
+      if(innerBorder>0){const sIB=Math.max(0.5,innerBorder*scale);
         ctx.save();ctx.strokeStyle=innerBorderColor;ctx.lineWidth=sIB;
-        ctx.strokeRect(Math.round(curX)+sIB/2,curY+sIB/2,cW-sIB,rowH-sIB);ctx.restore();
-      }
+        ctx.strokeRect(Math.round(curX)+sIB/2,curY+sIB/2,cW-sIB,rowH-sIB);ctx.restore();}
       curX+=cW+sGap;
     });
-    curY+=rowH; if(ri<nat.rowData.length-1) curY+=sGap;
+    curY+=rowH;if(ri<nat.rowData.length-1)curY+=sGap;
   });
   return canvas;
 }
 
-// =============================================
-// ファイルサイズ推定
-// =============================================
+// ===== ファイルサイズ推定 =====
 let sizeEstTimer=null;
-async function estimateDownloadSize() {
-  const pc=$('preview-canvas'); if(!pc.width||!pc.height) return null;
+async function estimateDownloadSize(){
+  const pc=$('preview-canvas');if(!pc.width||!pc.height) return null;
   const mime=saveFormat==='png'?'image/png':saveFormat==='webp'?'image/webp':'image/jpeg';
-  const quality=saveFormat==='png'?undefined:saveQuality/100;
   return new Promise(resolve=>{
-    pc.toBlob(blob=>{
-      if(!blob){resolve(null);return;}
+    pc.toBlob(blob=>{if(!blob){resolve(null);return;}
       const dlPx=Math.round(state.composedW)*Math.round(state.composedH);
-      const maxPx=settings.maxPixels;
-      const finalPx=(maxPx>0&&dlPx>maxPx)?maxPx:dlPx;
-      resolve(Math.round(blob.size*finalPx/(pc.width*pc.height)));
-    },mime,quality);
+      const mx=settings.maxPixels,fp=(mx>0&&dlPx>mx)?mx:dlPx;
+      resolve(Math.round(blob.size*fp/(pc.width*pc.height)));
+    },mime,saveFormat==='png'?undefined:saveQuality/100);
   });
 }
 function formatBytes(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(0)+' KB';return(b/1048576).toFixed(1)+' MB';}
 
-// =============================================
-// プレビュー
-// =============================================
-let composeTimer=null;
+// ===== プレビュー =====
 function scheduleCompose(d){clearTimeout(composeTimer);composeTimer=setTimeout(doCompose,d||200);}
 async function doCompose(){
-  if(!flatImages().length){updatePreviewEmptyState();return;}
-  const nat=calcNaturalDimensions(); if(!nat)return;
-  $('preview-empty').classList.add('hidden');
-  $('preview-content').classList.remove('hidden');
+  if(!flatImages().length){$('preview-empty').classList.remove('hidden');$('preview-content').classList.add('hidden');return;}
+  const nat=calcNaturalDimensions();if(!nat)return;
+  $('preview-empty').classList.add('hidden');$('preview-content').classList.remove('hidden');
   $('preview-loading').classList.remove('hidden');
   await new Promise(r=>requestAnimationFrame(r));
   try{
-    const maxDim=Math.max(nat.totalW,nat.totalH);
-    const pScale=maxDim>1400?1400/maxDim:1;
-    const pCanvas=await renderAt(pScale,saveFormat);
-    const pc=$('preview-canvas'); pc.width=pCanvas.width; pc.height=pCanvas.height;
-    pc.getContext('2d').drawImage(pCanvas,0,0);
+    const md=Math.max(nat.totalW,nat.totalH),ps=md>1400?1400/md:1;
+    const pC=await renderAt(ps,saveFormat);
+    const pc=$('preview-canvas');pc.width=pC.width;pc.height=pC.height;
+    pc.getContext('2d').drawImage(pC,0,0);
     state.previewNat=nat;state.composedW=nat.totalW;state.composedH=nat.totalH;
     state.composed=true;state.previewDirty=false;
-    updatePreviewInfo(nat);updateSaveTab();
-    $('color-pick-bar').classList.remove('hidden');
+    updatePreviewInfo(nat);updateSaveTab();$('color-pick-bar').classList.remove('hidden');
   }catch(err){console.error(err);alert('プレビューの生成に失敗しました。\n'+err.message);}
   $('preview-loading').classList.add('hidden');
 }
-function updatePreviewEmptyState(){$('preview-empty').classList.remove('hidden');$('preview-content').classList.add('hidden');$('color-pick-bar').classList.add('hidden');}
-function updateSaveEmptyState(){$('save-empty').classList.remove('hidden');$('save-content').classList.add('hidden');}
 function updatePreviewInfo(nat){
   const W=Math.round(nat.totalW),H=Math.round(nat.totalH);
   const mp=(W*H/1e6).toFixed(1),mem=Math.round(W*H*4/1024/1024);
@@ -1128,123 +1056,99 @@ function updatePreviewInfo(nat){
   $('preview-mem-chip').textContent='~'+mem+'MB';
   $('preview-imgs-info').textContent=flatImages().length+'枚 / '+nat.numRows+'行×'+nat.numCols+'列';
   const nm={width:'横幅統一',height:'高さ統一',longSide:'長辺統一',shortSide:'短辺統一',none:'そのまま'};
-  $('preview-scale-info').textContent='('+( nm[settings.normalization]||'')+')';
-  $('warn-dim-danger').classList.add('hidden');$('warn-dim-warn').classList.add('hidden');
-  if(W>16383||H>16383){$('warn-dim-danger').classList.remove('hidden');$('warn-dim-danger-text').textContent='縦横いずれかが16,384px超（'+W+'×'+H+'）。「最大ピクセル数」で制限を。';}
-  else if(W*H>16000000){$('warn-dim-warn').classList.remove('hidden');$('warn-dim-warn-text').textContent=mp+'MP と大きな画像です。「最大ピクセル数」で制限できます。';}
+  $('preview-scale-info').textContent='('+(nm[settings.normalization]||'')+')';
 }
 $('btn-compose').addEventListener('click',()=>{if(!flatImages().length){showTab('images');return;}doCompose();});
-
-// 背景色スポイト
 $('btn-pick-canvas').addEventListener('click',()=>{
-  if(!state.composed) return;
+  if(!state.composed)return;
   state.pickColorMode=!state.pickColorMode;
   $('btn-pick-canvas').classList.toggle('active',state.pickColorMode);
   $('preview-canvas').classList.toggle('picking',state.pickColorMode);
   $('btn-pick-canvas').textContent=state.pickColorMode?'✕ キャンセル':'🎨 画像から背景色を取得';
 });
 $('preview-canvas').addEventListener('click',e=>{
-  if(!state.pickColorMode) return;
+  if(!state.pickColorMode)return;
   const c=e.currentTarget,r=c.getBoundingClientRect();
-  const x=Math.round((e.clientX-r.left)*c.width/r.width), y=Math.round((e.clientY-r.top)*c.height/r.height);
+  const x=Math.round((e.clientX-r.left)*c.width/r.width),y=Math.round((e.clientY-r.top)*c.height/r.height);
   const d=c.getContext('2d').getImageData(x,y,1,1).data;
   const hex='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');
-  settings.bgColor=hex;$('s-bg-color').value=hex;
+  settings.bgColor=hex;$('adj-bg-color').value=hex;
   state.pickColorMode=false;$('btn-pick-canvas').classList.remove('active');$('preview-canvas').classList.remove('picking');
   $('btn-pick-canvas').textContent='🎨 画像から背景色を取得';
   state.previewDirty=true;scheduleCompose(100);
 });
 $('btn-eyedrop').addEventListener('click',async()=>{
   if(!('EyeDropper' in window)){alert('Chrome 95以降でのみ使えます。');return;}
-  try{const{sRGBHex}=await new EyeDropper().open();settings.bgColor=sRGBHex;$('s-bg-color').value=sRGBHex;state.previewDirty=true;scheduleCompose(100);}catch(e){}
+  try{const{sRGBHex}=await new EyeDropper().open();settings.bgColor=sRGBHex;$('adj-bg-color').value=sRGBHex;state.previewDirty=true;scheduleCompose(100);}catch(e){}
 });
 
-// =============================================
-// 保存タブ
-// =============================================
-let saveFormat='jpeg', saveQuality=92;
-$$('.format-pill').forEach(pill=>{
-  pill.addEventListener('click',()=>{
-    $$('.format-pill').forEach(p=>p.classList.remove('active'));
-    pill.classList.add('active'); saveFormat=pill.dataset.fmt;
-    $('save-quality-row').classList.toggle('hidden',saveFormat==='png');
-    if(state.composed&&flatImages().length){state.previewDirty=true;scheduleCompose(100);}
-    updateSaveTab();
-  });
-});
-// 品質スライダー → リアルタイム更新（debounce 400ms）
+// ===== 保存タブ =====
+$$('.format-pill').forEach(pill=>{pill.addEventListener('click',()=>{
+  $$('.format-pill').forEach(p=>p.classList.remove('active'));pill.classList.add('active');saveFormat=pill.dataset.fmt;
+  $('save-quality-row').classList.toggle('hidden',saveFormat==='png');
+  if(state.composed&&flatImages().length){state.previewDirty=true;scheduleCompose(100);}
+  updateSaveTab();
+});});
 $('save-quality').addEventListener('input',()=>{
-  saveQuality=parseInt($('save-quality').value);
-  $('save-quality-val').textContent=saveQuality;
-  clearTimeout(sizeEstTimer);
-  sizeEstTimer=setTimeout(()=>updateSaveTab(),400);
+  saveQuality=parseInt($('save-quality').value);$('save-quality-val').textContent=saveQuality;
+  clearTimeout(sizeEstTimeout);sizeEstTimeout=setTimeout(()=>updateSaveTab(),400);
 });
-
 function updateSaveTab(){
   if(!state.composed||!state.composedW){$('save-empty').classList.remove('hidden');$('save-content').classList.add('hidden');return;}
   $('save-empty').classList.add('hidden');$('save-content').classList.remove('hidden');
-  let fW=Math.round(state.composedW),fH=Math.round(state.composedH),scaledDown=false;
-  if(settings.maxPixels>0&&fW*fH>settings.maxPixels){const s=Math.sqrt(settings.maxPixels/(fW*fH));fW=Math.round(fW*s);fH=Math.round(fH*s);scaledDown=true;}
-  const mp=(fW*fH/1e6).toFixed(1), nat=state.previewNat;
-  const gi=nat?nat.numRows+'行×'+nat.numCols+'列':'';
-  const fmtStr=saveFormat.toUpperCase()+(saveFormat!=='png'?' 品質:'+saveQuality:'');
+  let fW=Math.round(state.composedW),fH=Math.round(state.composedH),sd=false;
+  if(settings.maxPixels>0&&fW*fH>settings.maxPixels){const s=Math.sqrt(settings.maxPixels/(fW*fH));fW=Math.round(fW*s);fH=Math.round(fH*s);sd=true;}
+  const mp=(fW*fH/1e6).toFixed(1),nat=state.previewNat,gi=nat?nat.numRows+'行×'+nat.numCols+'列':'';
+  // 警告（保存タブに統合）
+  $('warn-size-danger').classList.add('hidden');$('warn-size-warn').classList.add('hidden');$('save-size-ok').classList.add('hidden');
+  if(fW>16383||fH>16383){
+    $('warn-size-danger').classList.remove('hidden');
+    $('warn-size-danger-text').textContent='縦横いずれかが16,384px超（'+fW+'×'+fH+'）。Canvas上限に触れる可能性があります。「最大ピクセル数」で制限を。';
+  } else if(fW*fH>25000000){
+    $('warn-size-warn').classList.remove('hidden');
+    $('warn-size-warn-text').textContent=mp+'MP と大きな画像です。ダウンロードに時間がかかる場合があります。';
+  } else {
+    $('save-size-ok').classList.remove('hidden');$('save-size-ok-text').textContent='問題なくダウンロードできる見込みです。';
+  }
   $('save-summary').innerHTML=
     '<div class="save-row"><span class="save-key">解像度</span><span class="save-val">'+fW+' × '+fH+' px</span></div>'+
     '<div class="save-row"><span class="save-key">ピクセル数</span><span class="save-val">'+mp+' MP</span></div>'+
     '<div class="save-row"><span class="save-key">グリッド</span><span class="save-val">'+flatImages().length+'枚 / '+gi+'</span></div>'+
-    '<div class="save-row"><span class="save-key">形式</span><span class="save-val" id="save-fmt-val">'+fmtStr+'</span></div>'+
-    (scaledDown?'<div class="save-row"><span class="save-key">最大ピクセル適用</span><span class="save-val" style="color:var(--warn)">縮小あり</span></div>':'')+
-    '<div class="save-row"><span class="save-key">保存後サイズ目安</span><span class="save-val" id="size-estimate-val">計算中…</span></div>';
-  estimateDownloadSize().then(bytes=>{
-    const el=$('size-estimate-val'); if(el) el.textContent=bytes!==null?'~'+formatBytes(bytes)+' (概算)':'不明';
-  });
-  const wE=$('save-size-warn'),oE=$('save-size-ok');
-  wE.classList.add('hidden');oE.classList.add('hidden');
-  if(fW*fH>25000000){wE.classList.remove('hidden');$('save-size-warn-text').textContent='非常に大きな画像です。ダウンロードに時間がかかる場合があります。';}
-  else{oE.classList.remove('hidden');$('save-size-ok-text').textContent='問題なくダウンロードできる見込みです。';}
+    '<div class="save-row"><span class="save-key">形式</span><span class="save-val">'+saveFormat.toUpperCase()+(saveFormat!=='png'?' 品質:'+saveQuality:'')+'</span></div>'+
+    (sd?'<div class="save-row"><span class="save-key">最大ピクセル適用</span><span class="save-val" style="color:var(--warn)">縮小あり</span></div>':'')+
+    '<div class="save-row"><span class="save-key">保存後サイズ目安</span><span class="save-val" id="size-est">計算中…</span></div>';
+  estimateDownloadSize().then(bytes=>{const el=$('size-est');if(el)el.textContent=bytes!==null?'~'+formatBytes(bytes)+' (概算)':'不明';});
 }
 
-// =============================================
-// ダウンロード
-// =============================================
+// ===== ダウンロード =====
 $('btn-download').addEventListener('click',async()=>{
   if(!state.composed){alert('先にプレビューを生成してください。');return;}
-  const nat=state.previewNat; if(!nat) return;
+  const nat=state.previewNat;if(!nat)return;
   let dlScale=1;
   if(settings.maxPixels>0&&nat.totalW*nat.totalH>settings.maxPixels) dlScale=Math.sqrt(settings.maxPixels/(nat.totalW*nat.totalH));
-  const btn=$('btn-download'); btn.disabled=true; btn.textContent='⏳ 生成中…';
+  const btn=$('btn-download');btn.disabled=true;btn.textContent='⏳ 生成中…';
   try{
-    const canvas=await renderAt(dlScale,saveFormat); if(!canvas) throw new Error('Canvas null');
+    const canvas=await renderAt(dlScale,saveFormat);if(!canvas) throw new Error('Canvas null');
     const mime=saveFormat==='png'?'image/png':saveFormat==='webp'?'image/webp':'image/jpeg';
-    await new Promise((res,rej)=>{
-      canvas.toBlob(blob=>{
-        if(!blob){rej(new Error('toBlob failed'));return;}
-        const url=URL.createObjectURL(blob),a=document.createElement('a');
-        a.href=url;a.download='namacollage_'+Date.now()+'.'+saveFormat;
-        a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);res();
-      },mime,saveFormat==='png'?undefined:saveQuality/100);
-    });
+    await new Promise((res,rej)=>{canvas.toBlob(blob=>{if(!blob){rej();return;}
+      const url=URL.createObjectURL(blob),a=document.createElement('a');
+      a.href=url;a.download='namacollage_'+Date.now()+'.'+saveFormat;a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),5000);res();
+    },mime,saveFormat==='png'?undefined:saveQuality/100);});
   }catch(err){console.error(err);alert('ダウンロードに失敗しました。\n'+err.message);}
   btn.disabled=false;btn.innerHTML='⬇️ ダウンロード';
 });
 
-// =============================================
-// 初期化
-// =============================================
+// ===== 初期化 =====
 (function init(){
-  readSettings();syncSettingsUI();
+  syncAdjPanel();
   renderGridView();updateCountBadge();
-  $('preview-empty').classList.remove('hidden');
-  $('preview-content').classList.add('hidden');
+  $('preview-empty').classList.remove('hidden');$('preview-content').classList.add('hidden');
   $('color-pick-bar').classList.add('hidden');
-  $('save-empty').classList.remove('hidden');
-  $('save-content').classList.add('hidden');
+  $('save-empty').classList.remove('hidden');$('save-content').classList.add('hidden');
+  $('trim-modal').classList.add('hidden');$('ctx-menu').classList.add('hidden');
   if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
-  // URL params（Share Target リダイレクト後）
-  if(new URLSearchParams(location.search).get('share_pending')){
-    history.replaceState({},'','./');
-    // restoreFromDB 完了後に loadPendingShares が走るので追加不要
-  }
+  if(new URLSearchParams(location.search).get('share_pending')) history.replaceState({},'','./');
 })();
 </script>
 </body>
