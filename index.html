@@ -177,6 +177,14 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%233D6080'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 4px center;}
 
+/* Topping selection/drag */
+.tp-head{cursor:pointer;-webkit-user-select:none;user-select:none;}
+.tp-item.selected .tp-head{background:rgba(85,72,214,0.12);color:var(--violet);}
+.tp-item.selected .tp-num{color:var(--violet);font-weight:800;}
+#topping-canvas{touch-action:none;cursor:default;}
+#topping-canvas.draggable{cursor:move;}
+#topping-canvas.dragging{cursor:grabbing;}
+
 /* Save */
 .save-summary{background:var(--surf2);border-radius:9px;border:1px solid var(--border);padding:12px 14px;display:flex;flex-direction:column;gap:6px;}
 .save-row{display:flex;justify-content:space-between;font-size:13px;}
@@ -231,7 +239,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 <div id="header">
   <div id="logo"><img src="./NamaCollageLogo192.png" alt="NamaCollage"></div>
   <div><div id="app-name">NamaCollage</div><div id="sub-name">ナマコ — 画像結合ツール</div></div>
-  <button type="button" id="btn-install" title="アプリとしてインストール">📲</button>
+  <button type="button" id="btn-install" title="アプリとしてインストール">📲 インストール</button>
   <span id="count-badge"></span>
 </div>
 
@@ -480,7 +488,7 @@ const state = {
   pickColorMode:false,
   composed:null, composedW:0, composedH:0,
   previewNat:null, previewDirty:true,
-  toppings:[], nextToppingId:1,
+  toppings:[], nextToppingId:1, selectedToppingId:null,
 };
 const settings = {
   normalization:'width', reference:'max', customSize:1000,
@@ -858,7 +866,7 @@ function applyToppings(ctx,W,H,scale){
   });
 }
 
-async function renderAt(scale,fmt){
+async function renderBaseAt(scale,fmt){
   const nat=calcNaturalDimensions(); if(!nat) return null;
   const af=fmt||saveFormat;
   const W=Math.max(1,Math.round(nat.totalW*scale)),H=Math.max(1,Math.round(nat.totalH*scale));
@@ -888,7 +896,12 @@ async function renderAt(scale,fmt){
     });
     curY+=rowH; if(ri<nat.rowData.length-1) curY+=sGap;
   });
-  if(state.toppings.length>0) applyToppings(ctx,W,H,scale);
+  return canvas;
+}
+// renderAt = renderBaseAt + toppings (ダウンロード用)
+async function renderAt(scale,fmt){
+  const canvas=await renderBaseAt(scale,fmt); if(!canvas) return null;
+  if(state.toppings.length>0) applyToppings(canvas.getContext('2d'),canvas.width,canvas.height,scale);
   return canvas;
 }
 
@@ -916,7 +929,7 @@ async function doCompose(){
   await new Promise(r=>requestAnimationFrame(r));
   try{
     const md=Math.max(nat.totalW,nat.totalH),ps=md>1400?1400/md:1;
-    const pC=await renderAt(ps,saveFormat);
+    const pC=await renderBaseAt(ps,saveFormat);  // プレビューはベースのみ
     const pc=$('preview-canvas'); pc.width=pC.width; pc.height=pC.height;
     // 透明背景: clearRect してからdrawImage → チェッカーがcanvas透過部分から透けて見える
     const pctx=pc.getContext('2d'); pctx.clearRect(0,0,pC.width,pC.height); pctx.drawImage(pC,0,0);
@@ -1042,7 +1055,49 @@ function renderToppingCanvas(){
   const ctx=tc.getContext('2d'); ctx.clearRect(0,0,tc.width,tc.height); ctx.drawImage(pc,0,0);
   const ps=pc.width/(state.previewNat.totalW||1);
   applyToppings(ctx,pc.width,pc.height,ps);
+  // 選択中トッピングのクロスヘア
+  if(state.selectedToppingId!==null){
+    const sel=state.toppings.find(t=>t.id===state.selectedToppingId);
+    if(sel){
+      const sx=sel.x/100*tc.width, sy=sel.y/100*tc.height;
+      ctx.save();
+      ctx.strokeStyle='#5548D6'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(sx-14,sy);ctx.lineTo(sx+14,sy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(sx,sy-14);ctx.lineTo(sx,sy+14);ctx.stroke();
+      ctx.restore();
+    }
+  }
 }
+// ── トッピングキャンバスのドラッグ移動 ──
+let tpDrag=false;
+function tpUpdateFromPointer(e){
+  const t=state.toppings.find(tp=>tp.id===state.selectedToppingId); if(!t) return;
+  const tc=$('topping-canvas'),r=tc.getBoundingClientRect();
+  t.x=Math.round(Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)));
+  t.y=Math.round(Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100)));
+  // スライダー同期
+  const items=[...$$('.tp-item')]; const idx=state.toppings.indexOf(t);
+  if(items[idx]){
+    const xs=items[idx].querySelector('.tp-x'),ys=items[idx].querySelector('.tp-y');
+    const xv=items[idx].querySelector('.tp-x-val'),yv=items[idx].querySelector('.tp-y-val');
+    if(xs){xs.value=t.x;} if(ys){ys.value=t.y;}
+    if(xv)xv.textContent=t.x; if(yv)yv.textContent=t.y;
+  }
+  renderToppingCanvas();
+}
+const toppingCvs=$('topping-canvas');
+toppingCvs.addEventListener('pointerdown',e=>{
+  if(state.selectedToppingId===null) return;
+  tpDrag=true; toppingCvs.setPointerCapture(e.pointerId);
+  toppingCvs.classList.add('dragging');
+  tpUpdateFromPointer(e);
+});
+toppingCvs.addEventListener('pointermove',e=>{ if(tpDrag) tpUpdateFromPointer(e); });
+toppingCvs.addEventListener('pointerup',()=>{
+  if(tpDrag){ tpDrag=false; toppingCvs.classList.remove('dragging'); persistLayout(); }
+});
+toppingCvs.addEventListener('pointercancel',()=>{ tpDrag=false; toppingCvs.classList.remove('dragging'); });
+
 $('btn-add-topping').addEventListener('click',()=>{
   state.toppings.push({id:state.nextToppingId++,text:'テキスト',x:50,y:50,fontSize:80,color:'#ffffff',textAlign:'center',strokeWidth:3,strokeColor:'#000000',shadowEnabled:true,shadowColor:'#000000',shadowBlur:6,shadowX:2,shadowY:2,fontFamily:'sans-serif'});
   renderToppingList(); renderToppingCanvas(); persistLayout();
@@ -1073,7 +1128,12 @@ function renderToppingList(){
       if(el.tagName==='INPUT'&&el.type==='number') el.style.webkitUserSelect='text';
       el.style.userSelect='text';
     };
-    item.querySelector('.tp-del').onclick=()=>{state.toppings.splice(state.toppings.indexOf(t),1);renderToppingList();renderToppingCanvas();persistLayout();};
+    item.querySelector('.tp-del').onclick=()=>{if(state.selectedToppingId===t.id)state.selectedToppingId=null;state.toppings.splice(state.toppings.indexOf(t),1);renderToppingList();renderToppingCanvas();persistLayout();};
+    item.querySelector('.tp-head').addEventListener('click',e=>{
+      if(e.target.classList.contains('tp-del')) return;
+      state.selectedToppingId=(state.selectedToppingId===t.id)?null:t.id;
+      updateToppingSelection(); renderToppingCanvas();
+    });
     item.querySelector('.tp-textarea').addEventListener('input',e=>{t.text=e.target.value;update();});
     item.querySelector('.tp-textarea').style.webkitUserSelect='text';
     item.querySelector('.tp-textarea').style.userSelect='text';
@@ -1094,6 +1154,16 @@ function renderToppingList(){
     item.querySelector('.tp-shb').addEventListener('input',e=>{t.shadowBlur=parseFloat(e.target.value)||0;update();});
     list.appendChild(item);
   });
+  updateToppingSelection();
+}
+function updateToppingSelection(){
+  $$('.tp-item').forEach(el=>el.classList.remove('selected'));
+  if(state.selectedToppingId!==null){
+    const idx=state.toppings.findIndex(t=>t.id===state.selectedToppingId);
+    const items=[...$$('.tp-item')];
+    if(items[idx]) items[idx].classList.add('selected');
+  }
+  $('topping-canvas').classList.toggle('draggable',state.selectedToppingId!==null);
 }
 
 // ===== トリミングモーダル =====
