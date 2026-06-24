@@ -243,6 +243,23 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 .modal-close{margin-top:20px;width:100%;padding:12px;border-radius:9px;border:none;background:var(--prime);color:#fff;font-size:15px;font-weight:600;cursor:pointer;touch-action:manipulation;}
 
 /* Misc */
+.ctx-sep{height:1px;background:var(--border);margin:3px 0;}
+.ctx-item-danger{color:var(--danger)!important;}
+/* カラー調整・中抜きモーダル (trim-modalと同じ構造を流用) */
+#color-modal,#cutout-modal{position:fixed;inset:0;background:rgba(0,20,60,0.9);z-index:900;overflow:hidden;}
+#color-header,#cutout-header{position:absolute;top:0;left:0;right:0;z-index:10;height:54px;background:var(--surf);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;gap:6px;}
+#color-canvas-wrap,#cutout-canvas-wrap{position:absolute;top:54px;bottom:130px;left:0;right:0;z-index:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:12px;-webkit-overflow-scrolling:touch;}
+#color-canvas,#cutout-canvas{display:block;max-width:100%;height:auto;touch-action:none;}
+#cutout-canvas{cursor:ns-resize;}
+#color-footer,#cutout-footer{position:absolute;bottom:0;left:0;right:0;z-index:10;height:130px;background:var(--surf);border-top:1px solid var(--border);padding:8px 14px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;}
+.ca-row{display:flex;align-items:center;gap:6px;}
+.ca-label{font-size:10.5px;font-weight:700;color:var(--muted);width:32px;flex-shrink:0;text-align:right;}
+.ca-slider{accent-color:var(--prime);flex:1;cursor:pointer;}
+.ca-val{font-size:11px;font-weight:700;color:var(--prime);width:28px;text-align:right;flex-shrink:0;}
+/* tp detail panel */
+#tp-selected-panel{background:var(--surf);border:1.5px solid var(--violet);border-radius:var(--radius);padding:10px 12px;display:flex;flex-direction:column;gap:7px;}
+#tp-selected-panel:empty{display:none;}
+.tp-panel-head{font-size:12px;font-weight:700;color:var(--violet);padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:2px;}
 .empty-state{text-align:center;padding:48px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;color:var(--muted);}
 .empty-icon{font-size:50px;line-height:1;}
 .empty-text{font-size:14px;line-height:1.7;}
@@ -473,6 +490,18 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 <!-- コンテキストメニュー -->
 <div id="ctx-menu" class="hidden">
   <button type="button" class="ctx-item" id="ctx-trim">✂️ トリミング</button>
+  <div class="ctx-sep"></div>
+  <button type="button" class="ctx-item" id="ctx-cutv">✄ 中抜き（縦）</button>
+  <button type="button" class="ctx-item" id="ctx-cuth">✄ 中抜き（横）</button>
+  <div class="ctx-sep"></div>
+  <button type="button" class="ctx-item" id="ctx-rot-cw">↻ 右90°回転</button>
+  <button type="button" class="ctx-item" id="ctx-rot-ccw">↺ 左90°回転</button>
+  <button type="button" class="ctx-item" id="ctx-flip-h">↔ 左右反転</button>
+  <button type="button" class="ctx-item" id="ctx-flip-v">↕ 上下反転</button>
+  <div class="ctx-sep"></div>
+  <button type="button" class="ctx-item" id="ctx-color">🎨 カラー調整</button>
+  <div class="ctx-sep"></div>
+  <button type="button" class="ctx-item ctx-item-danger" id="ctx-reset-img">↺ 編集をリセット</button>
 </div>
 
 <!-- トリミングモーダル -->
@@ -562,7 +591,7 @@ async function persistNewImages(imgs){
 }
 async function persistLayout(){
   try{ await dbTxW('meta',s=>s.put({
-    layout:state.grid.map(row=>row.map(img=>({id:img.id,cropData:img.cropData||null}))),
+    layout:state.grid.map(row=>row.map(img=>({id:img.id,cropData:img.cropData||null,transform:img.transform||null,colorAdjust:img.colorAdjust||null,cutoutData:img.cutoutData||null}))),
     nextId:state.nextId, toppings:state.toppings, nextToppingId:state.nextToppingId,
   },'grid_layout')); }catch(e){}
 }
@@ -573,7 +602,7 @@ async function restoreFromDB(){
   await Promise.all(imgs.map(async rec=>{
     const url=URL.createObjectURL(rec.blob),el=new Image();
     await new Promise(r=>{el.onload=r;el.onerror=r;el.src=url;});
-    map.set(rec.id,{id:rec.id,name:rec.name,imgEl:el,url,w:el.naturalWidth,h:el.naturalHeight,cropData:null});
+    map.set(rec.id,{id:rec.id,name:rec.name,imgEl:el,url,w:el.naturalWidth,h:el.naturalHeight,cropData:null,transform:null,colorAdjust:null,cutoutData:null,thumbUrl:null});
   }));
   if(meta?.nextId) state.nextId=meta.nextId;
   if(meta?.toppings && meta.toppings.length){
@@ -584,7 +613,7 @@ async function restoreFromDB(){
   if(meta?.layout){
     state.grid=meta.layout.map(row=>row.map(item=>{
       const img=map.get(typeof item==='number'?item:item.id); if(!img) return null;
-      if(item?.cropData) img.cropData=item.cropData; return img;
+      if(item?.cropData)img.cropData=item.cropData;if(item?.transform)img.transform=item.transform;if(item?.colorAdjust)img.colorAdjust=item.colorAdjust;if(item?.cutoutData)img.cutoutData=item.cutoutData;return img;
     }).filter(Boolean)).filter(r=>r.length>0);
   } else state.grid=[Array.from(map.values())];
   state.previewDirty=true; renderGridView(); updateCountBadge();
@@ -682,7 +711,7 @@ $('btn-install').addEventListener('click',async()=>{
 async function loadImageFile(file){
   return new Promise((res,rej)=>{
     const url=URL.createObjectURL(file),el=new Image();
-    el.onload=()=>res({id:state.nextId++,name:file.name,imgEl:el,url,w:el.naturalWidth,h:el.naturalHeight,cropData:null});
+    el.onload=()=>res({id:state.nextId++,name:file.name,imgEl:el,url,w:el.naturalWidth,h:el.naturalHeight,cropData:null,transform:null,colorAdjust:null,cutoutData:null,thumbUrl:null});
     el.onerror=()=>rej(new Error('読込失敗: '+file.name)); el.src=url;
   });
 }
@@ -754,8 +783,9 @@ function renderGridView(){
       const ss=Math.abs(sx-1)<0.005?'等倍':(sx>1?'×'+sx.toFixed(2)+' 拡大':'×'+sx.toFixed(2)+' 縮小');
       const nm=img.name.length>14?img.name.substring(0,12)+'…':img.name;
       const cell=document.createElement('div'); cell.className='gv-cell'; cell.style.cssText='width:'+dW+'px;height:'+dH+'px;';
-      cell.innerHTML=(img.cropData?'<div class="gv-crop-badge">✂</div>':'')+
-        '<img src="'+img.url+'" alt="" draggable="false">'+
+      const thumbSrc=img.thumbUrl||img.url;
+      cell.innerHTML=(img.cropData||img.cutoutData||img.transform||img.colorAdjust?'<div class="gv-crop-badge" title="編集済み">✏️</div>':'')+
+        '<img src="'+thumbSrc+'" alt="" draggable="false">'+
         '<div class="gv-overlay"><div class="gv-num">#'+gn+'</div><div>'+escHtml(nm)+'</div>'+
         '<div>'+(img.cropData?img.cropData.cw+'×'+img.cropData.ch+' ✂':img.w+'×'+img.h)+' '+ss+'</div>'+
         '<div class="gv-moves">'+
@@ -797,6 +827,91 @@ function attachLongPress(el,cb){
   el.addEventListener('contextmenu',e=>{e.preventDefault();cb(e);});
 }
 
+
+// ===== 画像変換統合 =====
+function getEffectiveDimensions(img){
+  let w=img.w,h=img.h;
+  if(img.cropData){w=img.cropData.cw;h=img.cropData.ch;}
+  if(img.cutoutData){const{mode,start,end}=img.cutoutData;const cut=end-start;if(mode==='v')h=h*(1-cut);else w=w*(1-cut);}
+  const r=img.transform?.r||0;
+  return(r===90||r===270)?{w:h,h:w}:{w,h};
+}
+
+function buildColorFilter(ca){
+  if(!ca)return'none';
+  const exp=1+(ca.exposure||0)/100,bri=1+(ca.brightness||0)/100;
+  const con=1+(ca.contrast||0)/100,sat=1+(ca.saturation||0)/100;
+  return`brightness(${(exp*bri).toFixed(3)}) contrast(${con.toFixed(3)}) saturate(${sat.toFixed(3)})`;
+}
+
+function drawImgOnCanvas(ctx,img,dx,dy,dw,dh){
+  // ソース領域確定
+  let sx=0,sy=0,sw=img.w,sh=img.h;
+  if(img.cropData){sx=img.cropData.cx;sy=img.cropData.cy;sw=img.cropData.cw;sh=img.cropData.ch;}
+
+  ctx.save();
+  if(img.colorAdjust) ctx.filter=buildColorFilter(img.colorAdjust);
+
+  const r=img.transform?.r||0,fH=img.transform?.flipH||false,fV=img.transform?.flipV||false;
+  const hasTR=r||fH||fV;
+
+  if(img.cutoutData){
+    // 中抜き: 2分割描画
+    const{mode,start,end}=img.cutoutData;const cut=end-start;
+    if(mode==='v'){
+      const topSH=sh*start,botSH=sh*(1-end);
+      const effH=sh*(1-cut),ratio=dh/effH;
+      if(hasTR){
+        drawWithTransform(ctx,img,sx,sy,sw,topSH,dx,dy,dw,topSH*ratio,r,fH,fV);
+        drawWithTransform(ctx,img,sx,sy+sh*end,sw,botSH,dx,dy+topSH*ratio,dw,botSH*ratio,r,fH,fV);
+      }else{
+        ctx.drawImage(img.imgEl,sx,sy,sw,topSH,dx,dy,dw,topSH*ratio);
+        ctx.drawImage(img.imgEl,sx,sy+sh*end,sw,botSH,dx,dy+topSH*ratio,dw,botSH*ratio);
+      }
+    }else{
+      const leftSW=sw*start,rightSW=sw*(1-end);
+      const effW=sw*(1-cut),ratio=dw/effW;
+      if(hasTR){
+        drawWithTransform(ctx,img,sx,sy,leftSW,sh,dx,dy,leftSW*ratio,dh,r,fH,fV);
+        drawWithTransform(ctx,img,sx+sw*end,sy,rightSW,sh,dx+leftSW*ratio,dy,rightSW*ratio,dh,r,fH,fV);
+      }else{
+        ctx.drawImage(img.imgEl,sx,sy,leftSW,sh,dx,dy,leftSW*ratio,dh);
+        ctx.drawImage(img.imgEl,sx+sw*end,sy,rightSW,sh,dx+leftSW*ratio,dy,rightSW*ratio,dh);
+      }
+    }
+  }else if(hasTR){
+    drawWithTransform(ctx,img,sx,sy,sw,sh,dx,dy,dw,dh,r,fH,fV);
+  }else{
+    ctx.drawImage(img.imgEl,sx,sy,sw,sh,dx,dy,dw,dh);
+  }
+  ctx.restore();
+}
+
+function drawWithTransform(ctx,img,sx,sy,sw,sh,dx,dy,dw,dh,r,fH,fV){
+  ctx.save();
+  ctx.translate(dx+dw/2,dy+dh/2);
+  ctx.rotate(r*Math.PI/180);
+  if(fH)ctx.scale(-1,1);
+  if(fV)ctx.scale(1,-1);
+  const[w2,h2]=(r===90||r===270)?[dh/2,dw/2]:[dw/2,dh/2];
+  ctx.drawImage(img.imgEl,sx,sy,sw,sh,-w2,-h2,w2*2,h2*2);
+  ctx.restore();
+}
+
+async function updateImgThumb(img){
+  const eff=getEffectiveDimensions(img);
+  const maxS=220,s=Math.min(maxS/eff.w,maxS/eff.h,1);
+  const W=Math.max(1,Math.round(eff.w*s)),H=Math.max(1,Math.round(eff.h*s));
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;
+  drawImgOnCanvas(cv.getContext('2d'),img,0,0,W,H);
+  return new Promise(res=>{
+    cv.toBlob(blob=>{
+      if(img.thumbUrl)URL.revokeObjectURL(img.thumbUrl);
+      img.thumbUrl=blob?URL.createObjectURL(blob):null;res();
+    },'image/jpeg',0.82);
+  });
+}
+
 // ===== コンテキストメニュー =====
 let ctxTarget={ri:-1,ci:-1};
 function showCtxMenu(e,ri,ci){
@@ -805,7 +920,37 @@ function showCtxMenu(e,ri,ci){
   m.style.left=left+'px'; m.style.top=top+'px';
 }
 document.addEventListener('pointerdown',e=>{ if(!$('ctx-menu').classList.contains('hidden')&&!$('ctx-menu').contains(e.target))$('ctx-menu').classList.add('hidden'); });
-$('ctx-trim').addEventListener('click',()=>{ $('ctx-menu').classList.add('hidden'); openTrimModal(ctxTarget.ri,ctxTarget.ci); });
+$('ctx-menu').classList.add('hidden');
+// ── コンテキストメニュー各アクション ──
+function ctxHide(){ $('ctx-menu').classList.add('hidden'); }
+
+$('ctx-trim').addEventListener('click',()=>{ ctxHide(); openTrimModal(ctxTarget.ri,ctxTarget.ci); });
+
+$('ctx-cutv').addEventListener('click',()=>{ ctxHide(); openCutoutModal(ctxTarget.ri,ctxTarget.ci,'v'); });
+$('ctx-cuth').addEventListener('click',()=>{ ctxHide(); openCutoutModal(ctxTarget.ri,ctxTarget.ci,'h'); });
+
+function applyRotateFlip(ri,ci,rotDelta,flipH,flipV){
+  const img=state.grid[ri][ci];
+  if(!img.transform) img.transform={r:0,flipH:false,flipV:false};
+  if(rotDelta) img.transform.r=(img.transform.r+rotDelta+360)%360;
+  if(flipH) img.transform.flipH=!img.transform.flipH;
+  if(flipV) img.transform.flipV=!img.transform.flipV;
+  if(img.transform.r===0&&!img.transform.flipH&&!img.transform.flipV) img.transform=null;
+  state.previewDirty=true;
+  updateImgThumb(img).then(()=>{renderGridView();persistLayout();});
+}
+$('ctx-rot-cw').addEventListener('click',()=>{ ctxHide(); applyRotateFlip(ctxTarget.ri,ctxTarget.ci,90,false,false); });
+$('ctx-rot-ccw').addEventListener('click',()=>{ ctxHide(); applyRotateFlip(ctxTarget.ri,ctxTarget.ci,-90,false,false); });
+$('ctx-flip-h').addEventListener('click',()=>{ ctxHide(); applyRotateFlip(ctxTarget.ri,ctxTarget.ci,0,true,false); });
+$('ctx-flip-v').addEventListener('click',()=>{ ctxHide(); applyRotateFlip(ctxTarget.ri,ctxTarget.ci,0,false,true); });
+$('ctx-color').addEventListener('click',()=>{ ctxHide(); openColorModal(ctxTarget.ri,ctxTarget.ci); });
+$('ctx-reset-img').addEventListener('click',()=>{
+  ctxHide();
+  const img=state.grid[ctxTarget.ri][ctxTarget.ci];
+  img.cropData=null;img.cutoutData=null;img.transform=null;img.colorAdjust=null;
+  if(img.thumbUrl){URL.revokeObjectURL(img.thumbUrl);img.thumbUrl=null;}
+  state.previewDirty=true;renderGridView();persistLayout();
+});
 
 // ===== ファイル入力 =====
 $('file-input').addEventListener('change',async e=>{
@@ -827,7 +972,7 @@ document.body.addEventListener('drop',async e=>{
 function calcNaturalDimensions(){
   const flat=flatImages(); if(!flat.length) return null;
   const{normalization,reference,customSize,gap,lastRowFill,padding,outerBorder}=settings;
-  const eff=img=>({w:img.cropData?img.cropData.cw:img.w,h:img.cropData?img.cropData.ch:img.h});
+  const eff=img=>getEffectiveDimensions(img);
   const getSrcDim=img=>{const{w,h}=eff(img);
     if(normalization==='width')    return w;
     if(normalization==='height')   return h;
@@ -845,7 +990,7 @@ function calcNaturalDimensions(){
   const totalRowW=colWidths.reduce((s,w)=>s+w,0)+Math.max(0,numCols-1)*gap;
   const rowData=state.grid.map(row=>{
     const n=row.length;
-    let entries=row.map((img,ci)=>{const{sw,sh,cropData}=sizeOf.get(img.id);return{imgEl:img.imgEl,origW:img.w,origH:img.h,sw,sh,colW:colWidths[ci]??sw,cropData,colSpan:1,isSized:false};});
+    let entries=row.map((img,ci)=>{const{sw,sh}=sizeOf.get(img.id);return{imgEl:img.imgEl,_img:img,origW:img.w,origH:img.h,sw,sh,colW:colWidths[ci]??sw,colSpan:1,isSized:false};});
     if(n<numCols){
       if(lastRowFill==='distribute'){const dW=(totalRowW-Math.max(0,n-1)*gap)/n;entries.forEach(e=>{const s=dW/(e.sw||1);e.sw=dW;e.sh*=s;e.colW=dW;e.isSized=true;});}
       else if(lastRowFill==='span'&&n>0){const usedW=colWidths.slice(0,n-1).reduce((s,w)=>s+w,0)+Math.max(0,n-1)*gap;const spanW=totalRowW-usedW,last=entries[n-1],s=spanW/(last.sw||1);last.sw=spanW;last.sh*=s;last.colW=spanW;last.colSpan=numCols-(n-1);last.isSized=true;}
@@ -918,8 +1063,7 @@ async function renderBaseAt(scale,fmt){
       else if(alignment==='start')  imgX=Math.round(curX);
       else                          imgX=Math.round(curX+cW-sw);
       const imgY=Math.round(curY+(rowH-sh)/2);
-      if(e.cropData){const{cx,cy,cw,ch}=e.cropData;ctx.drawImage(e.imgEl,cx,cy,cw,ch,imgX,imgY,sw,sh);}
-      else ctx.drawImage(e.imgEl,imgX,imgY,sw,sh);
+      drawImgOnCanvas(ctx,e._img,imgX,imgY,sw,sh);
       if(innerBorder>0){const sIB=Math.max(0.5,innerBorder*scale);ctx.save();ctx.strokeStyle=innerBorderColor;ctx.lineWidth=sIB;ctx.strokeRect(Math.round(curX)+sIB/2,curY+sIB/2,cW-sIB,rowH-sIB);ctx.restore();}
       curX+=cW+sGap;
     });
@@ -1164,16 +1308,33 @@ function applyToppings(ctx,W,H,scale){
 
 // ===== ミニプレビュー =====
 function toppingMiniPreview(t){
-  const type=t.type||'text',c=t.color||'#ff4444';
-  const sw=Math.max(1,(t.strokeWidth||4)*0.4);
-  if(type==='text')return '<span class="tp-mini-text">'+escHtml((t.text||'').replace(/\n/g,' ').substring(0,22))+'</span>';
-  const fo=(t.fillEnabled&&t.fillOpacity!=null?t.fillOpacity:0)/100;
+  const type=t.type||'text',col=t.color||'#ff4444';
+  const sw=Math.max(0.8,(t.strokeWidth||4)*0.35);
+  if(type==='text') return '<span class="tp-mini-text">'+escHtml((t.text||'').replace(/\n/g,' ').substring(0,22))+'</span>';
+  const W=40,H=20,pad=2;
+  const fo=t.fillEnabled?(t.fillOpacity!=null?t.fillOpacity:30)/100:0;
   const fc=t.fillEnabled?(t.fillColor||'#ff4444'):'none';
-  if(type==='line')  return '<svg width="32" height="14" style="flex-shrink:0"><line x1="2" y1="7" x2="30" y2="7" stroke="'+c+'" stroke-width="'+sw+'" stroke-linecap="round"/></svg>';
-  if(type==='arrow') return '<svg width="32" height="14" style="flex-shrink:0"><line x1="2" y1="7" x2="22" y2="7" stroke="'+c+'" stroke-width="'+sw+'" stroke-linecap="round"/><polygon points="30,7 21,3 21,11" fill="'+c+'"/></svg>';
-  if(type==='rect')  return '<svg width="32" height="14" style="flex-shrink:0"><rect x="2" y="2" width="28" height="10" stroke="'+c+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
-  if(type==='ellipse')return '<svg width="32" height="14" style="flex-shrink:0"><ellipse cx="16" cy="7" rx="14" ry="5" stroke="'+c+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
-  return '';
+  if(type==='line'||type==='arrow'){
+    const dx=(t.x2||80)-(t.x||20),dy=(t.y2||50)-(t.y||50);
+    const len=Math.hypot(dx,dy)||1,nx=dx/len,ny=dy/len;
+    const half=Math.min(W,H)/2-pad;
+    const cx=W/2,cy=H/2;
+    const x1=cx-nx*half,y1=cy-ny*half,x2=cx+nx*half,y2=cy+ny*half;
+    if(type==='line') return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="round"/></svg>';
+    const ang=Math.atan2(y2-y1,x2-x1),hl=7,ha=30*Math.PI/180;
+    return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0">'+
+      '<line x1="'+x1+'" y1="'+y1+'" x2="'+(x2-hl*0.7*Math.cos(ang))+'" y2="'+(y2-hl*0.7*Math.sin(ang))+'" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="round"/>'+
+      '<polygon points="'+x2+','+y2+' '+(x2-hl*Math.cos(ang-ha))+','+(y2-hl*Math.sin(ang-ha))+' '+(x2-hl*Math.cos(ang+ha))+','+(y2-hl*Math.sin(ang+ha))+'" fill="'+col+'"/>'+
+      '</svg>';
+  }
+  // rect/ellipse: 縦横比を再現
+  const wR=t.w||40,hR=t.h||40;
+  const avW=W-pad*2,avH=H-pad*2;
+  let rw,rh;
+  if(wR/hR>avW/avH){rw=avW;rh=avW*hR/wR;}else{rh=avH;rw=avH*wR/hR;}
+  const rx=(W-rw)/2,ry=(H-rh)/2;
+  if(type==='rect') return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><rect x="'+rx+'" y="'+ry+'" width="'+rw+'" height="'+rh+'" stroke="'+col+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
+  return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><ellipse cx="'+(rx+rw/2)+'" cy="'+(ry+rh/2)+'" rx="'+(rw/2)+'" ry="'+(rh/2)+'" stroke="'+col+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
 }
 
 // ===== コントロールHTML =====
@@ -1358,7 +1519,7 @@ function renderToppingList(){
         '<span class="tp-mini">'+toppingMiniPreview(t)+'</span>'+
         '<button type="button" class="tp-del" title="削除">✕</button>'+
       '</div>'+
-      (isSelected?'<div class="tp-body">'+renderToppingControlsHTML(t)+'</div>':'');
+'';
 
     // ヘッダークリック → 選択/解除
     item.querySelector('.tp-head').addEventListener('click',e=>{
@@ -1372,8 +1533,7 @@ function renderToppingList(){
       state.toppings.splice(state.toppings.indexOf(t),1);
       renderToppingList();renderToppingCanvas();persistLayout();
     };
-    // コントロールバインド（展開中のみ）
-    if(isSelected)bindToppingControls(item,t);
+
 
     // ドラッグ並べ替えハンドル
     const handle=item.querySelector('.tp-handle');
@@ -1456,9 +1616,73 @@ function updateToppingSelection(){
     const items=[...$$('.tp-item')];if(items[idx])items[idx].classList.add('selected');
   }
   $('topping-canvas').classList.toggle('draggable',state.selectedToppingId!==null);
+  renderSelectedPanel();
+}
+function renderSelectedPanel(){
+  const panel=$('tp-selected-panel');
+  if(!panel){return;}
+  if(state.selectedToppingId===null){panel.innerHTML='';return;}
+  const t=state.toppings.find(tp=>tp.id===state.selectedToppingId);
+  if(!t){panel.innerHTML='';return;}
+  const type=t.type||'text';
+  panel.innerHTML='<div class="tp-panel-head">'+TP_LABELS[type]+' の設定</div>'+
+    '<div id="tp-panel-body">'+renderToppingControlsHTML(t)+'</div>';
+  bindToppingControls(panel,t);
 }
 
-// ===== トリミングモーダル =====
+
+// ===== カラー調整モーダル =====
+const CA = {ri:-1,ci:-1,ca:{exposure:0,brightness:0,contrast:0,saturation:0}};
+function openColorModal(ri,ci){
+  const img=state.grid[ri][ci];CA.ri=ri;CA.ci=ci;
+  CA.ca=img.colorAdjust?{...img.colorAdjust}:{exposure:0,brightness:0,contrast:0,saturation:0};
+  ['exp','bri','con','sat'].forEach(k=>{
+    const map={exp:'exposure',bri:'brightness',con:'contrast',sat:'saturation'};
+    $('ca-'+k).value=CA.ca[map[k]]||0;$('ca-'+k+'-val').textContent=CA.ca[map[k]]||0;
+  });
+  drawColorPreview(img);
+  $('color-title').textContent='カラー調整 — '+img.name;
+  $('color-modal').classList.remove('hidden');
+}
+function drawColorPreview(img){
+  const cv=$('color-canvas'),maxS=Math.min(window.innerWidth-40,600),maxH=Math.floor(window.innerHeight*0.52);
+  const eff=getEffectiveDimensions(img),s=Math.min(1,maxS/eff.w,maxH/eff.h);
+  cv.width=Math.round(eff.w*s);cv.height=Math.round(eff.h*s);
+  const ctx=cv.getContext('2d');
+  ctx.filter=buildColorFilter(CA.ca);
+  ctx.clearRect(0,0,cv.width,cv.height);
+  drawImgOnCanvas(ctx,{...img,colorAdjust:null},0,0,cv.width,cv.height);
+  ctx.filter='none';
+}
+function refreshColorPreview(){
+  const img=state.grid[CA.ri][CA.ci];
+  const ctx=$('color-canvas').getContext('2d');
+  ctx.filter=buildColorFilter(CA.ca);
+  ctx.clearRect(0,0,$('color-canvas').width,$('color-canvas').height);
+  drawImgOnCanvas(ctx,{...img,colorAdjust:null},0,0,$('color-canvas').width,$('color-canvas').height);
+  ctx.filter='none';
+}
+[['ca-exp','exposure'],['ca-bri','brightness'],['ca-con','contrast'],['ca-sat','saturation']].forEach(([id,key])=>{
+  const sl=$(id),vl=$(id+'-val');
+  sl.addEventListener('input',()=>{CA.ca[key]=parseInt(sl.value);vl.textContent=sl.value;refreshColorPreview();});
+});
+$('color-apply-btn').addEventListener('click',()=>{
+  const img=state.grid[CA.ri][CA.ci];
+  const allZero=Object.values(CA.ca).every(v=>v===0);
+  img.colorAdjust=allZero?null:{...CA.ca};
+  state.previewDirty=true;
+  updateImgThumb(img).then(()=>{renderGridView();persistLayout();});
+  $('color-modal').classList.add('hidden');
+});
+$('color-reset-btn').addEventListener('click',()=>{
+  CA.ca={exposure:0,brightness:0,contrast:0,saturation:0};
+  ['exp','bri','con','sat'].forEach(k=>{$('ca-'+k).value=0;$('ca-'+k+'-val').textContent=0;});
+  refreshColorPreview();
+});
+$('color-cancel-btn').addEventListener('click',()=>$('color-modal').classList.add('hidden'));
+
+// ===== 中抜きカットモーダル =====
+
 const T={ri:-1,ci:-1,imgEl:null,imgW:0,imgH:0,cx:0,cy:0,cw:0,ch:0,scale:1,drag:null,ox:0,oy:0,oc:null};
 const HSIZE=16;
 function openTrimModal(ri,ci){
@@ -1601,5 +1825,42 @@ $('btn-download').addEventListener('click',async()=>{
   if(new URLSearchParams(location.search).get('share_pending')) history.replaceState({},'','./');
 })();
 </script>
+
+<!-- カラー調整モーダル -->
+<div id="color-modal" class="hidden">
+  <div id="color-header">
+    <span id="color-title" style="flex:1;font-size:15px;font-weight:700;color:var(--text)">カラー調整</span>
+    <button type="button" class="trim-hbtn" id="color-reset-btn" style="background:var(--surf2);color:var(--muted)">リセット</button>
+    <button type="button" class="trim-hbtn" id="color-apply-btn" style="background:var(--prime);color:#fff">適用</button>
+    <button type="button" class="trim-hbtn" id="color-cancel-btn" style="background:var(--surf2);color:var(--muted)">✕</button>
+  </div>
+  <div id="color-canvas-wrap"><canvas id="color-canvas"></canvas></div>
+  <div id="color-footer">
+    <div class="ca-row"><span class="ca-label">露出</span><input type="range" class="ca-slider" id="ca-exp" min="-100" max="100" value="0"><span class="ca-val" id="ca-exp-val">0</span></div>
+    <div class="ca-row"><span class="ca-label">明度</span><input type="range" class="ca-slider" id="ca-bri" min="-100" max="100" value="0"><span class="ca-val" id="ca-bri-val">0</span></div>
+    <div class="ca-row"><span class="ca-label">対比</span><input type="range" class="ca-slider" id="ca-con" min="-100" max="100" value="0"><span class="ca-val" id="ca-con-val">0</span></div>
+    <div class="ca-row"><span class="ca-label">彩度</span><input type="range" class="ca-slider" id="ca-sat" min="-100" max="100" value="0"><span class="ca-val" id="ca-sat-val">0</span></div>
+  </div>
+</div>
+
+<!-- 中抜きカットモーダル -->
+<div id="cutout-modal" class="hidden">
+  <div id="cutout-header">
+    <span id="cutout-title" style="flex:1;font-size:15px;font-weight:700;color:var(--text)">中抜きカット</span>
+    <button type="button" class="trim-hbtn" id="cutout-reset-btn" style="background:var(--surf2);color:var(--muted)">リセット</button>
+    <button type="button" class="trim-hbtn" id="cutout-apply-btn" style="background:var(--prime);color:#fff">適用</button>
+    <button type="button" class="trim-hbtn" id="cutout-cancel-btn" style="background:var(--surf2);color:var(--muted)">✕</button>
+  </div>
+  <div id="cutout-canvas-wrap"><canvas id="cutout-canvas"></canvas></div>
+  <div id="cutout-footer">
+    <div style="display:flex;gap:6px;align-items:center;font-size:12px">
+      <span style="color:var(--muted)">除去領域</span>
+      <span id="cutout-info" style="font-weight:700;color:var(--prime)"></span>
+    </div>
+    <div class="ca-row"><span class="ca-label">開始</span><input type="range" class="ca-slider" id="cu-start" min="0" max="100" value="30"><span class="ca-val" id="cu-start-val">30%</span></div>
+    <div class="ca-row"><span class="ca-label">終了</span><input type="range" class="ca-slider" id="cu-end" min="0" max="100" value="60"><span class="ca-val" id="cu-end-val">60%</span></div>
+    <div style="font-size:11px;color:var(--muted)">💡 ラインをドラッグまたはスライダーで調整。除去された部分の両端が結合されます。</div>
+  </div>
+</div>
 </body>
 </html>
