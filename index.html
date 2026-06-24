@@ -533,6 +533,42 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
   </div>
 </div>
 
+<!-- カラー調整モーダル -->
+<div id="color-modal" class="hidden">
+  <div id="color-header">
+    <span id="color-title" style="flex:1;font-size:15px;font-weight:700;color:var(--text)">カラー調整</span>
+    <button type="button" class="trim-hbtn" id="color-reset-btn" style="background:var(--surf2);color:var(--muted)">リセット</button>
+    <button type="button" class="trim-hbtn" id="color-apply-btn" style="background:var(--prime);color:#fff">適用</button>
+    <button type="button" class="trim-hbtn" id="color-cancel-btn" style="background:var(--surf2);color:var(--muted)">✕</button>
+  </div>
+  <div id="color-canvas-wrap"><canvas id="color-canvas"></canvas></div>
+  <div id="color-footer">
+    <div class="ca-row"><span class="ca-label">露出</span><input type="range" class="ca-slider" id="ca-exp" min="-100" max="100" value="0"><span class="ca-val" id="ca-exp-val">0</span></div>
+    <div class="ca-row"><span class="ca-label">明度</span><input type="range" class="ca-slider" id="ca-bri" min="-100" max="100" value="0"><span class="ca-val" id="ca-bri-val">0</span></div>
+    <div class="ca-row"><span class="ca-label">対比</span><input type="range" class="ca-slider" id="ca-con" min="-100" max="100" value="0"><span class="ca-val" id="ca-con-val">0</span></div>
+    <div class="ca-row"><span class="ca-label">彩度</span><input type="range" class="ca-slider" id="ca-sat" min="-100" max="100" value="0"><span class="ca-val" id="ca-sat-val">0</span></div>
+  </div>
+</div>
+
+<!-- 中抜きカットモーダル -->
+<div id="cutout-modal" class="hidden">
+  <div id="cutout-header">
+    <span id="cutout-title" style="flex:1;font-size:15px;font-weight:700;color:var(--text)">中抜きカット</span>
+    <button type="button" class="trim-hbtn" id="cutout-reset-btn" style="background:var(--surf2);color:var(--muted)">リセット</button>
+    <button type="button" class="trim-hbtn" id="cutout-apply-btn" style="background:var(--prime);color:#fff">適用</button>
+    <button type="button" class="trim-hbtn" id="cutout-cancel-btn" style="background:var(--surf2);color:var(--muted)">✕</button>
+  </div>
+  <div id="cutout-canvas-wrap"><canvas id="cutout-canvas"></canvas></div>
+  <div id="cutout-footer">
+    <div style="display:flex;gap:6px;align-items:center;font-size:12px">
+      <span style="color:var(--muted)">除去領域</span>
+      <span id="cutout-info" style="font-weight:700;color:var(--prime)"></span>
+    </div>
+    <div class="ca-row"><span class="ca-label">開始</span><input type="range" class="ca-slider" id="cu-start" min="0" max="100" value="30"><span class="ca-val" id="cu-start-val">30%</span></div>
+    <div class="ca-row"><span class="ca-label">終了</span><input type="range" class="ca-slider" id="cu-end" min="0" max="100" value="60"><span class="ca-val" id="cu-end-val">60%</span></div>
+    <div style="font-size:11px;color:var(--muted)">💡 ラインをドラッグまたはスライダーで調整。除去された部分の両端が結合されます。</div>
+  </div>
+</div>
 <script>
 'use strict';
 // ===== NamaCollage v5.0 =====
@@ -1525,7 +1561,7 @@ function renderToppingList(){
     item.querySelector('.tp-head').addEventListener('click',e=>{
       if(e.target.classList.contains('tp-del'))return;
       state.selectedToppingId=(state.selectedToppingId===t.id)?null:t.id;
-      renderToppingList();renderToppingCanvas();
+      renderToppingList();renderToppingCanvas();renderSelectedPanel();
     });
     // 削除
     item.querySelector('.tp-del').onclick=()=>{
@@ -1541,6 +1577,7 @@ function renderToppingList(){
 
     list.appendChild(item);
   });
+  updateToppingSelection(); // リスト更新後に詳細パネルも更新
 }
 
 // ===== ドラッグ並べ替え =====
@@ -1682,6 +1719,88 @@ $('color-reset-btn').addEventListener('click',()=>{
 $('color-cancel-btn').addEventListener('click',()=>$('color-modal').classList.add('hidden'));
 
 // ===== 中抜きカットモーダル =====
+const CU={ri:-1,ci:-1,mode:'v',start:0.3,end:0.6,imgEl:null,imgW:0,imgH:0,scale:1,drag:null};
+function openCutoutModal(ri,ci,mode){
+  const img=state.grid[ri][ci];
+  CU.ri=ri;CU.ci=ci;CU.mode=mode;CU.imgEl=img.imgEl;CU.imgW=img.w;CU.imgH=img.h;
+  if(img.cutoutData&&img.cutoutData.mode===mode){CU.start=img.cutoutData.start;CU.end=img.cutoutData.end;}
+  else{CU.start=0.3;CU.end=0.6;}
+  const maxW=Math.min(window.innerWidth-32,780),maxH=Math.floor(window.innerHeight*0.5);
+  CU.scale=Math.min(1,maxW/img.w,maxH/img.h);
+  const cv=$('cutout-canvas');
+  cv.width=Math.round(img.w*CU.scale);cv.height=Math.round(img.h*CU.scale);
+  $('cutout-title').textContent=(mode==='v'?'中抜き（縦方向）':'中抜き（横方向）')+' — '+img.name;
+  $('cu-start').value=Math.round(CU.start*100);$('cu-end').value=Math.round(CU.end*100);
+  updateCutoutSliderVals();drawCutout();
+  $('cutout-modal').classList.remove('hidden');
+}
+function updateCutoutSliderVals(){
+  $('cu-start-val').textContent=Math.round(CU.start*100)+'%';
+  $('cu-end-val').textContent=Math.round(CU.end*100)+'%';
+  const cut=Math.round((CU.end-CU.start)*100);
+  $('cutout-info').textContent='除去: '+cut+'% / 残: '+(100-cut)+'%';
+}
+function drawCutout(){
+  const cv=$('cutout-canvas'),ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.drawImage(CU.imgEl,0,0,cv.width,cv.height);
+  const startPx=CU.mode==='v'?CU.start*cv.height:CU.start*cv.width;
+  const endPx=CU.mode==='v'?CU.end*cv.height:CU.end*cv.width;
+  ctx.fillStyle='rgba(200,0,0,0.35)';
+  if(CU.mode==='v')ctx.fillRect(0,startPx,cv.width,endPx-startPx);
+  else ctx.fillRect(startPx,0,endPx-startPx,cv.height);
+  ctx.strokeStyle='#FF6940';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+  if(CU.mode==='v'){
+    ctx.beginPath();ctx.moveTo(0,startPx);ctx.lineTo(cv.width,startPx);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,endPx);ctx.lineTo(cv.width,endPx);ctx.stroke();
+  }else{
+    ctx.beginPath();ctx.moveTo(startPx,0);ctx.lineTo(startPx,cv.height);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(endPx,0);ctx.lineTo(endPx,cv.height);ctx.stroke();
+  }
+}
+(function initCutoutListeners(){
+  const cuCvs=$('cutout-canvas');
+  cuCvs.addEventListener('pointerdown',e=>{
+    const r=cuCvs.getBoundingClientRect();
+    const p=CU.mode==='v'?(e.clientY-r.top)/r.height:(e.clientX-r.left)/r.width;
+    const ds=Math.abs(p-CU.start),de=Math.abs(p-CU.end);
+    CU.drag=ds<de?'start':'end';
+    cuCvs.setPointerCapture(e.pointerId);
+  });
+  cuCvs.addEventListener('pointermove',e=>{
+    if(!CU.drag)return;
+    const r=cuCvs.getBoundingClientRect();
+    let p=CU.mode==='v'?(e.clientY-r.top)/r.height:(e.clientX-r.left)/r.width;
+    p=Math.max(0,Math.min(1,p));
+    if(CU.drag==='start')CU.start=Math.min(p,CU.end-0.05);
+    else CU.end=Math.max(p,CU.start+0.05);
+    $('cu-start').value=Math.round(CU.start*100);$('cu-end').value=Math.round(CU.end*100);
+    updateCutoutSliderVals();drawCutout();
+  });
+  cuCvs.addEventListener('pointerup',()=>{CU.drag=null;});
+  $('cu-start').addEventListener('input',()=>{
+    CU.start=Math.min(parseInt($('cu-start').value)/100,CU.end-0.05);
+    $('cu-start').value=Math.round(CU.start*100);updateCutoutSliderVals();drawCutout();
+  });
+  $('cu-end').addEventListener('input',()=>{
+    CU.end=Math.max(parseInt($('cu-end').value)/100,CU.start+0.05);
+    $('cu-end').value=Math.round(CU.end*100);updateCutoutSliderVals();drawCutout();
+  });
+  $('cutout-apply-btn').addEventListener('click',()=>{
+    const img=state.grid[CU.ri][CU.ci];
+    img.cutoutData={mode:CU.mode,start:CU.start,end:CU.end};
+    state.previewDirty=true;
+    updateImgThumb(img).then(()=>{renderGridView();persistLayout();});
+    $('cutout-modal').classList.add('hidden');
+  });
+  $('cutout-reset-btn').addEventListener('click',()=>{
+    CU.start=0.3;CU.end=0.6;
+    $('cu-start').value=30;$('cu-end').value=60;
+    updateCutoutSliderVals();drawCutout();
+  });
+  $('cutout-cancel-btn').addEventListener('click',()=>$('cutout-modal').classList.add('hidden'));
+})();
+
 
 const T={ri:-1,ci:-1,imgEl:null,imgW:0,imgH:0,cx:0,cy:0,cw:0,ch:0,scale:1,drag:null,ox:0,oy:0,oc:null};
 const HSIZE=16;
@@ -1826,41 +1945,5 @@ $('btn-download').addEventListener('click',async()=>{
 })();
 </script>
 
-<!-- カラー調整モーダル -->
-<div id="color-modal" class="hidden">
-  <div id="color-header">
-    <span id="color-title" style="flex:1;font-size:15px;font-weight:700;color:var(--text)">カラー調整</span>
-    <button type="button" class="trim-hbtn" id="color-reset-btn" style="background:var(--surf2);color:var(--muted)">リセット</button>
-    <button type="button" class="trim-hbtn" id="color-apply-btn" style="background:var(--prime);color:#fff">適用</button>
-    <button type="button" class="trim-hbtn" id="color-cancel-btn" style="background:var(--surf2);color:var(--muted)">✕</button>
-  </div>
-  <div id="color-canvas-wrap"><canvas id="color-canvas"></canvas></div>
-  <div id="color-footer">
-    <div class="ca-row"><span class="ca-label">露出</span><input type="range" class="ca-slider" id="ca-exp" min="-100" max="100" value="0"><span class="ca-val" id="ca-exp-val">0</span></div>
-    <div class="ca-row"><span class="ca-label">明度</span><input type="range" class="ca-slider" id="ca-bri" min="-100" max="100" value="0"><span class="ca-val" id="ca-bri-val">0</span></div>
-    <div class="ca-row"><span class="ca-label">対比</span><input type="range" class="ca-slider" id="ca-con" min="-100" max="100" value="0"><span class="ca-val" id="ca-con-val">0</span></div>
-    <div class="ca-row"><span class="ca-label">彩度</span><input type="range" class="ca-slider" id="ca-sat" min="-100" max="100" value="0"><span class="ca-val" id="ca-sat-val">0</span></div>
-  </div>
-</div>
-
-<!-- 中抜きカットモーダル -->
-<div id="cutout-modal" class="hidden">
-  <div id="cutout-header">
-    <span id="cutout-title" style="flex:1;font-size:15px;font-weight:700;color:var(--text)">中抜きカット</span>
-    <button type="button" class="trim-hbtn" id="cutout-reset-btn" style="background:var(--surf2);color:var(--muted)">リセット</button>
-    <button type="button" class="trim-hbtn" id="cutout-apply-btn" style="background:var(--prime);color:#fff">適用</button>
-    <button type="button" class="trim-hbtn" id="cutout-cancel-btn" style="background:var(--surf2);color:var(--muted)">✕</button>
-  </div>
-  <div id="cutout-canvas-wrap"><canvas id="cutout-canvas"></canvas></div>
-  <div id="cutout-footer">
-    <div style="display:flex;gap:6px;align-items:center;font-size:12px">
-      <span style="color:var(--muted)">除去領域</span>
-      <span id="cutout-info" style="font-weight:700;color:var(--prime)"></span>
-    </div>
-    <div class="ca-row"><span class="ca-label">開始</span><input type="range" class="ca-slider" id="cu-start" min="0" max="100" value="30"><span class="ca-val" id="cu-start-val">30%</span></div>
-    <div class="ca-row"><span class="ca-label">終了</span><input type="range" class="ca-slider" id="cu-end" min="0" max="100" value="60"><span class="ca-val" id="cu-end-val">60%</span></div>
-    <div style="font-size:11px;color:var(--muted)">💡 ラインをドラッグまたはスライダーで調整。除去された部分の両端が結合されます。</div>
-  </div>
-</div>
 </body>
 </html>
