@@ -1261,8 +1261,8 @@ function createToppingItem(type){
     case 'text':  return{...base,text:'テキスト',x:50,y:50,fontSize:80,color:'#ffffff',textAlign:'center',strokeWidth:3,strokeColor:'#000000',shadowEnabled:true,shadowColor:'#000000',shadowBlur:6,shadowX:2,shadowY:2};
     case 'line':  return{...base,x:20,y:50,x2:80,y2:50,color:'#ff4444',strokeWidth:4};
     case 'arrow': return{...base,x:20,y:50,x2:80,y2:50,color:'#ff4444',strokeWidth:4,headSize:40,headAngle:30};
-    case 'rect':  return{...base,x:30,y:30,w:40,h:40,color:'#ff4444',strokeWidth:4,fillEnabled:false,fillColor:'#ff4444',fillOpacity:30,lockAspect:false};
-    case 'ellipse':return{...base,x:30,y:30,w:40,h:40,color:'#ff4444',strokeWidth:4,fillEnabled:false,fillColor:'#ff4444',fillOpacity:30,lockAspect:true,_ar:1};
+    case 'rect':  return{...base,x:30,y:30,w:25,h:25,color:'#ff4444',strokeWidth:4,fillEnabled:false,fillColor:'#ff4444',fillOpacity:30,lockAspect:false};
+    case 'ellipse':return{...base,x:30,y:30,w:25,h:25,color:'#ff4444',strokeWidth:4,fillEnabled:false,fillColor:'#ff4444',fillOpacity:30,lockAspect:true,_ar:1};
     default:return base;
   }
 }
@@ -1293,8 +1293,8 @@ function drawTextItem(ctx,t,W,H,scale){
 
 function buildShapePath(ctx,s,px,py){
   if(s.type==='line'||s.type==='arrow'){ctx.beginPath();ctx.moveTo(px(s.x),py(s.y));ctx.lineTo(px(s.x2),py(s.y2));}
-  else if(s.type==='rect'){ctx.beginPath();ctx.rect(px(s.x),py(s.y),px(s.w),py(s.h));}
-  else if(s.type==='ellipse'){const ecx=px(s.x)+px(s.w)/2,ecy=py(s.y)+py(s.h)/2,erx=Math.abs(px(s.w))/2,ery=Math.abs(py(s.h))/2;ctx.beginPath();ctx.ellipse(ecx,ecy,erx,ery,0,0,Math.PI*2);}
+  else if(s.type==='rect'){ctx.beginPath();ctx.rect(px(s.x),py(s.y),px(s.w),px(s.h));}
+  else if(s.type==='ellipse'){const ecx=px(s.x)+px(s.w)/2,ecy=py(s.y)+px(s.h)/2,erx=Math.abs(px(s.w))/2,ery=Math.abs(px(s.h))/2;ctx.beginPath();ctx.ellipse(ecx,ecy,erx,ery,0,0,Math.PI*2);}
 }
 
 function drawShapeItem(ctx,s,W,H,scale){
@@ -1409,7 +1409,7 @@ function sizeLockHTML(s){
     '<input type="range" class="adj-slider tp-w" min="1" max="100" value="'+Math.round(s.w||40)+'">'+
     '<span class="adj-val tp-w-val">'+Math.round(s.w||40)+'</span>'+
     '<button type="button" class="tp-lock-btn'+(locked?' locked':'')+'">'+( locked?'🔒':'🔓')+'</button>'+
-    '<span class="adj-label">高%</span>'+
+    '<span class="adj-label" title="幅と同じ単位（画像幅の%）">高%</span>'+
     '<input type="range" class="adj-slider tp-h" min="1" max="100" value="'+Math.round(s.h||40)+'">'+
     '<span class="adj-val tp-h-val">'+Math.round(s.h||40)+'</span>'+
     '</div>';
@@ -1529,10 +1529,16 @@ function renderToppingCanvas(){
     const sel=state.toppings.find(t=>t.id===state.selectedToppingId);
     if(sel){
       const type=sel.type||'text';
-      let mx,my;
-      if(type==='line'||type==='arrow'){mx=(sel.x+sel.x2)/2;my=(sel.y+sel.y2)/2;}
-      else{mx=(sel.x||0)+((type==='rect'||type==='ellipse')?(sel.w||0)/2:0);my=(sel.y||0)+((type==='rect'||type==='ellipse')?(sel.h||0)/2:0);}
-      const sx=mx/100*tc.width,sy=my/100*tc.height;
+      let sx,sy;
+      if(type==='line'||type==='arrow'){
+        sx=(sel.x+sel.x2)/2/100*tc.width; sy=(sel.y+sel.y2)/2/100*tc.height;
+      }else if(type==='rect'||type==='ellipse'){
+        // x,w は画像幅基準%; y は画像高さ基準%; h は画像幅基準%（歪み防止）
+        sx=((sel.x||0)+(sel.w||0)/2)/100*tc.width;
+        sy=(sel.y||0)/100*tc.height+(sel.h||0)/200*tc.width;
+      }else{
+        sx=(sel.x||0)/100*tc.width; sy=(sel.y||0)/100*tc.height;
+      }
       ctx.save();ctx.strokeStyle='#5548D6';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
       ctx.beginPath();ctx.moveTo(sx-14,sy);ctx.lineTo(sx+14,sy);ctx.stroke();
       ctx.beginPath();ctx.moveTo(sx,sy-14);ctx.lineTo(sx,sy+14);ctx.stroke();
