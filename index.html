@@ -9,7 +9,7 @@
 <title>NamaCollage</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Noto+Sans+JP:wght@700&family=Noto+Serif+JP:wght@700&family=Yomogi&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Kaisei+Decol:wght@700&family=Mochiy+Pop+One&family=Noto+Sans+JP:wght@700&family=Noto+Serif+JP:wght@700&family=Yomogi&display=swap" rel="stylesheet">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" href="./NamaCollageLogo192.png" type="image/png">
 <link rel="apple-touch-icon" href="./NamaCollageLogo192.png">
@@ -1427,6 +1427,14 @@ function renderToppingControlsHTML(t){
       '<select class="tp-align tp-select"><option value="center"'+(t.textAlign==='center'?' selected':'')+'>中央</option>'+
       '<option value="left"'+(t.textAlign==='left'?' selected':'')+'>左</option>'+
       '<option value="right"'+(t.textAlign==='right'?' selected':'')+'>右</option></select></div>'+
+      '<div class="adj-row"><span class="adj-label">フォント</span>'+'<select class="tp-font tp-select" style="flex:1;max-width:200px"><optgroup label="ゴシック">'
++'<option value="sans-serif"'+((!t.fontFamily||t.fontFamily==="sans-serif")?" selected":"")+">ゴシック（標準）</option>"
++'<option value="Noto Sans JP"'+(t.fontFamily==="Noto Sans JP"?" selected":"")+">Noto Sans JP</option>"
++'<option value="Dela Gothic One"'+(t.fontFamily==="Dela Gothic One"?" selected":"")+">Dela Gothic One</option>"
++'<option value="Mochiy Pop One"'+(t.fontFamily==="Mochiy Pop One"?" selected":"")+">Mochiy Pop One</option>"
++'<option value="Noto Serif JP"'+(t.fontFamily==="Noto Serif JP"?" selected":"")+">Noto Serif JP</option>"
++'<option value="Kaisei Decol"'+(t.fontFamily==="Kaisei Decol"?" selected":"")+">Kaisei Decol</option>"
++'<option value="Yomogi"'+(t.fontFamily==="Yomogi"?" selected":"")+">Yomogi</option>"+'</optgroup></select></div>'+
       '<div class="adj-row"><span class="adj-label">縁取り</span>'+
       '<input type="number" class="tp-sw tp-num-inp" min="0" max="50" value="'+t.strokeWidth+'">'+
       '<span style="font-size:10px">px</span><input type="color" class="tp-color-inp tp-sc" value="'+t.strokeColor+'"></div>'+
@@ -1642,10 +1650,13 @@ toppingCvs.addEventListener('pointermove',e=>{
   const type=t.type||'text';const cl=(v)=>Math.round(Math.max(0,Math.min(100,v)));
   t.x=cl((t.x||0)+dx);t.y=cl((t.y||0)+dy);
   if(type==='line'||type==='arrow'){t.x2=cl((t.x2||0)+dx);t.y2=cl((t.y2||0)+dy);}
-  // 展開中スライダー同期
-  const items=[...$$('.tp-item')];const idx=state.toppings.indexOf(t);
-  if(items[idx]){
-    const up=(cls,val,vcls)=>{const el=items[idx].querySelector('.'+cls);const ve=items[idx].querySelector('.'+vcls);if(el)el.value=val;if(ve)ve.textContent=val;};
+  // 選択パネルのスライダーを同期
+  const sp=$('tp-selected-panel');
+  if(sp){
+    const up=(cls,val,vcls)=>{
+      const el=sp.querySelector('.'+cls),ve=sp.querySelector('.'+vcls);
+      if(el)el.value=Math.round(val);if(ve)ve.textContent=Math.round(val);
+    };
     up('tp-x',t.x,'tp-x-val');up('tp-y',t.y,'tp-y-val');
     if(type==='line'||type==='arrow'){up('tp-x2',t.x2,'tp-x2-val');up('tp-y2',t.y2,'tp-y2-val');}
   }
