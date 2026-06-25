@@ -7,6 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>NamaCollage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Noto+Sans+JP:wght@700&family=Noto+Serif+JP:wght@700&family=Yomogi&display=swap" rel="stylesheet">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" href="./NamaCollageLogo192.png" type="image/png">
 <link rel="apple-touch-icon" href="./NamaCollageLogo192.png">
@@ -682,7 +685,11 @@ function showTab(name){
   document.getElementById('tab-'+name).classList.add('active');
   document.querySelector('.nav-btn[data-tab="'+name+'"]').classList.add('active');
   if(name==='preview'&&state.previewDirty&&flatImages().length) scheduleCompose(150);
-  if(name==='topping'){ renderToppingList(); renderToppingCanvas(); }
+  if(name==='topping'){
+    renderToppingList();
+    if(!state.composed&&flatImages().length)doCompose().then(()=>renderToppingCanvas());
+    else renderToppingCanvas();
+  }
   if(name==='save') updateSaveTab();
 }
 $$('.nav-btn').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
@@ -892,29 +899,23 @@ function drawImgOnCanvas(ctx,img,dx,dy,dw,dh){
   const hasTR=r||fH||fV;
 
   if(img.cutoutData){
-    // 中抜き: 2分割描画
-    const{mode,start,end}=img.cutoutData;const cut=end-start;
+    // 中抜き: 中間キャンバスで結合後に回転/反転 → 順序逆転バグを防ぐ
+    const{mode,start,end}=img.cutoutData,cut=end-start;
+    const iW=mode==='h'?sw*(1-cut):sw,iH=mode==='v'?sh*(1-cut):sh;
+    const tmp=document.createElement('canvas');
+    tmp.width=Math.max(1,Math.round(iW));tmp.height=Math.max(1,Math.round(iH));
+    const tc=tmp.getContext('2d');
     if(mode==='v'){
-      const topSH=sh*start,botSH=sh*(1-end);
-      const effH=sh*(1-cut),ratio=dh/effH;
-      if(hasTR){
-        drawWithTransform(ctx,img,sx,sy,sw,topSH,dx,dy,dw,topSH*ratio,r,fH,fV);
-        drawWithTransform(ctx,img,sx,sy+sh*end,sw,botSH,dx,dy+topSH*ratio,dw,botSH*ratio,r,fH,fV);
-      }else{
-        ctx.drawImage(img.imgEl,sx,sy,sw,topSH,dx,dy,dw,topSH*ratio);
-        ctx.drawImage(img.imgEl,sx,sy+sh*end,sw,botSH,dx,dy+topSH*ratio,dw,botSH*ratio);
-      }
+      const tSH=sh*start,bSH=sh*(1-end);
+      tc.drawImage(img.imgEl,sx,sy,sw,tSH,0,0,sw,tSH);
+      tc.drawImage(img.imgEl,sx,sy+sh*end,sw,bSH,0,tSH,sw,bSH);
     }else{
-      const leftSW=sw*start,rightSW=sw*(1-end);
-      const effW=sw*(1-cut),ratio=dw/effW;
-      if(hasTR){
-        drawWithTransform(ctx,img,sx,sy,leftSW,sh,dx,dy,leftSW*ratio,dh,r,fH,fV);
-        drawWithTransform(ctx,img,sx+sw*end,sy,rightSW,sh,dx+leftSW*ratio,dy,rightSW*ratio,dh,r,fH,fV);
-      }else{
-        ctx.drawImage(img.imgEl,sx,sy,leftSW,sh,dx,dy,leftSW*ratio,dh);
-        ctx.drawImage(img.imgEl,sx+sw*end,sy,rightSW,sh,dx+leftSW*ratio,dy,rightSW*ratio,dh);
-      }
+      const lSW=sw*start,rSW=sw*(1-end);
+      tc.drawImage(img.imgEl,sx,sy,lSW,sh,0,0,lSW,sh);
+      tc.drawImage(img.imgEl,sx+sw*end,sy,rSW,sh,lSW,0,rSW,sh);
     }
+    if(hasTR)drawWithTransform(ctx,{imgEl:tmp},0,0,tmp.width,tmp.height,dx,dy,dw,dh,r,fH,fV);
+    else ctx.drawImage(tmp,dx,dy,dw,dh);
   }else if(hasTR){
     drawWithTransform(ctx,img,sx,sy,sw,sh,dx,dy,dw,dh,r,fH,fV);
   }else{
@@ -1046,7 +1047,7 @@ function applyToppings(ctx,W,H,scale){
     const x=t.x/100*W, y=t.y/100*H;
     const fs=Math.max(1,Math.round(t.fontSize*scale));
     ctx.save();
-    ctx.font='bold '+fs+'px '+(t.fontFamily||'sans-serif');
+    const ff2=t.fontFamily&&t.fontFamily!=='sans-serif'?'"'+t.fontFamily+'"':'sans-serif';ctx.font='bold '+fs+'px '+ff2;
     ctx.textAlign=t.textAlign||'center';
     ctx.textBaseline='middle';
     const lines=t.text.split('\n');
@@ -1278,7 +1279,7 @@ function drawTextItem(ctx,t,W,H,scale){
   if(!t.text?.trim())return;
   const x=t.x/100*W,y=t.y/100*H,fs=Math.max(1,Math.round((t.fontSize||80)*scale));
   ctx.save();
-  ctx.font='bold '+fs+'px '+(t.fontFamily||'sans-serif');
+  const ff2=t.fontFamily&&t.fontFamily!=='sans-serif'?'"'+t.fontFamily+'"':'sans-serif';ctx.font='bold '+fs+'px '+ff2;
   ctx.textAlign=t.textAlign||'center';ctx.textBaseline='middle';
   const lines=t.text.split('\n'),lh=fs*1.28,totalH=(lines.length-1)*lh;
   lines.forEach((line,li)=>{
@@ -1469,6 +1470,7 @@ function bindToppingControls(container,t){
     bs('tp-size','fontSize','tp-size-val');
     const mc=container.querySelector('.tp-mainc');if(mc)mc.addEventListener('input',e=>{t.color=e.target.value;upd();});
     const al=container.querySelector('.tp-align');if(al)al.addEventListener('change',e=>{t.textAlign=e.target.value;upd();});
+    const ff=container.querySelector('.tp-font');if(ff)ff.addEventListener('change',e=>{t.fontFamily=e.target.value;upd();});
     const sw=container.querySelector('.tp-sw');if(sw)sw.addEventListener('input',e=>{t.strokeWidth=parseFloat(e.target.value)||0;upd();});
     const sc=container.querySelector('.tp-sc');if(sc)sc.addEventListener('input',e=>{t.strokeColor=e.target.value;upd();});
     const sha=container.querySelector('.tp-sha');if(sha)sha.addEventListener('change',e=>{t.shadowEnabled=e.target.checked;upd();});
