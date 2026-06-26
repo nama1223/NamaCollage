@@ -302,6 +302,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
     </div>
     <div id="grid-view" style="display:none"></div>
     <input type="file" id="file-input" accept="image/*" multiple style="display:none">
+    <div id="gv-guide" style="display:none;text-align:center;font-size:11.5px;color:var(--muted2);padding:8px 0 2px;letter-spacing:0.3px">💡 画像を長押し（または右クリック）で加工メニュー</div>
   </section>
 
   <!-- ② プレビュー（レイアウト・背景・枠線統合） -->
@@ -410,7 +411,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
       <div class="empty-text">先に「プレビュー」タブで<br>画像を生成してください</div>
     </div>
     <div id="topping-content" class="hidden">
-      <div id="tp-canvas-wrap"></div>
+      <div id="tp-canvas-wrap"><canvas id="topping-canvas"></canvas></div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
         <button type="button" class="tp-add-btn" data-tp="text">✍️ テキスト</button>
         <button type="button" class="tp-add-btn" data-tp="line">— 直線</button>
@@ -808,6 +809,7 @@ function renderGridView(){
   const gv=$('grid-view'),tb=$('gv-toolbar'),em=$('gv-empty'),n=flatImages().length;
   if(!n){gv.style.display='none';tb.style.display='none';em.classList.remove('hidden');return;}
   em.classList.add('hidden');gv.style.display='';tb.style.display='';
+  const guide=$('gv-guide');if(guide)guide.style.display='';
   const cols=maxCols(); $('gv-count-info').textContent=n+'枚 / '+state.grid.length+'行 × '+cols+'列';
   const nat=calcNaturalDimensions();
   const cW=(gv.parentElement?.offsetWidth||360)-28;
@@ -1550,6 +1552,7 @@ function renderToppingCanvas(){
   if(!pc.width||!state.previewNat){$('topping-empty').classList.remove('hidden');$('topping-content').classList.add('hidden');return;}
   $('topping-empty').classList.add('hidden');$('topping-content').classList.remove('hidden');
   const tc=$('topping-canvas');
+  if(!tc){$('topping-empty').classList.remove('hidden');$('topping-content').classList.add('hidden');return;}
   const needReset=tc.width!==pc.width||tc.height!==pc.height;
   tc.width=pc.width;tc.height=pc.height;
   if(needReset||!TZ.initScale){
@@ -2156,6 +2159,10 @@ document.addEventListener('pointermove',e=>{
 document.addEventListener('pointerup',()=>{
   if(_numSwipe){_numSwipe.el.dispatchEvent(new Event('change',{bubbles:true}));_numSwipe=null;}
 },{passive:true,capture:true});
+// スワイプ中は画面縦スクロールを抑止
+document.addEventListener('touchmove',e=>{
+  if(_numSwipe)e.preventDefault();
+},{passive:false,capture:false});
 
 // ===== 初期化 =====
 (function init(){
