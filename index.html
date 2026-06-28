@@ -1835,9 +1835,8 @@ function renderToppingCanvas(){
       ctx.beginPath();ctx.moveTo(sx,sy-14);ctx.lineTo(sx,sy+14);ctx.stroke();
       ctx.restore();
     }
-  }
-  // エフェクト選択中: 輪郭 + ポリゴン頂点マーカー
-  if(sel&&(sel.type?.startsWith('blur')||sel.type?.startsWith('mosaic'))){
+    // エフェクト選択中: 輪郭 + ポリゴン頂点マーカー
+    if(sel&&(sel.type?.startsWith('blur')||sel.type?.startsWith('mosaic'))){
     const sh=sel.type.split('-')[1];
     ctx.save();
     ctx.strokeStyle='#5548D6';ctx.lineWidth=1.5/TZ.scale;ctx.setLineDash([5,4]);
@@ -1865,6 +1864,7 @@ function renderToppingCanvas(){
       });
     }
     ctx.restore();
+    }
   }
   if(typeof _updateTZ==='function')_updateTZ();
 }
