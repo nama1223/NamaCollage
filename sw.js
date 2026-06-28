@@ -5,7 +5,7 @@
 //     index.html や画像ファイルの更新だけなら変更不要（stale-while-revalidate で自動更新）。
 //   - SW 自体（このファイル）を変更すれば、ブラウザが自動的に再登録する。
 
-const CACHE_NAME = 'namacollage-v1';
+const CACHE_NAME = 'namacollage-v2';
 
 const PRECACHE = [
   './',
@@ -18,7 +18,11 @@ const PRECACHE = [
 // ============================================================
 // Install: プリキャッシュ（失敗しても続行）
 // ============================================================
+let _isUpdate = false; // 初回インストールか更新かを判別
+
 self.addEventListener('install', event => {
+  // 既存のアクティブなSWがあれば更新と判断
+  _isUpdate = !!self.registration.active;
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => Promise.allSettled(PRECACHE.map(url => cache.add(url))))
@@ -36,6 +40,15 @@ self.addEventListener('activate', event => {
         keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
       ))
       .then(() => self.clients.claim())
+      .then(async () => {
+        if (_isUpdate) {
+          // 更新完了を開いているウィンドウに通知
+          const clients = await self.clients.matchAll({ type: 'window' });
+          for (const client of clients) {
+            client.postMessage({ type: 'sw_updated' });
+          }
+        }
+      })
   );
 });
 

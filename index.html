@@ -220,6 +220,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 /* Zoom overlay */
 .adj-val,.ca-val,.tp-x-val,.tp-y-val,.tp-x2-val,.tp-y2-val,.tp-size-val,.tp-w-val,.tp-h-val,.tp-fillop-val{cursor:pointer;text-decoration:underline dotted var(--muted2);min-width:28px;text-align:right;touch-action:manipulation;}
 .tp-inline-inp{width:48px;font-size:12px;font-weight:700;color:var(--prime);border:1px solid var(--prime);border-radius:5px;padding:1px 4px;text-align:center;background:var(--surf2);-webkit-user-select:text;user-select:text;}
+.sw-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(0);background:#1a1a2e;color:#fff;padding:10px 16px;border-radius:22px;font-size:13px;z-index:9990;box-shadow:0 3px 18px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;max-width:calc(100vw - 32px);animation:swToastIn .35s ease;}.sw-toast-reload{background:var(--prime);color:#fff;border:none;border-radius:9px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation;}.sw-toast-close{background:none;color:#aaa;border:none;font-size:18px;cursor:pointer;padding:0 4px;line-height:1;touch-action:manipulation;}@keyframes swToastIn{from{opacity:0;transform:translateX(-50%) translateY(16px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
 #zoom-overlay{position:fixed;inset:0;background:#000;z-index:850;overflow:hidden;touch-action:none;display:none;}
 #zoom-overlay.open{display:block;}
 #zoom-img{position:absolute;top:0;left:0;transform-origin:0 0;display:block;pointer-events:none;max-width:none;}
@@ -419,6 +420,14 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
         <button type="button" class="tp-add-btn" data-tp="rect">□ 四角形</button>
         <button type="button" class="tp-add-btn" data-tp="ellipse">○ 楕円</button>
       </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        <button type="button" class="tp-add-btn" data-tp="blur-rect">🫧□ ぼかし</button>
+        <button type="button" class="tp-add-btn" data-tp="blur-ellipse">🫧○ ぼかし</button>
+        <button type="button" class="tp-add-btn" data-tp="blur-poly">🫧⬟ ぼかし</button>
+        <button type="button" class="tp-add-btn" data-tp="mosaic-rect">⬛□ モザイク</button>
+        <button type="button" class="tp-add-btn" data-tp="mosaic-ellipse">⬛○ モザイク</button>
+        <button type="button" class="tp-add-btn" data-tp="mosaic-poly">⬛⬟ モザイク</button>
+      </div>
       <div id="tp-selected-panel"></div>
       <div id="topping-list"></div>
     </div>
@@ -495,6 +504,8 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 
 <!-- コンテキストメニュー -->
 <div id="ctx-menu" class="hidden">
+  <button type="button" class="ctx-item" id="ctx-replace">🔄 画像の変更</button>
+  <div class="ctx-sep"></div>
   <button type="button" class="ctx-item" id="ctx-trim">✂️ トリミング</button>
   <div class="ctx-sep"></div>
   <button type="button" class="ctx-item" id="ctx-cutv">✄ 中抜き（縦）</button>
@@ -676,7 +687,7 @@ async function loadPendingShares(){
     persistNewImages(loaded).then(()=>persistLayout()); showTab('images');
   }catch(e){ console.warn('loadPending:',e); }
 }
-navigator.serviceWorker?.addEventListener('message',async e=>{ if(e.data?.type==='share_received') await loadPendingShares(); });
+// メッセージ処理は init 内に統合
 document.addEventListener('paste',async e=>{
   const files=Array.from(e.clipboardData?.items||[]).filter(it=>it.type.startsWith('image/')).map(it=>it.getAsFile()).filter(Boolean);
   if(files.length){ await insertFilesAt(null,files); showTab('images'); }
@@ -972,6 +983,28 @@ $('ctx-menu').classList.add('hidden');
 // ── コンテキストメニュー各アクション ──
 function ctxHide(){ $('ctx-menu').classList.add('hidden'); }
 
+$('ctx-replace').addEventListener('click',()=>{
+  ctxHide();
+  const fi=document.createElement('input');fi.type='file';fi.accept='image/*';
+  fi.onchange=async e=>{
+    const file=e.target.files?.[0];if(!file)return;
+    const{ri,ci}=ctxTarget;const oldImg=state.grid[ri][ci];
+    try{
+      const url=URL.createObjectURL(file);
+      const el=new Image();
+      await new Promise((res,rej)=>{el.onload=res;el.onerror=rej;el.src=url;});
+      URL.revokeObjectURL(oldImg.url);
+      state.grid[ri][ci]={id:oldImg.id,name:file.name,imgEl:el,url,
+        w:el.naturalWidth,h:el.naturalHeight,
+        cropData:null,transform:null,colorAdjust:null,cutoutData:null,thumbUrl:null};
+      state.previewDirty=true;
+      const blob=await fetch(url).then(r=>r.blob());
+      await dbTxW('imgs',s=>s.put({id:oldImg.id,name:file.name,blob}));
+      updateImgThumb(state.grid[ri][ci]).then(()=>{renderGridView();persistLayout();});
+    }catch(err){alert('画像の変更に失敗しました。\n'+err.message);}
+  };
+  fi.click();
+});
 $('ctx-trim').addEventListener('click',()=>{ ctxHide(); openTrimModal(ctxTarget.ri,ctxTarget.ci); });
 
 $('ctx-cutv').addEventListener('click',()=>{ ctxHide(); openCutoutModal(ctxTarget.ri,ctxTarget.ci,'v'); });
@@ -1052,6 +1085,70 @@ function calcNaturalDimensions(){
 }
 
 // ===== トッピング描画 =====
+
+// ===== ぼかし・モザイク描画 =====
+function _pointInPoly(px,py,pts){
+  let inside=false;
+  for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+    const xi=pts[i][0],yi=pts[i][1],xj=pts[j][0],yj=pts[j][1];
+    if((yi>py)!==(yj>py)&&px<(xj-xi)*(py-yi)/(yj-yi)+xi)inside=!inside;
+  }
+  return inside;
+}
+
+function drawEffectItem(ctx,s,W,H,scale){
+  const isBlur=s.type.startsWith('blur');
+  const shape=s.type.split('-')[1];
+  const intensity=Math.max(2,(s.intensity||20)*scale);
+  const px=p=>p/100*W,py=p=>p/100*H;
+
+  // クリップパスを構築
+  const buildClip=()=>{
+    ctx.beginPath();
+    if(shape==='rect'){
+      ctx.rect(px(s.x),py(s.y),px(s.w),px(s.h));
+    }else if(shape==='ellipse'){
+      const ecx=px(s.x)+px(s.w)/2,ecy=py(s.y)+px(s.h)/2;
+      const erx=Math.abs(px(s.w))/2,ery=Math.abs(px(s.h))/2;
+      ctx.ellipse(ecx,ecy,erx,ery,0,0,Math.PI*2);
+    }else if(shape==='poly'&&s.points?.length>=3){
+      ctx.moveTo(px(s.points[0].x),py(s.points[0].y));
+      s.points.slice(1).forEach(p=>ctx.lineTo(px(p.x),py(p.y)));
+      ctx.closePath();
+    }else return false;
+    return true;
+  };
+
+  // 現在のキャンバス状態をスナップショット
+  const snap=document.createElement('canvas');snap.width=W;snap.height=H;
+  snap.getContext('2d').drawImage(ctx.canvas,0,0);
+
+  ctx.save();
+  if(!buildClip()){ctx.restore();return;}
+  ctx.clip();
+
+  if(isBlur){
+    // ぼかし: filter:blur() で処理
+    const blurred=document.createElement('canvas');blurred.width=W;blurred.height=H;
+    const bc=blurred.getContext('2d');
+    bc.filter=`blur(${intensity}px)`;
+    bc.drawImage(snap,0,0);
+    bc.filter='none';
+    ctx.drawImage(blurred,0,0);
+  }else{
+    // モザイク: 縮小→ニアレストネイバー拡大
+    const blockPx=Math.max(2,Math.round(intensity));
+    const smallW=Math.max(1,Math.round(W/blockPx)),smallH=Math.max(1,Math.round(H/blockPx));
+    const small=document.createElement('canvas');small.width=smallW;small.height=smallH;
+    const sc=small.getContext('2d');
+    sc.imageSmoothingEnabled=true;sc.drawImage(snap,0,0,smallW,smallH);
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(small,0,0,smallW,smallH,0,0,W,H);
+    ctx.imageSmoothingEnabled=true;
+  }
+  ctx.restore();
+}
+
 function applyToppings(ctx,W,H,scale){
   state.toppings.forEach(t=>{
     if(!t.text?.trim()) return;
@@ -1267,7 +1364,7 @@ $('btn-eyedrop').addEventListener('click',async()=>{
 
 // ===== トッピングタブ =====
 
-const TP_LABELS={text:'✍️ テキスト',line:'— 直線',arrow:'→ 矢印',rect:'□ 四角形',ellipse:'○ 楕円'};
+const TP_LABELS={text:'✍️ テキスト',line:'— 直線',arrow:'→ 矢印',rect:'□ 四角形',ellipse:'○ 楕円','blur-rect':'🫧□ ぼかし','blur-ellipse':'🫧○ ぼかし','blur-poly':'🫧⬟ ぼかし','mosaic-rect':'⬛□ モザイク','mosaic-ellipse':'⬛○ モザイク','mosaic-poly':'⬛⬟ モザイク'};
 
 function createToppingItem(type){
   const base={id:state.nextToppingId++,type,stroke2Enabled:false,stroke2Color:'#ffffff',stroke2Width:3,shadowEnabled:false,shadowColor:'#000000',shadowBlur:8,shadowX:3,shadowY:3};
@@ -1277,6 +1374,12 @@ function createToppingItem(type){
     case 'arrow': return{...base,x:20,y:50,x2:80,y2:50,color:'#ff4444',strokeWidth:4,headSize:40,headAngle:30};
     case 'rect':  return{...base,x:30,y:30,w:25,h:25,color:'#ff4444',strokeWidth:4,fillEnabled:false,fillColor:'#ff4444',fillOpacity:30,lockAspect:false};
     case 'ellipse':return{...base,x:30,y:30,w:25,h:25,color:'#ff4444',strokeWidth:4,fillEnabled:false,fillColor:'#ff4444',fillOpacity:30,lockAspect:true,_ar:1};
+    case 'blur-rect':  return{...base,x:30,y:30,w:40,h:30,intensity:20,lockAspect:false};
+    case 'blur-ellipse':return{...base,x:30,y:30,w:40,h:30,intensity:20,lockAspect:false};
+    case 'blur-poly':  return{...base,points:[{x:35,y:25},{x:65,y:25},{x:75,y:65},{x:50,y:75},{x:25,y:65}],intensity:20};
+    case 'mosaic-rect':  return{...base,x:30,y:30,w:40,h:30,intensity:20,lockAspect:false};
+    case 'mosaic-ellipse':return{...base,x:30,y:30,w:40,h:30,intensity:20,lockAspect:false};
+    case 'mosaic-poly':  return{...base,points:[{x:35,y:25},{x:65,y:25},{x:75,y:65},{x:50,y:75},{x:25,y:65}],intensity:20};
     default:return base;
   }
 }
@@ -1340,28 +1443,109 @@ function drawShapeItem(ctx,s,W,H,scale){
   } else if(s.type==='arrow'){
     const[x1,y1,x2,y2]=[px(s.x),py(s.y),px(s.x2),py(s.y2)];
     const hl=(s.headSize||40)*scale,ha=(s.headAngle||30)*Math.PI/180,ang=Math.atan2(y2-y1,x2-x1);
+    // 矢印: オフスクリーンキャンバスで全部描いてから影を統合適用
+    // こうすることでシャフト/矢じり接合・縁取り/本体の二重影を防ぐ
     const shaftEnd=[x2-hl*0.7*Math.cos(ang),y2-hl*0.7*Math.sin(ang)];
     const hp1=[x2-hl*Math.cos(ang-ha),y2-hl*Math.sin(ang-ha)];
     const hp2=[x2-hl*Math.cos(ang+ha),y2-hl*Math.sin(ang+ha)];
-    // 縁取り（シャフト＋矢じり両方に適用）
+    const pts=[[x1,y1],[x2,y2],shaftEnd,hp1,hp2];
+    const lw2s=s.stroke2Enabled?lw+(s.stroke2Width||3)*scale*2:lw;
+    const shadMg=s.shadowEnabled?Math.max((s.shadowBlur||8)*scale+Math.abs((s.shadowX||3)*scale)+Math.abs((s.shadowY||3)*scale),8):4;
+    const mg=Math.ceil(lw2s/2+hl+shadMg+8);
+    const bx=Math.floor(Math.min(...pts.map(p=>p[0]))-mg);
+    const by=Math.floor(Math.min(...pts.map(p=>p[1]))-mg);
+    const bw=Math.max(1,Math.ceil(Math.max(...pts.map(p=>p[0]))-bx+mg*2));
+    const bh=Math.max(1,Math.ceil(Math.max(...pts.map(p=>p[1]))-by+mg*2));
+    const offC=document.createElement('canvas');offC.width=bw;offC.height=bh;
+    const octx=offC.getContext('2d');
+    octx.translate(-bx,-by);octx.lineCap='round';octx.lineJoin='round';
     if(s.stroke2Enabled){
-      const lw2=lw+(s.stroke2Width||3)*scale*2;
-      ctx.strokeStyle=s.stroke2Color||'#fff';ctx.lineWidth=lw2;ctx.lineJoin='round';
-      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(shaftEnd[0],shaftEnd[1]);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(hp1[0],hp1[1]);ctx.lineTo(hp2[0],hp2[1]);ctx.closePath();
-      ctx.fillStyle=s.stroke2Color||'#fff';ctx.fill();ctx.stroke();
+      octx.strokeStyle=s.stroke2Color||'#fff';octx.lineWidth=lw2s;
+      octx.beginPath();octx.moveTo(x1,y1);octx.lineTo(shaftEnd[0],shaftEnd[1]);octx.stroke();
+      octx.beginPath();octx.moveTo(x2,y2);octx.lineTo(hp1[0],hp1[1]);octx.lineTo(hp2[0],hp2[1]);octx.closePath();
+      octx.fillStyle=s.stroke2Color||'#fff';octx.fill();octx.stroke();
     }
-    // メイン描画
-    ctx.strokeStyle=s.color||'#ff4444';ctx.lineWidth=lw;
-    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(shaftEnd[0],shaftEnd[1]);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(hp1[0],hp1[1]);ctx.lineTo(hp2[0],hp2[1]);ctx.closePath();
-    ctx.fillStyle=s.color||'#ff4444';ctx.fill();
+    octx.strokeStyle=s.color||'#ff4444';octx.lineWidth=lw;
+    octx.beginPath();octx.moveTo(x1,y1);octx.lineTo(shaftEnd[0],shaftEnd[1]);octx.stroke();
+    octx.beginPath();octx.moveTo(x2,y2);octx.lineTo(hp1[0],hp1[1]);octx.lineTo(hp2[0],hp2[1]);octx.closePath();
+    octx.fillStyle=s.color||'#ff4444';octx.fill();
+    // 影はctxに既設定。drawImageで全体を一括影描画
+    ctx.drawImage(offC,bx,by);
+  }
+  ctx.restore();
+}
+
+
+// ===== ぼかし・モザイク描画 =====
+function _pointInPoly(px,py,pts){
+  let inside=false;
+  for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+    const xi=pts[i][0],yi=pts[i][1],xj=pts[j][0],yj=pts[j][1];
+    if((yi>py)!==(yj>py)&&px<(xj-xi)*(py-yi)/(yj-yi)+xi)inside=!inside;
+  }
+  return inside;
+}
+
+function drawEffectItem(ctx,s,W,H,scale){
+  const isBlur=s.type.startsWith('blur');
+  const shape=s.type.split('-')[1];
+  const intensity=Math.max(2,(s.intensity||20)*scale);
+  const px=p=>p/100*W,py=p=>p/100*H;
+
+  // クリップパスを構築
+  const buildClip=()=>{
+    ctx.beginPath();
+    if(shape==='rect'){
+      ctx.rect(px(s.x),py(s.y),px(s.w),px(s.h));
+    }else if(shape==='ellipse'){
+      const ecx=px(s.x)+px(s.w)/2,ecy=py(s.y)+px(s.h)/2;
+      const erx=Math.abs(px(s.w))/2,ery=Math.abs(px(s.h))/2;
+      ctx.ellipse(ecx,ecy,erx,ery,0,0,Math.PI*2);
+    }else if(shape==='poly'&&s.points?.length>=3){
+      ctx.moveTo(px(s.points[0].x),py(s.points[0].y));
+      s.points.slice(1).forEach(p=>ctx.lineTo(px(p.x),py(p.y)));
+      ctx.closePath();
+    }else return false;
+    return true;
+  };
+
+  // 現在のキャンバス状態をスナップショット
+  const snap=document.createElement('canvas');snap.width=W;snap.height=H;
+  snap.getContext('2d').drawImage(ctx.canvas,0,0);
+
+  ctx.save();
+  if(!buildClip()){ctx.restore();return;}
+  ctx.clip();
+
+  if(isBlur){
+    // ぼかし: filter:blur() で処理
+    const blurred=document.createElement('canvas');blurred.width=W;blurred.height=H;
+    const bc=blurred.getContext('2d');
+    bc.filter=`blur(${intensity}px)`;
+    bc.drawImage(snap,0,0);
+    bc.filter='none';
+    ctx.drawImage(blurred,0,0);
+  }else{
+    // モザイク: 縮小→ニアレストネイバー拡大
+    const blockPx=Math.max(2,Math.round(intensity));
+    const smallW=Math.max(1,Math.round(W/blockPx)),smallH=Math.max(1,Math.round(H/blockPx));
+    const small=document.createElement('canvas');small.width=smallW;small.height=smallH;
+    const sc=small.getContext('2d');
+    sc.imageSmoothingEnabled=true;sc.drawImage(snap,0,0,smallW,smallH);
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(small,0,0,smallW,smallH,0,0,W,H);
+    ctx.imageSmoothingEnabled=true;
   }
   ctx.restore();
 }
 
 function applyToppings(ctx,W,H,scale){
-  state.toppings.forEach(item=>{const type=item.type||'text';if(type==='text')drawTextItem(ctx,item,W,H,scale);else drawShapeItem(ctx,item,W,H,scale);});
+  state.toppings.forEach(item=>{
+    const type=item.type||'text';
+    if(type==='text')drawTextItem(ctx,item,W,H,scale);
+    else if(type.startsWith('blur')||type.startsWith('mosaic'))drawEffectItem(ctx,item,W,H,scale);
+    else drawShapeItem(ctx,item,W,H,scale);
+  });
 }
 
 // ===== ミニプレビュー =====
@@ -1393,6 +1577,24 @@ function toppingMiniPreview(t){
   const rx=(W-rw)/2,ry=(H-rh)/2;
   if(type==='rect') return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><rect x="'+rx+'" y="'+ry+'" width="'+rw+'" height="'+rh+'" stroke="'+col+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
   return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><ellipse cx="'+(rx+rw/2)+'" cy="'+(ry+rh/2)+'" rx="'+(rw/2)+'" ry="'+(rh/2)+'" stroke="'+col+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
+  // blur/mosaic mini preview
+  if(type.startsWith('blur')||type.startsWith('mosaic')){
+    const isBlur=type.startsWith('blur'),sh=type.split('-')[1];
+    const col2=isBlur?'#88aaff':'#888888',fid='ef'+t.id;
+    const blurSvg=isBlur?`<defs><filter id="${fid}"><feGaussianBlur stdDeviation="2"/></filter></defs>`:'',
+          fattr=isBlur?`filter="url(#${fid})" opacity="0.85"`:'fill="none"';
+    if(sh==='rect')  return `<svg width="40" height="20" style="flex-shrink:0">${blurSvg}<rect x="2" y="2" width="36" height="16" ${fattr} fill="${isBlur?col2:'none'}" stroke="${col2}" stroke-width="1.5"/></svg>`;
+    if(sh==='ellipse')return `<svg width="40" height="20" style="flex-shrink:0">${blurSvg}<ellipse cx="20" cy="10" rx="18" ry="8" ${fattr} fill="${isBlur?col2:'none'}" stroke="${col2}" stroke-width="1.5"/></svg>`;
+    if(sh==='poly'){
+      const pts=(t.points||[{x:35,y:25},{x:65,y:25},{x:75,y:65},{x:50,y:75},{x:25,y:65}]);
+      const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);
+      const mnx=Math.min(...xs),mny=Math.min(...ys),mxx=Math.max(...xs),mxy=Math.max(...ys);
+      const scx=36/(mxx-mnx||1),scy=16/(mxy-mny||1);
+      const pstr=pts.map(p=>((p.x-mnx)*scx+2)+','+((p.y-mny)*scy+2)).join(' ');
+      return `<svg width="40" height="20" style="flex-shrink:0">${blurSvg}<polygon points="${pstr}" ${fattr} fill="${isBlur?col2:'none'}" stroke="${col2}" stroke-width="1.5"/></svg>`;
+    }
+  }
+  return '';
 }
 
 // ===== コントロールHTML =====
@@ -1482,6 +1684,26 @@ function renderToppingControlsHTML(t){
     return adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val')+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val')+
       sizeLockHTML(t)+colorLineHTML(t)+fillHTML(t)+strokeShadowHTML(t);
   }
+  if(type.startsWith('blur')||type.startsWith('mosaic')){
+    const isBlur=type.startsWith('blur'),sh=type.split('-')[1];
+    let html='';
+    if(sh==='rect'||sh==='ellipse'){
+      html=adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val')+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val')+sizeLockHTML(t);
+    }else if(sh==='poly'){
+      html=(t.points||[]).map((p,i)=>
+        '<div class="adj-row"><span class="adj-label">頂点'+(i+1)+'</span>'
+        +'<input type="range" class="adj-slider tp-vx-'+i+'" min="0" max="100" value="'+Math.round(p.x)+'">'
+        +'<span class="adj-val tp-vxv-'+i+'">'+Math.round(p.x)+'</span>'
+        +'<input type="range" class="adj-slider tp-vy-'+i+'" min="0" max="100" value="'+Math.round(p.y)+'">'
+        +'<span class="adj-val tp-vyv-'+i+'">'+Math.round(p.y)+'</span></div>'
+      ).join('');
+      html+='<div class="adj-row">'
+        +'<button type="button" class="tp-poly-add adj-btn">＋ 頂点追加</button>'
+        +((t.points||[]).length>3?'<button type="button" class="tp-poly-del adj-btn" style="margin-left:4px">－ 末尾削除</button>':'')+'</div>';
+    }
+    html+=adjRowHTML(isBlur?'ぼかし':'ブロック','tp-intensity',2,100,t.intensity||20,'tp-intensity-val');
+    return html;
+  }
   return '';
 }
 
@@ -1528,6 +1750,37 @@ function bindToppingControls(container,t){
     const fc=container.querySelector('.tp-fillc');if(fc)fc.addEventListener('input',e=>{t.fillColor=e.target.value;upd();});
     const fo=container.querySelector('.tp-fillop');const fov=container.querySelector('.tp-fillop-val');
     if(fo)fo.addEventListener('input',()=>{t.fillOpacity=parseFloat(fo.value);if(fov)fov.textContent=fo.value;upd();});
+  }
+  // blur/mosaic エフェクト
+  if(type.startsWith('blur')||type.startsWith('mosaic')){
+    const sh=type.split('-')[1];
+    if(sh==='rect'||sh==='ellipse'){
+      bs('tp-x','x','tp-x-val');bs('tp-y','y','tp-y-val');
+      const wEl=container.querySelector('.tp-w'),hEl=container.querySelector('.tp-h');
+      const wVl=container.querySelector('.tp-w-val'),hVl=container.querySelector('.tp-h-val');
+      const lockBtn=container.querySelector('.tp-lock-btn');
+      if(wEl)wEl.addEventListener('input',()=>{t.w=parseFloat(wEl.value);if(wVl)wVl.textContent=Math.round(t.w);if(t.lockAspect&&t._ar){t.h=Math.max(1,Math.min(100,Math.round(t.w*t._ar)));if(hEl)hEl.value=t.h;if(hVl)hVl.textContent=t.h;}upd();});
+      if(hEl)hEl.addEventListener('input',()=>{t.h=parseFloat(hEl.value);if(hVl)hVl.textContent=Math.round(t.h);if(t.lockAspect&&t._ar){t.w=Math.max(1,Math.min(100,Math.round(t.h/t._ar)));if(wEl)wEl.value=t.w;if(wVl)wVl.textContent=t.w;}upd();});
+      if(lockBtn)lockBtn.addEventListener('click',()=>{t.lockAspect=!t.lockAspect;if(t.lockAspect)t._ar=(t.h||1)/(t.w||1);lockBtn.textContent=t.lockAspect?'🔒':'🔓';lockBtn.classList.toggle('locked',t.lockAspect);});
+    }else if(sh==='poly'){
+      (t.points||[]).forEach((p,i)=>{
+        const vxEl=container.querySelector('.tp-vx-'+i),vyEl=container.querySelector('.tp-vy-'+i);
+        const vxVal=container.querySelector('.tp-vxv-'+i),vyVal=container.querySelector('.tp-vyv-'+i);
+        if(vxEl)vxEl.addEventListener('input',()=>{p.x=parseFloat(vxEl.value);if(vxVal)vxVal.textContent=Math.round(p.x);upd();});
+        if(vyEl)vyEl.addEventListener('input',()=>{p.y=parseFloat(vyEl.value);if(vyVal)vyVal.textContent=Math.round(p.y);upd();});
+      });
+      const addBtn=container.querySelector('.tp-poly-add');
+      if(addBtn)addBtn.addEventListener('click',()=>{
+        const pts=t.points,last=pts[pts.length-1],prev=pts[pts.length-2]||pts[0];
+        pts.push({x:Math.round(Math.min(98,(last.x+prev.x)/2+5)),y:Math.round(Math.min(98,(last.y+prev.y)/2+5))});
+        renderSelectedPanel();upd();
+      });
+      const delBtn=container.querySelector('.tp-poly-del');
+      if(delBtn)delBtn.addEventListener('click',()=>{if(t.points.length>3){t.points.pop();renderSelectedPanel();upd();}});
+    }
+    const intEl=container.querySelector('.tp-intensity'),intVl=container.querySelector('.tp-intensity-val');
+    if(intEl)intEl.addEventListener('input',()=>{t.intensity=parseFloat(intEl.value);if(intVl)intVl.textContent=Math.round(t.intensity);upd();});
+    return;
   }
   // 縁取り/影（テキスト以外）
   if(type!=='text'){
@@ -1583,6 +1836,37 @@ function renderToppingCanvas(){
       ctx.restore();
     }
   }
+  // エフェクト選択中: 輪郭 + ポリゴン頂点マーカー
+  if(sel&&(sel.type?.startsWith('blur')||sel.type?.startsWith('mosaic'))){
+    const sh=sel.type.split('-')[1];
+    ctx.save();
+    ctx.strokeStyle='#5548D6';ctx.lineWidth=1.5/TZ.scale;ctx.setLineDash([5,4]);
+    ctx.beginPath();
+    if(sh==='rect'){
+      ctx.rect(sel.x/100*tc.width,sel.y/100*tc.height,sel.w/100*tc.width,sel.w/100*tc.width);
+      ctx.stroke();
+    }else if(sh==='ellipse'){
+      const ecx=(sel.x+sel.w/2)/100*tc.width,ecy=sel.y/100*tc.height+sel.w/2/100*tc.width;
+      const er=sel.w/200*tc.width;
+      ctx.ellipse(ecx,ecy,er,er,0,0,Math.PI*2);ctx.stroke();
+    }else if(sh==='poly'&&sel.points?.length>=3){
+      ctx.moveTo(sel.points[0].x/100*tc.width,sel.points[0].y/100*tc.height);
+      sel.points.slice(1).forEach(p=>ctx.lineTo(p.x/100*tc.width,p.y/100*tc.height));
+      ctx.closePath();ctx.stroke();
+      ctx.setLineDash([]);
+      sel.points.forEach((p,i)=>{
+        const vx=p.x/100*tc.width,vy=p.y/100*tc.height;
+        ctx.beginPath();ctx.arc(vx,vy,7/TZ.scale,0,Math.PI*2);
+        ctx.fillStyle='#5548D6';ctx.fill();
+        ctx.strokeStyle='#fff';ctx.lineWidth=1.5/TZ.scale;ctx.stroke();
+        ctx.fillStyle='#fff';ctx.font='bold '+(9/TZ.scale)+'px sans-serif';
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(i+1,vx,vy);
+      });
+    }
+    ctx.restore();
+  }
+  if(typeof _updateTZ==='function')_updateTZ();
 }
 
 // ===== リスト（アコーディオン） =====
@@ -1662,7 +1946,8 @@ function onReorderUp(e){
 // ===== キャンバスドラッグ移動（デルタ方式） =====
 // ===== トッピングキャンバス: ズーム・パン・ドラッグ =====
 const TZ={scale:1,tx:0,ty:0,initScale:1,ptrs:new Map(),lastPD:0,
-          tpDrag:false,isPan:false,pSX:0,pSY:0,pSTX:0,pSTY:0,dPCX:0,dPCY:0};
+          tpDrag:false,isPan:false,pSX:0,pSY:0,pSTX:0,pSTY:0,dPCX:0,dPCY:0,
+          dragMode:'move',dragVertexIdx:-1};
 
 function _w2c(ex,ey){
   const r=$('tp-canvas-wrap').getBoundingClientRect();
@@ -1694,6 +1979,15 @@ function _hitTest(cx,cy){
   }
   return null;
 }
+function _hitTestVertex(cx,cy,t){
+  if(!t?.points)return -1;
+  const tc=$('topping-canvas');if(!tc?.width)return -1;
+  const W=tc.width,H=tc.height,HR=22/TZ.scale;
+  for(let i=0;i<t.points.length;i++){
+    if(Math.hypot(cx-t.points[i].x/100*W,cy-t.points[i].y/100*H)<HR)return i;
+  }
+  return -1;
+}
 function _updateTZ(){
   const tc=$('topping-canvas'),wrap=$('tp-canvas-wrap');
   const mTX=Math.min(0,wrap.clientWidth-tc.width*TZ.scale);
@@ -1709,13 +2003,20 @@ tpWrap.addEventListener('pointerdown',e=>{
   tpWrap.setPointerCapture(e.pointerId);
   if(TZ.ptrs.size===1){
     const{cx,cy}=_w2c(e.clientX,e.clientY);
-    const hit=_hitTest(cx,cy);
-    if(hit!==null&&state.selectedToppingId!==null&&hit===state.selectedToppingId){
-      TZ.tpDrag=true;TZ.isPan=false;TZ.dPCX=cx;TZ.dPCY=cy;
-      tpWrap.classList.add('tp-grabbing');
+    const selT=state.toppings.find(t=>t.id===state.selectedToppingId);
+    const vIdx=selT?_hitTestVertex(cx,cy,selT):-1;
+    if(vIdx>=0){
+      TZ.tpDrag=true;TZ.isPan=false;TZ.dragMode='vertex';TZ.dragVertexIdx=vIdx;
+      TZ.dPCX=cx;TZ.dPCY=cy;tpWrap.classList.add('tp-grabbing');
     }else{
-      TZ.isPan=true;TZ.tpDrag=false;
-      TZ.pSX=e.clientX;TZ.pSY=e.clientY;TZ.pSTX=TZ.tx;TZ.pSTY=TZ.ty;
+      const hit=_hitTest(cx,cy);
+      if(hit!==null&&state.selectedToppingId!==null&&hit===state.selectedToppingId){
+        TZ.tpDrag=true;TZ.isPan=false;TZ.dragMode='move';
+        TZ.dPCX=cx;TZ.dPCY=cy;tpWrap.classList.add('tp-grabbing');
+      }else{
+        TZ.isPan=true;TZ.tpDrag=false;
+        TZ.pSX=e.clientX;TZ.pSY=e.clientY;TZ.pSTX=TZ.tx;TZ.pSTY=TZ.ty;
+      }
     }
   }else if(TZ.ptrs.size===2){
     TZ.tpDrag=false;TZ.isPan=false;
@@ -1743,11 +2044,23 @@ tpWrap.addEventListener('pointermove',e=>{
   if(TZ.tpDrag&&state.selectedToppingId!==null){
     const{cx,cy}=_w2c(e.clientX,e.clientY);
     const tc=$('topping-canvas');
-    const dx=(cx-TZ.dPCX)/tc.width*100,dy=(cy-TZ.dPCY)/tc.height*100;
-    TZ.dPCX=cx;TZ.dPCY=cy;
     const t=state.toppings.find(tp=>tp.id===state.selectedToppingId);if(!t)return;
     const type=t.type||'text';const cl=v=>Math.round(Math.max(0,Math.min(100,v)));
-    t.x=cl(t.x+dx);t.y=cl(t.y+dy);
+    if(TZ.dragMode==='vertex'&&t.points&&TZ.dragVertexIdx>=0){
+      t.points[TZ.dragVertexIdx]={x:cl(cx/tc.width*100),y:cl(cy/tc.height*100)};
+      const sp=$('tp-selected-panel');if(sp){
+        const i=TZ.dragVertexIdx;
+        const vx=sp.querySelector('.tp-vx-'+i),vy=sp.querySelector('.tp-vy-'+i);
+        const vxv=sp.querySelector('.tp-vxv-'+i),vyv=sp.querySelector('.tp-vyv-'+i);
+        if(vx)vx.value=t.points[i].x;if(vy)vy.value=t.points[i].y;
+        if(vxv)vxv.textContent=t.points[i].x;if(vyv)vyv.textContent=t.points[i].y;
+      }
+      renderToppingCanvas();return;
+    }
+    const dx=(cx-TZ.dPCX)/tc.width*100,dy=(cy-TZ.dPCY)/tc.height*100;
+    TZ.dPCX=cx;TZ.dPCY=cy;
+    if(type.endsWith('-poly')&&t.points){t.points=t.points.map(p=>({x:cl(p.x+dx),y:cl(p.y+dy)}));}
+    else{t.x=cl((t.x||0)+dx);t.y=cl((t.y||0)+dy);}
     if(type==='line'||type==='arrow'){t.x2=cl(t.x2+dx);t.y2=cl(t.y2+dy);}
     const sp=$('tp-selected-panel');
     if(sp){
@@ -2164,6 +2477,17 @@ document.addEventListener('touchmove',e=>{
   if(_numSwipe)e.preventDefault();
 },{passive:false,capture:false});
 
+
+// ===== SW更新通知 =====
+function showUpdateToast(){
+  if(document.querySelector('.sw-toast'))return; // 二重表示防止
+  const t=document.createElement('div');t.className='sw-toast';
+  t.innerHTML='🔄 アプリが更新されました&nbsp;'
+    +'<button class="sw-toast-reload" onclick="location.reload()">再読込</button>'
+    +'<button class="sw-toast-close" onclick="this.parentElement.remove()">✕</button>';
+  document.body.appendChild(t);
+  setTimeout(()=>t?.remove(),15000);
+}
 // ===== 初期化 =====
 (function init(){
   syncAdjPanel(); renderGridView(); updateCountBadge();
@@ -2172,7 +2496,17 @@ document.addEventListener('touchmove',e=>{
   $('topping-empty').classList.remove('hidden'); $('topping-content').classList.add('hidden');
   $('save-empty').classList.remove('hidden'); $('save-content').classList.add('hidden');
   $('trim-modal').classList.add('hidden'); $('ctx-menu').classList.add('hidden');
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  if('serviceWorker' in navigator){
+    const prevCtrl=navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(prevCtrl)showUpdateToast(); // 旧SWが存在した＝更新時のみ通知
+    });
+    navigator.serviceWorker.addEventListener('message',async e=>{
+      if(e.data?.type==='share_received')await loadPendingShares();
+      if(e.data?.type==='sw_updated')showUpdateToast();
+    });
+  }
   if(new URLSearchParams(location.search).get('share_pending')) history.replaceState({},'','./');
 })();
 </script>
