@@ -195,6 +195,9 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 .tp-lock-btn.locked{border-color:var(--prime);background:rgba(255,105,64,0.1);}
 .tp-add-btn{padding:5px 10px;border:1px solid var(--border2);border-radius:7px;background:var(--surf2);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;}
 .tp-add-btn:hover{border-color:var(--prime);color:var(--prime);}
+.tp-ud-btn{position:relative;padding:5px 9px;border:1px solid var(--border2);border-radius:7px;background:var(--surf2);color:var(--text);font-size:17px;line-height:1;cursor:pointer;touch-action:manipulation;transition:opacity .15s;}
+.tp-ud-btn:disabled{opacity:.3;pointer-events:none;}
+.tp-ud-badge{position:absolute;top:-6px;right:-6px;background:var(--prime);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:1px 4px;min-width:15px;text-align:center;line-height:14px;display:none;}
 .tp-select{background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:7px;padding:4px 18px 4px 6px;font-size:11px;cursor:pointer;appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%233D6080'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 4px center;}
@@ -439,6 +442,8 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
             <option value="mosaic-poly">⬛⬟ モザイク 多角</option>
           </optgroup>
         </select>
+        <button type="button" id="tp-undo" class="tp-ud-btn" disabled title="元に戻す">↩<span class="tp-ud-badge" id="tp-undo-badge"></span></button>
+        <button type="button" id="tp-redo" class="tp-ud-btn" disabled title="やり直し">↪<span class="tp-ud-badge" id="tp-redo-badge"></span></button>
       </div>
       <div id="tp-selected-panel"></div>
       <div id="topping-list"></div>
@@ -716,6 +721,8 @@ function showTab(name){
     renderToppingList();
     if(flatImages().length)doCompose().then(()=>renderToppingCanvas()); // 常に最新状態を反映
     else renderToppingCanvas();
+    // 初回スナップショット（まだ履歴がない場合）
+    if(TH.stack.length===0)thSnapshot();
   }
   if(name==='save') updateSaveTab();
 }
@@ -1400,10 +1407,45 @@ function createToppingItem(type){
     default:return base;
   }
 }
+// ===== トッピング アンドゥ/リドゥ =====
+const TH={stack:[],idx:-1,MAX:40};
+function thSnapshot(){
+  TH.stack=TH.stack.slice(0,TH.idx+1);
+  TH.stack.push({toppings:JSON.parse(JSON.stringify(state.toppings)),selId:state.selectedToppingId});
+  if(TH.stack.length>TH.MAX)TH.stack.shift();
+  TH.idx=TH.stack.length-1;
+  _thUpdateBtns();
+}
+function _thRestore(){
+  const s=TH.stack[TH.idx];
+  state.toppings=JSON.parse(JSON.stringify(s.toppings));
+  state.selectedToppingId=s.selId;
+  renderToppingList();renderToppingCanvas();renderSelectedPanel();persistLayout();
+  _thUpdateBtns();
+}
+function _thUpdateBtns(){
+  const uCnt=TH.idx,rCnt=TH.stack.length-1-TH.idx;
+  const ub=$('tp-undo'),rb=$('tp-redo');
+  const ubg=$('tp-undo-badge'),rbg=$('tp-redo-badge');
+  if(ub){ub.disabled=uCnt<=0;if(ubg){ubg.textContent=uCnt>0?uCnt:'';ubg.style.display=uCnt>0?'':'none';}}
+  if(rb){rb.disabled=rCnt<=0;if(rbg){rbg.textContent=rCnt>0?rCnt:'';rbg.style.display=rCnt>0?'':'none';}}
+}
+let _thDebTimer=null;
+// 即時保存（追加・削除・並び替え等）
+function tpSaveNow(){clearTimeout(_thDebTimer);thSnapshot();persistLayout();}
+// デバウンス保存（スライダー等の連続操作）
+function tpSaveDebounced(){
+  persistLayout();
+  clearTimeout(_thDebTimer);
+  _thDebTimer=setTimeout(()=>{thSnapshot();},700);
+}
+$('tp-undo').addEventListener('click',()=>{if(TH.idx>0){TH.idx--;_thRestore();}});
+$('tp-redo').addEventListener('click',()=>{if(TH.idx<TH.stack.length-1){TH.idx++;_thRestore();}});
+
 function addToppingItem(type){
   const item=createToppingItem(type);
   state.toppings.push(item); state.selectedToppingId=item.id;
-  renderToppingList(); renderToppingCanvas(); persistLayout();
+  renderToppingList(); renderToppingCanvas(); tpSaveNow();
 }
 $$('.tp-add-btn').forEach(btn=>btn.addEventListener('click',()=>addToppingItem(btn.dataset.tp)));
 document.addEventListener('change',e=>{
@@ -1763,13 +1805,13 @@ function _bindPolyControls(container,t,upd){
   if(addBtn)addBtn.addEventListener('click',()=>{
     const pts=t.points,last=pts[pts.length-1],prev=pts[pts.length-2]||pts[0];
     pts.push({x:Math.round(Math.min(98,(last.x+prev.x)/2+5)),y:Math.round(Math.min(98,(last.y+prev.y)/2+5))});
-    renderSelectedPanel();upd();
+    renderSelectedPanel();renderToppingCanvas();tpSaveNow();
   });
   const delBtn=container.querySelector('.tp-poly-del');
-  if(delBtn)delBtn.addEventListener('click',()=>{if(t.points.length>3){t.points.pop();renderSelectedPanel();upd();}});
+  if(delBtn)delBtn.addEventListener('click',()=>{if(t.points.length>3){t.points.pop();renderSelectedPanel();renderToppingCanvas();tpSaveNow();}});
 }
 function bindToppingControls(container,t){
-  const upd=()=>{renderToppingCanvas();persistLayout();};
+  const upd=()=>{renderToppingCanvas();tpSaveDebounced();};
   const bs=(cls,prop,valCls)=>{const el=container.querySelector('.'+cls);if(!el)return;el.addEventListener('input',()=>{t[prop]=parseFloat(el.value)||0;const ve=container.querySelector('.'+valCls);if(ve)ve.textContent=Math.round(t[prop]);upd();});};
   const type=t.type||'text';
   // 共通X,Y
@@ -1977,7 +2019,7 @@ function renderToppingList(){
     item.querySelector('.tp-del').onclick=()=>{
       if(state.selectedToppingId===t.id)state.selectedToppingId=null;
       state.toppings.splice(state.toppings.indexOf(t),1);
-      renderToppingList();renderToppingCanvas();persistLayout();
+      renderToppingList();renderToppingCanvas();tpSaveNow();
     };
 
 
@@ -2019,7 +2061,7 @@ function onReorderUp(e){
   if(toIdx!==rdr.fromIdx){
     const[moved]=state.toppings.splice(rdr.fromIdx,1);
     state.toppings.splice(toIdx,0,moved);
-    persistLayout();
+    tpSaveNow();
   }
   rdr.active=false;
   renderToppingList();renderToppingCanvas();
@@ -2250,7 +2292,7 @@ tpWrap.addEventListener('pointermove',e=>{
 tpWrap.addEventListener('pointerup',e=>{
   TZ.ptrs.delete(e.pointerId);
   tpWrap.classList.remove('tp-grabbing');
-  if(TZ.tpDrag){TZ.tpDrag=false;persistLayout();}
+  if(TZ.tpDrag){TZ.tpDrag=false;tpSaveNow();}
   TZ.isPan=false;
   if(TZ.ptrs.size===1){
     const[p]=TZ.ptrs.values();
@@ -2301,12 +2343,16 @@ function openColorModal(ri,ci){
   });
   drawColorPreview(img);
   $('color-title').textContent='カラー調整 — '+img.name;
+  history.pushState({modal:'color'},'');
   $('color-modal').classList.remove('hidden'); resetColorZoom();
 }
 function drawColorPreview(img){
+  const dpr=Math.min(window.devicePixelRatio||1,3);
   const cv=$('color-canvas'),maxS=Math.min(window.innerWidth-40,600),maxH=Math.floor(window.innerHeight*0.52);
   const eff=getEffectiveDimensions(img),s=Math.min(1,maxS/eff.w,maxH/eff.h);
-  cv.width=Math.round(eff.w*s);cv.height=Math.round(eff.h*s);
+  const cssW=Math.round(eff.w*s),cssH=Math.round(eff.h*s);
+  cv.width=Math.min(eff.w,cssW*dpr);cv.height=Math.min(eff.h,cssH*dpr);
+  cv.style.width=cssW+'px';cv.style.height=cssH+'px';
   const ctx=cv.getContext('2d');
   ctx.filter=buildColorFilter(CA.ca);
   ctx.clearRect(0,0,cv.width,cv.height);
@@ -2332,14 +2378,14 @@ $('color-apply-btn').addEventListener('click',()=>{
   img.colorAdjust=allZero?null:{...CA.ca};
   state.previewDirty=true;
   updateImgThumb(img).then(()=>{renderGridView();persistLayout();});
-  $('color-modal').classList.add('hidden');
+  $('color-modal').classList.add('hidden'); history.back();
 });
 $('color-reset-btn').addEventListener('click',()=>{
   CA.ca={exposure:0,brightness:0,contrast:0,saturation:0};
   ['exp','bri','con','sat'].forEach(k=>{$('ca-'+k).value=0;$('ca-'+k+'-val').textContent=0;});
   refreshColorPreview();
 });
-$('color-cancel-btn').addEventListener('click',()=>$('color-modal').classList.add('hidden'));
+$('color-cancel-btn').addEventListener('click',()=>{$('color-modal').classList.add('hidden');history.back();});
 $('ca-preview').addEventListener('change',()=>refreshColorPreview());
 
 // ===== 中抜きカットモーダル =====
@@ -2355,9 +2401,13 @@ function openCutoutModal(ri,ci,mode){
   }else CU.regions=[{start:0.3,end:0.6}];
   const maxW=Math.min(window.innerWidth-32,780),maxH=Math.floor(window.innerHeight*0.5);
   CU.scale=Math.min(1,maxW/img.w,maxH/img.h);
+  const dpr=Math.min(window.devicePixelRatio||1,3);
+  const cssW=Math.round(img.w*CU.scale),cssH=Math.round(img.h*CU.scale);
   const cv=$('cutout-canvas');
-  cv.width=Math.round(img.w*CU.scale);cv.height=Math.round(img.h*CU.scale);
+  cv.width=Math.min(img.w,cssW*dpr);cv.height=Math.min(img.h,cssH*dpr);
+  cv.style.width=cssW+'px';cv.style.height=cssH+'px';
   $('cutout-title').textContent=(mode==='v'?'中抜き（縦方向）':'中抜き（横方向）')+' — '+img.name;
+  history.pushState({modal:'cutout'},'');
   renderCutoutRegions();updateCutoutInfo();drawCutout();
   $('cutout-modal').classList.remove('hidden'); resetCutoutZoom();
 }
@@ -2415,7 +2465,9 @@ function drawCutout(){
 
 (function initCutoutListeners(){
   const cuCvs=$('cutout-canvas');
+  // ドラッグ開始: ズーム中は無視 / ハンドルから遠すぎる場合も無視
   cuCvs.addEventListener('pointerdown',e=>{
+    if(cutoutZoom.isZooming())return;
     const r=cuCvs.getBoundingClientRect();
     const p=CU.mode==='v'?(e.clientY-r.top)/r.height:(e.clientX-r.left)/r.width;
     let minD=Infinity,best=null;
@@ -2424,10 +2476,12 @@ function drawCutout(){
       if(ds<minD){minD=ds;best={which:'start',idx:i};}
       if(de<minD){minD=de;best={which:'end',idx:i};}
     });
+    // ハンドルから 10% 以上離れている場合はドラッグ開始しない
+    if(minD>0.10){CU.drag=null;return;}
     CU.drag=best;cuCvs.setPointerCapture(e.pointerId);
   });
   cuCvs.addEventListener('pointermove',e=>{
-    if(!CU.drag)return;
+    if(!CU.drag||cutoutZoom.isZooming())return;
     const r=cuCvs.getBoundingClientRect();
     let p=CU.mode==='v'?(e.clientY-r.top)/r.height:(e.clientX-r.left)/r.width;
     p=Math.max(0,Math.min(1,p));
@@ -2437,6 +2491,7 @@ function drawCutout(){
     renderCutoutRegions();updateCutoutInfo();drawCutout();
   });
   cuCvs.addEventListener('pointerup',()=>{CU.drag=null;});
+  cuCvs.addEventListener('pointercancel',()=>{CU.drag=null;});
   $('cu-add').addEventListener('click',()=>{
     const sorted=[...CU.regions].sort((a,b)=>a.start-b.start);
     const gaps=[];let pos=0;
@@ -2453,10 +2508,10 @@ function drawCutout(){
     img.cutoutData={mode:CU.mode,regions:CU.regions.map(r=>({start:r.start,end:r.end}))};
     state.previewDirty=true;
     updateImgThumb(img).then(()=>{renderGridView();persistLayout();});
-    $('cutout-modal').classList.add('hidden');
+    $('cutout-modal').classList.add('hidden'); history.back();
   });
   $('cutout-reset-btn').addEventListener('click',()=>{CU.regions=[{start:0.3,end:0.6}];renderCutoutRegions();updateCutoutInfo();drawCutout();});
-  $('cutout-cancel-btn').addEventListener('click',()=>$('cutout-modal').classList.add('hidden'));
+  $('cutout-cancel-btn').addEventListener('click',()=>{$('cutout-modal').classList.add('hidden');history.back();});
 })();
 
 
@@ -2468,14 +2523,21 @@ function openTrimModal(ri,ci){
   else{T.cx=0;T.cy=0;T.cw=img.w;T.ch=img.h;}
   const mxW=Math.min(window.innerWidth-32,780),mxH=Math.floor(window.innerHeight*0.52);
   T.scale=Math.min(1,mxW/img.w,mxH/img.h);
-  const tc=$('trim-canvas'); tc.width=Math.round(img.w*T.scale); tc.height=Math.round(img.h*T.scale);
+  const dpr=Math.min(window.devicePixelRatio||1,3);
+  const cssW=Math.round(img.w*T.scale),cssH=Math.round(img.h*T.scale);
+  const tc=$('trim-canvas');
+  tc.width=Math.min(img.w,cssW*dpr); tc.height=Math.min(img.h,cssH*dpr);
+  tc.style.width=cssW+'px'; tc.style.height=cssH+'px';
   $('trim-title').textContent='トリミング — '+img.name;
+  history.pushState({modal:'trim'},'');
   $('trim-modal').classList.remove('hidden'); drawTrim(); updateTrimInputs(); resetTrimZoom();
 }
 function drawTrim(){
-  const tc=$('trim-canvas'),ctx=tc.getContext('2d'),s=T.scale;
+  const tc=$('trim-canvas'),ctx=tc.getContext('2d');
+  // scale は論理サイズ→実ピクセルのスケール（DPR 込み）
+  const sx=tc.width/T.imgW, sy=tc.height/T.imgH;
   ctx.clearRect(0,0,tc.width,tc.height); ctx.drawImage(T.imgEl,0,0,tc.width,tc.height);
-  const cx=T.cx*s,cy=T.cy*s,cw=T.cw*s,ch=T.ch*s;
+  const cx=T.cx*sx,cy=T.cy*sy,cw=T.cw*sx,ch=T.ch*sy;
   ctx.fillStyle='rgba(0,0,0,0.52)';
   ctx.fillRect(0,0,tc.width,cy); ctx.fillRect(0,cy+ch,tc.width,tc.height-cy-ch);
   ctx.fillRect(0,cy,cx,ch); ctx.fillRect(cx+cw,cy,tc.width-cx-cw,ch);
@@ -2491,7 +2553,10 @@ function updateTrimInputs(){
 }
 const clamp=(v,mn,mx)=>Math.max(mn,Math.min(mx,v));
 function getHandle(px,py){
-  const s=T.scale,cx=T.cx*s,cy=T.cy*s,cw=T.cw*s,ch=T.ch*s,h=HSIZE;
+  // px,py は getBoundingClientRect 経由の CSS px → canvas px に変換済み
+  const tc=$('trim-canvas');
+  const sx=tc.width/T.imgW,sy=tc.height/T.imgH;
+  const cx=T.cx*sx,cy=T.cy*sy,cw=T.cw*sx,ch=T.ch*sy,h=HSIZE*(tc.width/(parseFloat(tc.style.width)||tc.width));
   if(Math.abs(px-cx)<h&&Math.abs(py-cy)<h) return 'tl';
   if(Math.abs(px-(cx+cw))<h&&Math.abs(py-cy)<h) return 'tr';
   if(Math.abs(px-cx)<h&&Math.abs(py-(cy+ch))<h) return 'bl';
@@ -2501,11 +2566,17 @@ function getHandle(px,py){
 }
 function getTrimCoords(e){const tc=$('trim-canvas'),r=tc.getBoundingClientRect();return{px:(e.clientX-r.left)*tc.width/r.width,py:(e.clientY-r.top)*tc.height/r.height};}
 const trimWrap=$('trim-canvas-wrap');
-trimWrap.addEventListener('pointerdown',e=>{const{px,py}=getTrimCoords(e);T.drag=getHandle(px,py);if(!T.drag)return;e.preventDefault();T.ox=px;T.oy=py;T.oc={cx:T.cx,cy:T.cy,cw:T.cw,ch:T.ch};trimWrap.setPointerCapture(e.pointerId);});
+trimWrap.addEventListener('pointerdown',e=>{
+  if(trimZoom.isZooming())return;
+  const{px,py}=getTrimCoords(e);T.drag=getHandle(px,py);if(!T.drag)return;e.preventDefault();T.ox=px;T.oy=py;T.oc={cx:T.cx,cy:T.cy,cw:T.cw,ch:T.ch};trimWrap.setPointerCapture(e.pointerId);
+});
 trimWrap.addEventListener('pointermove',e=>{
+  if(trimZoom.isZooming()){T.drag=null;return;}
   if(!T.drag) return;
   const{px,py}=getTrimCoords(e);
-  const s=T.scale,dx=(px-T.ox)/s,dy=(py-T.oy)/s,o=T.oc,iw=T.imgW,ih=T.imgH,MIN=10;
+  // canvas px → image px
+  const tc=$('trim-canvas');
+  const dx=(px-T.ox)*T.imgW/tc.width,dy=(py-T.oy)*T.imgH/tc.height,o=T.oc,iw=T.imgW,ih=T.imgH,MIN=10;
   let{cx,cy,cw,ch}=o;
   if(T.drag==='tl'){cx=clamp(o.cx+dx,0,o.cx+o.cw-MIN);cy=clamp(o.cy+dy,0,o.cy+o.ch-MIN);cw=o.cx+o.cw-cx;ch=o.cy+o.ch-cy;}
   else if(T.drag==='tr'){cy=clamp(o.cy+dy,0,o.cy+o.ch-MIN);cw=clamp(o.cw+dx,MIN,iw-o.cx);ch=o.cy+o.ch-cy;}
@@ -2529,13 +2600,15 @@ $('trim-apply-btn').addEventListener('click',()=>{
   const img=state.grid[T.ri][T.ci];
   img.cropData=(T.cx===0&&T.cy===0&&T.cw===img.w&&T.ch===img.h)?null:{cx:T.cx,cy:T.cy,cw:T.cw,ch:T.ch};
   state.previewDirty=true; $('trim-modal').classList.add('hidden');
+  history.back();
   updateImgThumb(state.grid[T.ri][T.ci]).then(()=>{renderGridView();persistLayout();});
   if($('tab-preview').classList.contains('active')) scheduleCompose(100);
 });
 $('trim-reset-btn').addEventListener('click',()=>{T.cx=0;T.cy=0;T.cw=T.imgW;T.ch=T.imgH;drawTrim();updateTrimInputs();});
-$('trim-cancel-btn').addEventListener('click',()=>$('trim-modal').classList.add('hidden'));
+$('trim-cancel-btn').addEventListener('click',()=>{$('trim-modal').classList.add('hidden');history.back();});
 
-// ===== モーダル共通ズーム（ホイール＋ピンチ） =====
+// ===== モーダル共通ズーム（ホイール＋ピンチ）=====
+// capture:true でキャンバスより先に反応し、2本指時は stopPropagation で干渉を防ぐ
 function addModalZoom(wrap){
   const Z={scale:1,tx:0,ty:0,ptrs:new Map(),ld:0,active:false};
   function applyTZ(){
@@ -2543,7 +2616,6 @@ function addModalZoom(wrap){
     cv.style.transformOrigin='0 0';
     cv.style.transform='translate('+Z.tx+'px,'+Z.ty+'px) scale('+Z.scale+')';
   }
-  function clampTX(s,w){const mw=wrap.clientWidth,cw=(w||wrap.querySelector('canvas')?.clientWidth||mw)*s;return cw<mw?Math.max(0,Math.min((mw-cw)/2,0)):Math.max(mw-cw,Math.min(0,Z.tx));}
   wrap.addEventListener('wheel',e=>{
     e.preventDefault();
     const r=wrap.getBoundingClientRect(),ratio=e.deltaY<0?1.15:0.87;
@@ -2551,14 +2623,21 @@ function addModalZoom(wrap){
     const fx=e.clientX-r.left,fy=e.clientY-r.top;
     Z.tx=fx-(fx-Z.tx)*(ns/Z.scale);Z.ty=fy-(fy-Z.ty)*(ns/Z.scale);Z.scale=ns;applyTZ();
   },{passive:false});
+  // capture:true → キャンバスの pointerdown より先に実行されるので ptrs が正確
   wrap.addEventListener('pointerdown',e=>{
     Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(Z.ptrs.size===2){const ps=[...Z.ptrs.values()];Z.ld=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);Z.active=true;}
-  },{passive:true});
+    if(Z.ptrs.size>=2){
+      const ps=[...Z.ptrs.values()];
+      Z.ld=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);
+      Z.active=true;
+    }
+  },{capture:true,passive:true});
+  // capture:true + stopPropagation でズーム中はキャンバスに move を届かせない
   wrap.addEventListener('pointermove',e=>{
     if(!Z.ptrs.has(e.pointerId))return;
     Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(Z.active&&Z.ptrs.size>=2){
+      e.stopPropagation();
       const ps=[...Z.ptrs.values()];
       const dist=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);
       if(Z.ld>0){
@@ -2570,14 +2649,33 @@ function addModalZoom(wrap){
       Z.ld=dist;
     }
   },{capture:true,passive:true});
-  wrap.addEventListener('pointerup',e=>{Z.ptrs.delete(e.pointerId);if(Z.ptrs.size<2){Z.active=false;Z.ld=0;}},{passive:true});
+  wrap.addEventListener('pointerup',e=>{
+    Z.ptrs.delete(e.pointerId);
+    if(Z.ptrs.size<2){Z.active=false;Z.ld=0;}
+  },{passive:true});
   wrap.addEventListener('pointercancel',e=>{Z.ptrs.delete(e.pointerId);Z.active=false;Z.ld=0;},{passive:true});
-  // ズームリセット関数を返す（モーダルを開く時に呼ぶ）
-  return ()=>{Z.scale=1;Z.tx=0;Z.ty=0;Z.active=false;Z.ptrs.clear();Z.ld=0;applyTZ();};
+  const reset=()=>{Z.scale=1;Z.tx=0;Z.ty=0;Z.active=false;Z.ptrs.clear();Z.ld=0;applyTZ();};
+  const isZooming=()=>Z.ptrs.size>=2||Z.active;
+  return{reset,isZooming};
 }
-const resetTrimZoom=addModalZoom($('trim-canvas-wrap'));
-const resetColorZoom=addModalZoom($('color-canvas-wrap'));
-const resetCutoutZoom=addModalZoom($('cutout-canvas-wrap'));
+const trimZoom=addModalZoom($('trim-canvas-wrap'));
+const colorZoom=addModalZoom($('color-canvas-wrap'));
+const cutoutZoom=addModalZoom($('cutout-canvas-wrap'));
+const resetTrimZoom=trimZoom.reset;
+const resetColorZoom=colorZoom.reset;
+const resetCutoutZoom=cutoutZoom.reset;
+
+// ===== Android「戻る」ボタン対応 =====
+// モーダルを開く時に pushState、閉じる時に history.back() → popstate でモーダルを隠す
+window.addEventListener('popstate',()=>{
+  const modals=['trim-modal','cutout-modal','color-modal'];
+  for(const id of modals){
+    if(!$(id).classList.contains('hidden')){
+      $(id).classList.add('hidden');
+      return;
+    }
+  }
+});
 
 // ===== 保存タブ =====
 $$('.format-pill').forEach(pill=>{
