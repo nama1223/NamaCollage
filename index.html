@@ -232,7 +232,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 #trim-header{position:absolute;top:0;left:0;right:0;z-index:10;height:54px;background:var(--surf);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;gap:6px;}
 #trim-title{flex:1;font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .trim-hbtn{padding:6px 12px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;touch-action:manipulation;}
-#trim-canvas-wrap{position:absolute;top:54px;bottom:106px;left:0;right:0;z-index:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:16px;-webkit-overflow-scrolling:touch;}
+#trim-canvas-wrap{position:absolute;top:54px;bottom:106px;left:0;right:0;z-index:1;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:16px;-webkit-overflow-scrolling:touch;}
 #trim-canvas{cursor:crosshair;touch-action:none;display:block;max-width:100%;height:auto;}
 #trim-footer{position:absolute;bottom:0;left:0;right:0;z-index:10;height:106px;background:var(--surf);border-top:1px solid var(--border);padding:10px 14px;display:flex;flex-direction:column;gap:8px;}
 .trim-inputs{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;}
@@ -256,7 +256,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 /* カラー調整・中抜きモーダル (trim-modalと同じ構造を流用) */
 #color-modal,#cutout-modal{position:fixed;inset:0;background:rgba(0,20,60,0.9);z-index:900;overflow:hidden;}
 #color-header,#cutout-header{position:absolute;top:0;left:0;right:0;z-index:10;height:54px;background:var(--surf);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;gap:6px;}
-#color-canvas-wrap,#cutout-canvas-wrap{position:absolute;top:54px;bottom:130px;left:0;right:0;z-index:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:12px;-webkit-overflow-scrolling:touch;}
+#color-canvas-wrap,#cutout-canvas-wrap{position:absolute;top:54px;bottom:130px;left:0;right:0;z-index:1;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:12px;-webkit-overflow-scrolling:touch;}
 #color-canvas,#cutout-canvas{display:block;max-width:100%;height:auto;touch-action:none;}
 #cutout-canvas{cursor:ns-resize;}
 #color-footer,#cutout-footer{position:absolute;bottom:0;left:0;right:0;z-index:10;height:130px;background:var(--surf);border-top:1px solid var(--border);padding:8px 14px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;}
@@ -413,20 +413,32 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
     </div>
     <div id="topping-content" class="hidden">
       <div id="tp-canvas-wrap"><canvas id="topping-canvas"></canvas></div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:2px 0">
         <button type="button" class="tp-add-btn" data-tp="text">✍️ テキスト</button>
-        <button type="button" class="tp-add-btn" data-tp="line">— 直線</button>
-        <button type="button" class="tp-add-btn" data-tp="arrow">→ 矢印</button>
-        <button type="button" class="tp-add-btn" data-tp="rect">□ 四角形</button>
-        <button type="button" class="tp-add-btn" data-tp="ellipse">○ 楕円</button>
-      </div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap">
-        <button type="button" class="tp-add-btn" data-tp="blur-rect">🫧□ ぼかし</button>
-        <button type="button" class="tp-add-btn" data-tp="blur-ellipse">🫧○ ぼかし</button>
-        <button type="button" class="tp-add-btn" data-tp="blur-poly">🫧⬟ ぼかし</button>
-        <button type="button" class="tp-add-btn" data-tp="mosaic-rect">⬛□ モザイク</button>
-        <button type="button" class="tp-add-btn" data-tp="mosaic-ellipse">⬛○ モザイク</button>
-        <button type="button" class="tp-add-btn" data-tp="mosaic-poly">⬛⬟ モザイク</button>
+        <select class="adj-select tp-cat-sel" id="tp-sel-line" style="max-width:120px;flex:0 0 auto">
+          <option value="">— 線・矢印</option>
+          <option value="line">— 直線</option>
+          <option value="arrow">→ 矢印</option>
+        </select>
+        <select class="adj-select tp-cat-sel" id="tp-sel-shape" style="max-width:110px;flex:0 0 auto">
+          <option value="">□ 図形</option>
+          <option value="rect">□ 四角形</option>
+          <option value="ellipse">○ 楕円</option>
+          <option value="poly">⬟ 多角形</option>
+        </select>
+        <select class="adj-select tp-cat-sel" id="tp-sel-filter" style="max-width:130px;flex:0 0 auto">
+          <option value="">🫧 フィルタ</option>
+          <optgroup label="ぼかし">
+            <option value="blur-rect">🫧□ ぼかし 四角</option>
+            <option value="blur-ellipse">🫧○ ぼかし 楕円</option>
+            <option value="blur-poly">🫧⬟ ぼかし 多角</option>
+          </optgroup>
+          <optgroup label="モザイク">
+            <option value="mosaic-rect">⬛□ モザイク 四角</option>
+            <option value="mosaic-ellipse">⬛○ モザイク 楕円</option>
+            <option value="mosaic-poly">⬛⬟ モザイク 多角</option>
+          </optgroup>
+        </select>
       </div>
       <div id="tp-selected-panel"></div>
       <div id="topping-list"></div>
@@ -974,8 +986,12 @@ async function updateImgThumb(img){
 // ===== コンテキストメニュー =====
 let ctxTarget={ri:-1,ci:-1};
 function showCtxMenu(e,ri,ci){
-  const m=$('ctx-menu'); ctxTarget={ri,ci}; m.classList.remove('hidden');
-  const left=Math.min(e.clientX,window.innerWidth-170),top=Math.min(e.clientY,window.innerHeight-60);
+  const m=$('ctx-menu'); ctxTarget={ri,ci};
+  m.style.left='0px'; m.style.top='-9999px';
+  m.classList.remove('hidden');
+  const mW=m.offsetWidth||180, mH=m.offsetHeight||320;
+  const left=Math.max(4, Math.min(e.clientX, window.innerWidth-mW-4));
+  const top=Math.max(4, Math.min(e.clientY, window.innerHeight-mH-4));
   m.style.left=left+'px'; m.style.top=top+'px';
 }
 document.addEventListener('pointerdown',e=>{ if(!$('ctx-menu').classList.contains('hidden')&&!$('ctx-menu').contains(e.target))$('ctx-menu').classList.add('hidden'); });
@@ -1364,7 +1380,7 @@ $('btn-eyedrop').addEventListener('click',async()=>{
 
 // ===== トッピングタブ =====
 
-const TP_LABELS={text:'✍️ テキスト',line:'— 直線',arrow:'→ 矢印',rect:'□ 四角形',ellipse:'○ 楕円','blur-rect':'🫧□ ぼかし','blur-ellipse':'🫧○ ぼかし','blur-poly':'🫧⬟ ぼかし','mosaic-rect':'⬛□ モザイク','mosaic-ellipse':'⬛○ モザイク','mosaic-poly':'⬛⬟ モザイク'};
+const TP_LABELS={text:'✍️ テキスト',line:'— 直線',arrow:'→ 矢印',rect:'□ 四角形',ellipse:'○ 楕円',poly:'⬟ 多角形','blur-rect':'🫧□ ぼかし','blur-ellipse':'🫧○ ぼかし','blur-poly':'🫧⬟ ぼかし','mosaic-rect':'⬛□ モザイク','mosaic-ellipse':'⬛○ モザイク','mosaic-poly':'⬛⬟ モザイク'};
 
 function createToppingItem(type){
   const base={id:state.nextToppingId++,type,stroke2Enabled:false,stroke2Color:'#ffffff',stroke2Width:3,shadowEnabled:false,shadowColor:'#000000',shadowBlur:8,shadowX:3,shadowY:3};
@@ -1374,6 +1390,7 @@ function createToppingItem(type){
     case 'arrow': return{...base,x:20,y:50,x2:80,y2:50,color:'#ff4444',strokeWidth:4,headSize:40,headAngle:30};
     case 'rect':  return{...base,x:30,y:30,w:25,h:25,color:'#ff4444',strokeWidth:4,fillEnabled:false,fillColor:'#ff4444',fillOpacity:30,lockAspect:false};
     case 'ellipse':return{...base,x:30,y:30,w:25,h:25,color:'#ff4444',strokeWidth:4,fillEnabled:false,fillColor:'#ff4444',fillOpacity:30,lockAspect:true,_ar:1};
+    case 'poly':  return{...base,points:[{x:50,y:20},{x:80,y:70},{x:20,y:70}],color:'#ff4444',strokeWidth:4,fillEnabled:false,fillColor:'#ff4444',fillOpacity:30};
     case 'blur-rect':  return{...base,x:30,y:30,w:40,h:30,intensity:20,lockAspect:false};
     case 'blur-ellipse':return{...base,x:30,y:30,w:40,h:30,intensity:20,lockAspect:false};
     case 'blur-poly':  return{...base,points:[{x:35,y:25},{x:65,y:25},{x:75,y:65},{x:50,y:75},{x:25,y:65}],intensity:20};
@@ -1389,6 +1406,12 @@ function addToppingItem(type){
   renderToppingList(); renderToppingCanvas(); persistLayout();
 }
 $$('.tp-add-btn').forEach(btn=>btn.addEventListener('click',()=>addToppingItem(btn.dataset.tp)));
+document.addEventListener('change',e=>{
+  if(e.target.classList.contains('tp-cat-sel')&&e.target.value){
+    addToppingItem(e.target.value);
+    e.target.value='';
+  }
+});
 
 // ===== 描画 =====
 function drawTextItem(ctx,t,W,H,scale){
@@ -1412,6 +1435,7 @@ function buildShapePath(ctx,s,px,py){
   if(s.type==='line'||s.type==='arrow'){ctx.beginPath();ctx.moveTo(px(s.x),py(s.y));ctx.lineTo(px(s.x2),py(s.y2));}
   else if(s.type==='rect'){ctx.beginPath();ctx.rect(px(s.x),py(s.y),px(s.w),px(s.h));}
   else if(s.type==='ellipse'){const ecx=px(s.x)+px(s.w)/2,ecy=py(s.y)+px(s.h)/2,erx=Math.abs(px(s.w))/2,ery=Math.abs(px(s.h))/2;ctx.beginPath();ctx.ellipse(ecx,ecy,erx,ery,0,0,Math.PI*2);}
+  else if(s.type==='poly'&&s.points?.length>=3){ctx.beginPath();ctx.moveTo(px(s.points[0].x),py(s.points[0].y));s.points.slice(1).forEach(p=>ctx.lineTo(px(p.x),py(p.y)));ctx.closePath();}
 }
 
 function drawShapeItem(ctx,s,W,H,scale){
@@ -1424,7 +1448,7 @@ function drawShapeItem(ctx,s,W,H,scale){
   if(s.shadowEnabled){ctx.shadowColor=s.shadowColor||'#000';ctx.shadowBlur=(s.shadowBlur||8)*scale;ctx.shadowOffsetX=(s.shadowX||3)*scale;ctx.shadowOffsetY=(s.shadowY||3)*scale;}
   else ctx.shadowColor='transparent';
 
-  if(s.type==='line'||s.type==='rect'||s.type==='ellipse'){
+  if(s.type==='line'||s.type==='rect'||s.type==='ellipse'||s.type==='poly'){
     // 縁取り（外側の太いストローク）
     if(s.stroke2Enabled){
       buildShapePath(ctx,s,px,py);
@@ -1433,7 +1457,7 @@ function drawShapeItem(ctx,s,W,H,scale){
       ctx.stroke();
     }
     // 塗りつぶし
-    if((s.type==='rect'||s.type==='ellipse')&&s.fillEnabled){
+    if((s.type==='rect'||s.type==='ellipse'||s.type==='poly')&&s.fillEnabled){
       buildShapePath(ctx,s,px,py);
       ctx.save();ctx.globalAlpha=(s.fillOpacity!=null?s.fillOpacity:30)/100;ctx.fillStyle=s.fillColor||'#ff4444';ctx.fill();ctx.restore();
     }
@@ -1576,7 +1600,14 @@ function toppingMiniPreview(t){
   if(wR/hR>avW/avH){rw=avW;rh=avW*hR/wR;}else{rh=avH;rw=avH*wR/hR;}
   const rx=(W-rw)/2,ry=(H-rh)/2;
   if(type==='rect') return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><rect x="'+rx+'" y="'+ry+'" width="'+rw+'" height="'+rh+'" stroke="'+col+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
-  return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><ellipse cx="'+(rx+rw/2)+'" cy="'+(ry+rh/2)+'" rx="'+(rw/2)+'" ry="'+(rh/2)+'" stroke="'+col+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
+  if(type==='ellipse') return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><ellipse cx="'+(rx+rw/2)+'" cy="'+(ry+rh/2)+'" rx="'+(rw/2)+'" ry="'+(rh/2)+'" stroke="'+col+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
+  if(type==='poly'&&t.points){
+    const xs=t.points.map(p=>p.x),ys=t.points.map(p=>p.y);
+    const mnx=Math.min(...xs),mny=Math.min(...ys),mxx=Math.max(...xs),mxy=Math.max(...ys);
+    const scx=(W-pad*2)/(mxx-mnx||1),scy=(H-pad*2)/(mxy-mny||1);
+    const pstr=t.points.map(p=>((p.x-mnx)*scx+pad)+','+((p.y-mny)*scy+pad)).join(' ');
+    return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><polygon points="'+pstr+'" stroke="'+col+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
+  }
   // blur/mosaic mini preview
   if(type.startsWith('blur')||type.startsWith('mosaic')){
     const isBlur=type.startsWith('blur'),sh=type.split('-')[1];
@@ -1684,6 +1715,19 @@ function renderToppingControlsHTML(t){
     return adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val')+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val')+
       sizeLockHTML(t)+colorLineHTML(t)+fillHTML(t)+strokeShadowHTML(t);
   }
+  if(type==='poly'){
+    let html=(t.points||[]).map((p,i)=>
+      '<div class="adj-row"><span class="adj-label">頂点'+(i+1)+'</span>'
+      +'<input type="range" class="adj-slider tp-vx-'+i+'" min="0" max="100" value="'+Math.round(p.x)+'">'
+      +'<span class="adj-val tp-vxv-'+i+'">'+Math.round(p.x)+'</span>'
+      +'<input type="range" class="adj-slider tp-vy-'+i+'" min="0" max="100" value="'+Math.round(p.y)+'">'
+      +'<span class="adj-val tp-vyv-'+i+'">'+Math.round(p.y)+'</span></div>'
+    ).join('');
+    html+='<div class="adj-row">'
+      +'<button type="button" class="tp-poly-add adj-btn">＋ 頂点追加</button>'
+      +((t.points||[]).length>3?'<button type="button" class="tp-poly-del adj-btn" style="margin-left:4px">－ 末尾削除</button>':'')+'</div>';
+    return html+colorLineHTML(t)+fillHTML(t)+strokeShadowHTML(t);
+  }
   if(type.startsWith('blur')||type.startsWith('mosaic')){
     const isBlur=type.startsWith('blur'),sh=type.split('-')[1];
     let html='';
@@ -1708,6 +1752,22 @@ function renderToppingControlsHTML(t){
 }
 
 // ===== コントロールバインド =====
+function _bindPolyControls(container,t,upd){
+  (t.points||[]).forEach((p,i)=>{
+    const vxEl=container.querySelector('.tp-vx-'+i),vyEl=container.querySelector('.tp-vy-'+i);
+    const vxVal=container.querySelector('.tp-vxv-'+i),vyVal=container.querySelector('.tp-vyv-'+i);
+    if(vxEl)vxEl.addEventListener('input',()=>{p.x=parseFloat(vxEl.value);if(vxVal)vxVal.textContent=Math.round(p.x);upd();});
+    if(vyEl)vyEl.addEventListener('input',()=>{p.y=parseFloat(vyEl.value);if(vyVal)vyVal.textContent=Math.round(p.y);upd();});
+  });
+  const addBtn=container.querySelector('.tp-poly-add');
+  if(addBtn)addBtn.addEventListener('click',()=>{
+    const pts=t.points,last=pts[pts.length-1],prev=pts[pts.length-2]||pts[0];
+    pts.push({x:Math.round(Math.min(98,(last.x+prev.x)/2+5)),y:Math.round(Math.min(98,(last.y+prev.y)/2+5))});
+    renderSelectedPanel();upd();
+  });
+  const delBtn=container.querySelector('.tp-poly-del');
+  if(delBtn)delBtn.addEventListener('click',()=>{if(t.points.length>3){t.points.pop();renderSelectedPanel();upd();}});
+}
 function bindToppingControls(container,t){
   const upd=()=>{renderToppingCanvas();persistLayout();};
   const bs=(cls,prop,valCls)=>{const el=container.querySelector('.'+cls);if(!el)return;el.addEventListener('input',()=>{t[prop]=parseFloat(el.value)||0;const ve=container.querySelector('.'+valCls);if(ve)ve.textContent=Math.round(t[prop]);upd();});};
@@ -1751,6 +1811,15 @@ function bindToppingControls(container,t){
     const fo=container.querySelector('.tp-fillop');const fov=container.querySelector('.tp-fillop-val');
     if(fo)fo.addEventListener('input',()=>{t.fillOpacity=parseFloat(fo.value);if(fov)fov.textContent=fo.value;upd();});
   }
+  if(type==='poly'){
+    _bindPolyControls(container,t,upd);
+    const mc=container.querySelector('.tp-mainc');if(mc)mc.addEventListener('input',e=>{t.color=e.target.value;upd();});
+    const sw=container.querySelector('.tp-sw');if(sw)sw.addEventListener('input',e=>{t.strokeWidth=parseFloat(e.target.value)||2;upd();});
+    const fe=container.querySelector('.tp-fill');if(fe)fe.addEventListener('change',e=>{t.fillEnabled=e.target.checked;upd();});
+    const fc=container.querySelector('.tp-fillc');if(fc)fc.addEventListener('input',e=>{t.fillColor=e.target.value;upd();});
+    const fo=container.querySelector('.tp-fillop');const fov=container.querySelector('.tp-fillop-val');
+    if(fo)fo.addEventListener('input',()=>{t.fillOpacity=parseFloat(fo.value);if(fov)fov.textContent=fo.value;upd();});
+  }
   // blur/mosaic エフェクト
   if(type.startsWith('blur')||type.startsWith('mosaic')){
     const sh=type.split('-')[1];
@@ -1763,20 +1832,7 @@ function bindToppingControls(container,t){
       if(hEl)hEl.addEventListener('input',()=>{t.h=parseFloat(hEl.value);if(hVl)hVl.textContent=Math.round(t.h);if(t.lockAspect&&t._ar){t.w=Math.max(1,Math.min(100,Math.round(t.h/t._ar)));if(wEl)wEl.value=t.w;if(wVl)wVl.textContent=t.w;}upd();});
       if(lockBtn)lockBtn.addEventListener('click',()=>{t.lockAspect=!t.lockAspect;if(t.lockAspect)t._ar=(t.h||1)/(t.w||1);lockBtn.textContent=t.lockAspect?'🔒':'🔓';lockBtn.classList.toggle('locked',t.lockAspect);});
     }else if(sh==='poly'){
-      (t.points||[]).forEach((p,i)=>{
-        const vxEl=container.querySelector('.tp-vx-'+i),vyEl=container.querySelector('.tp-vy-'+i);
-        const vxVal=container.querySelector('.tp-vxv-'+i),vyVal=container.querySelector('.tp-vyv-'+i);
-        if(vxEl)vxEl.addEventListener('input',()=>{p.x=parseFloat(vxEl.value);if(vxVal)vxVal.textContent=Math.round(p.x);upd();});
-        if(vyEl)vyEl.addEventListener('input',()=>{p.y=parseFloat(vyEl.value);if(vyVal)vyVal.textContent=Math.round(p.y);upd();});
-      });
-      const addBtn=container.querySelector('.tp-poly-add');
-      if(addBtn)addBtn.addEventListener('click',()=>{
-        const pts=t.points,last=pts[pts.length-1],prev=pts[pts.length-2]||pts[0];
-        pts.push({x:Math.round(Math.min(98,(last.x+prev.x)/2+5)),y:Math.round(Math.min(98,(last.y+prev.y)/2+5))});
-        renderSelectedPanel();upd();
-      });
-      const delBtn=container.querySelector('.tp-poly-del');
-      if(delBtn)delBtn.addEventListener('click',()=>{if(t.points.length>3){t.points.pop();renderSelectedPanel();upd();}});
+      _bindPolyControls(container,t,upd);
     }
     const intEl=container.querySelector('.tp-intensity'),intVl=container.querySelector('.tp-intensity-val');
     if(intEl)intEl.addEventListener('input',()=>{t.intensity=parseFloat(intEl.value);if(intVl)intVl.textContent=Math.round(t.intensity);upd();});
@@ -1815,55 +1871,81 @@ function renderToppingCanvas(){
   const ctx=tc.getContext('2d');ctx.clearRect(0,0,tc.width,tc.height);ctx.drawImage(pc,0,0);
   const ps=pc.width/(state.previewNat.totalW||1);
   applyToppings(ctx,pc.width,pc.height,ps);
-  // 選択クロスヘア
+  // 選択クロスヘア & ハンドル
   if(state.selectedToppingId!==null){
     const sel=state.toppings.find(t=>t.id===state.selectedToppingId);
     if(sel){
       const type=sel.type||'text';
+      const sh=type.includes('-')?type.split('-')[1]:type;
       let sx,sy;
       if(type==='line'||type==='arrow'){
         sx=(sel.x+sel.x2)/2/100*tc.width; sy=(sel.y+sel.y2)/2/100*tc.height;
-      }else if(type==='rect'||type==='ellipse'){
-        // x,w は画像幅基準%; y は画像高さ基準%; h は画像幅基準%（歪み防止）
-        sx=((sel.x||0)+(sel.w||0)/2)/100*tc.width;
-        sy=(sel.y||0)/100*tc.height+(sel.h||0)/200*tc.width;
+      }else if(sh==='rect'||sh==='ellipse'){
+        const g=getShapeGeomCanvas(sel,tc.width,tc.height);
+        sx=g.cx; sy=g.cy;
       }else{
         sx=(sel.x||0)/100*tc.width; sy=(sel.y||0)/100*tc.height;
       }
-      ctx.save();ctx.strokeStyle='#5548D6';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
-      ctx.beginPath();ctx.moveTo(sx-14,sy);ctx.lineTo(sx+14,sy);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(sx,sy-14);ctx.lineTo(sx,sy+14);ctx.stroke();
+      ctx.save();ctx.strokeStyle='#5548D6';ctx.lineWidth=1.5/TZ.scale;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(sx-14/TZ.scale,sy);ctx.lineTo(sx+14/TZ.scale,sy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(sx,sy-14/TZ.scale);ctx.lineTo(sx,sy+14/TZ.scale);ctx.stroke();
       ctx.restore();
     }
-    // エフェクト選択中: 輪郭 + ポリゴン頂点マーカー
-    if(sel&&(sel.type?.startsWith('blur')||sel.type?.startsWith('mosaic'))){
-    const sh=sel.type.split('-')[1];
-    ctx.save();
-    ctx.strokeStyle='#5548D6';ctx.lineWidth=1.5/TZ.scale;ctx.setLineDash([5,4]);
-    ctx.beginPath();
-    if(sh==='rect'){
-      ctx.rect(sel.x/100*tc.width,sel.y/100*tc.height,sel.w/100*tc.width,sel.w/100*tc.width);
-      ctx.stroke();
-    }else if(sh==='ellipse'){
-      const ecx=(sel.x+sel.w/2)/100*tc.width,ecy=sel.y/100*tc.height+sel.w/2/100*tc.width;
-      const er=sel.w/200*tc.width;
-      ctx.ellipse(ecx,ecy,er,er,0,0,Math.PI*2);ctx.stroke();
-    }else if(sh==='poly'&&sel.points?.length>=3){
-      ctx.moveTo(sel.points[0].x/100*tc.width,sel.points[0].y/100*tc.height);
-      sel.points.slice(1).forEach(p=>ctx.lineTo(p.x/100*tc.width,p.y/100*tc.height));
-      ctx.closePath();ctx.stroke();
-      ctx.setLineDash([]);
-      sel.points.forEach((p,i)=>{
-        const vx=p.x/100*tc.width,vy=p.y/100*tc.height;
-        ctx.beginPath();ctx.arc(vx,vy,7/TZ.scale,0,Math.PI*2);
-        ctx.fillStyle='#5548D6';ctx.fill();
-        ctx.strokeStyle='#fff';ctx.lineWidth=1.5/TZ.scale;ctx.stroke();
-        ctx.fillStyle='#fff';ctx.font='bold '+(9/TZ.scale)+'px sans-serif';
-        ctx.textAlign='center';ctx.textBaseline='middle';
-        ctx.fillText(i+1,vx,vy);
-      });
-    }
-    ctx.restore();
+    // エフェクト・図形選択中: 輪郭 + ハンドル
+    if(sel){
+      const type=sel.type||'text';
+      const sh=type.includes('-')?type.split('-')[1]:type;
+      const isEffect=type.startsWith('blur')||type.startsWith('mosaic');
+      const isShape=(type==='rect'||type==='ellipse')||isEffect&&(sh==='rect'||sh==='ellipse');
+      ctx.save();
+      ctx.strokeStyle='#5548D6';ctx.lineWidth=1.5/TZ.scale;
+      if(isEffect||type==='rect'||type==='ellipse'){
+        ctx.setLineDash([5/TZ.scale,4/TZ.scale]);
+        ctx.beginPath();
+        if(sh==='rect'){
+          const g=getShapeGeomCanvas(sel,tc.width,tc.height);
+          ctx.rect(g.x,g.y,g.w,g.h);
+          ctx.stroke();
+        }else if(sh==='ellipse'){
+          const g=getShapeGeomCanvas(sel,tc.width,tc.height);
+          ctx.ellipse(g.cx,g.cy,g.w/2,g.h/2,0,0,Math.PI*2);ctx.stroke();
+        }else if(sh==='poly'&&sel.points?.length>=3){
+          ctx.moveTo(sel.points[0].x/100*tc.width,sel.points[0].y/100*tc.height);
+          sel.points.slice(1).forEach(p=>ctx.lineTo(p.x/100*tc.width,p.y/100*tc.height));
+          ctx.closePath();ctx.stroke();
+          ctx.setLineDash([]);
+          sel.points.forEach((p,i)=>{
+            const vx=p.x/100*tc.width,vy=p.y/100*tc.height;
+            ctx.beginPath();ctx.arc(vx,vy,7/TZ.scale,0,Math.PI*2);
+            ctx.fillStyle='#5548D6';ctx.fill();
+            ctx.strokeStyle='#fff';ctx.lineWidth=1.5/TZ.scale;ctx.stroke();
+            ctx.fillStyle='#fff';ctx.font='bold '+(9/TZ.scale)+'px sans-serif';
+            ctx.textAlign='center';ctx.textBaseline='middle';
+            ctx.fillText(i+1,vx,vy);
+          });
+        }
+      }
+      // rect/ellipse ハンドル（エフェクト・図形共通）
+      if(sh==='rect'||sh==='ellipse'){
+        const g=getShapeGeomCanvas(sel,tc.width,tc.height);
+        const HR=6/TZ.scale;
+        ctx.setLineDash([]);
+        ctx.lineWidth=1.5/TZ.scale;
+        // 中心ハンドル（移動用）
+        ctx.beginPath();ctx.arc(g.cx,g.cy,HR*2,0,Math.PI*2);
+        ctx.fillStyle='rgba(85,72,214,0.25)';ctx.fill();
+        ctx.strokeStyle='#5548D6';ctx.stroke();
+        // コーナー/辺ハンドル
+        const corners=sh==='rect'
+          ?[[g.x,g.y],[g.x+g.w,g.y],[g.x,g.y+g.h],[g.x+g.w,g.y+g.h]]
+          :[[g.cx,g.y],[g.cx,g.y+g.h],[g.x,g.cy],[g.x+g.w,g.cy]];
+        corners.forEach(([hx,hy])=>{
+          ctx.beginPath();ctx.arc(hx,hy,HR,0,Math.PI*2);
+          ctx.fillStyle='#fff';ctx.fill();
+          ctx.strokeStyle='#5548D6';ctx.stroke();
+        });
+      }
+      ctx.restore();
     }
   }
   if(typeof _updateTZ==='function')_updateTZ();
@@ -1947,6 +2029,7 @@ function onReorderUp(e){
 // ===== トッピングキャンバス: ズーム・パン・ドラッグ =====
 const TZ={scale:1,tx:0,ty:0,initScale:1,ptrs:new Map(),lastPD:0,
           tpDrag:false,isPan:false,pSX:0,pSY:0,pSTX:0,pSTY:0,dPCX:0,dPCY:0,
+          dStartCX:0,dStartCY:0,oc:null,
           dragMode:'move',dragVertexIdx:-1};
 
 function _w2c(ex,ey){
@@ -1959,23 +2042,60 @@ function _segDist(px,py,x1,y1,x2,y2){
   const t=Math.max(0,Math.min(1,((px-x1)*dx+(py-y1)*dy)/l2));
   return Math.hypot(px-x1-t*dx,py-y1-t*dy);
 }
+// ===== 形状ジオメトリ共通ヘルパー =====
+// x,y は画像幅/高さ基準%、w,h は画像幅基準%（歪み防止）
+function getShapeGeomCanvas(t,W,H){
+  const x=t.x/100*W, y=t.y/100*H;
+  const w=t.w/100*W, h=t.h/100*W;  // h は W 基準
+  return{x,y,w,h,cx:x+w/2,cy:y+h/2};
+}
 function _hitTest(cx,cy){
   const tc=$('topping-canvas');if(!tc.width)return null;
   const W=tc.width,H=tc.height,HR=30/TZ.scale;
   for(let i=state.toppings.length-1;i>=0;i--){
     const t=state.toppings[i],type=t.type||'text';
+    const sh=type.includes('-')?type.split('-')[1]:type;
     if(type==='text'){
       if(Math.hypot(cx-t.x/100*W,cy-t.y/100*H)<HR*2.5)return t.id;
     }else if(type==='line'||type==='arrow'){
       if(_segDist(cx,cy,t.x/100*W,t.y/100*H,t.x2/100*W,t.y2/100*H)<HR)return t.id;
-    }else if(type==='rect'){
-      const rx=t.x/100*W,ry=t.y/100*H,rw=t.w/100*W,rh=t.w/100*W;
-      if(cx>=rx-HR&&cx<=rx+rw+HR&&cy>=ry-HR&&cy<=ry+rh+HR)return t.id;
-    }else if(type==='ellipse'){
-      const ecx=(t.x+t.w/2)/100*W,ecy=t.y/100*H+(t.w/2)/100*W;
-      const er=t.w/200*W+HR;
-      if(Math.hypot(cx-ecx,cy-ecy)<er*1.3)return t.id;
+    }else if(sh==='rect'){
+      const g=getShapeGeomCanvas(t,W,H);
+      if(cx>=g.x-HR&&cx<=g.x+g.w+HR&&cy>=g.y-HR&&cy<=g.y+g.h+HR)return t.id;
+    }else if(sh==='ellipse'){
+      const g=getShapeGeomCanvas(t,W,H);
+      const erx=g.w/2+HR,ery=g.h/2+HR;
+      if((cx-g.cx)**2/erx**2+(cy-g.cy)**2/ery**2<1.3)return t.id;
+    }else if(sh==='poly'&&t.points?.length>=3){
+      const xs=t.points.map(p=>p.x/100*W),ys=t.points.map(p=>p.y/100*H);
+      const mnx=Math.min(...xs)-HR,mxx=Math.max(...xs)+HR;
+      const mny=Math.min(...ys)-HR,mxy=Math.max(...ys)+HR;
+      if(cx>=mnx&&cx<=mxx&&cy>=mny&&cy<=mxy)return t.id;
     }
+  }
+  return null;
+}
+// ハンドルヒットテスト（選択中の図形のみ）
+// 戻り値: 'center' | 'tl'|'tr'|'bl'|'br' | 't'|'b'|'l'|'r' | null
+function _hitTestHandle(cx,cy,t){
+  if(!t)return null;
+  const tc=$('topping-canvas');if(!tc?.width)return null;
+  const W=tc.width,H=tc.height,HR=18/TZ.scale;
+  const type=t.type||'text';
+  const sh=type.includes('-')?type.split('-')[1]:type;
+  if(sh!=='rect'&&sh!=='ellipse')return null;
+  const g=getShapeGeomCanvas(t,W,H);
+  if(Math.hypot(cx-g.cx,cy-g.cy)<HR*1.6)return'center';
+  if(sh==='rect'){
+    if(Math.hypot(cx-g.x,       cy-g.y      )<HR)return'tl';
+    if(Math.hypot(cx-(g.x+g.w), cy-g.y      )<HR)return'tr';
+    if(Math.hypot(cx-g.x,       cy-(g.y+g.h))<HR)return'bl';
+    if(Math.hypot(cx-(g.x+g.w), cy-(g.y+g.h))<HR)return'br';
+  }else{// ellipse: 4辺の中点ハンドル
+    if(Math.hypot(cx-g.cx,      cy-g.y      )<HR)return't';
+    if(Math.hypot(cx-g.cx,      cy-(g.y+g.h))<HR)return'b';
+    if(Math.hypot(cx-g.x,       cy-g.cy     )<HR)return'l';
+    if(Math.hypot(cx-(g.x+g.w), cy-g.cy     )<HR)return'r';
   }
   return null;
 }
@@ -2009,13 +2129,21 @@ tpWrap.addEventListener('pointerdown',e=>{
       TZ.tpDrag=true;TZ.isPan=false;TZ.dragMode='vertex';TZ.dragVertexIdx=vIdx;
       TZ.dPCX=cx;TZ.dPCY=cy;tpWrap.classList.add('tp-grabbing');
     }else{
-      const hit=_hitTest(cx,cy);
-      if(hit!==null&&state.selectedToppingId!==null&&hit===state.selectedToppingId){
-        TZ.tpDrag=true;TZ.isPan=false;TZ.dragMode='move';
-        TZ.dPCX=cx;TZ.dPCY=cy;tpWrap.classList.add('tp-grabbing');
+      const handleMode=selT?_hitTestHandle(cx,cy,selT):null;
+      if(handleMode){
+        TZ.tpDrag=true;TZ.isPan=false;TZ.dragMode=handleMode;
+        TZ.dPCX=cx;TZ.dPCY=cy;TZ.dStartCX=cx;TZ.dStartCY=cy;
+        TZ.oc=getShapeGeomCanvas(selT,$('topping-canvas').width,$('topping-canvas').height);
+        tpWrap.classList.add('tp-grabbing');
       }else{
-        TZ.isPan=true;TZ.tpDrag=false;
-        TZ.pSX=e.clientX;TZ.pSY=e.clientY;TZ.pSTX=TZ.tx;TZ.pSTY=TZ.ty;
+        const hit=_hitTest(cx,cy);
+        if(hit!==null&&state.selectedToppingId!==null&&hit===state.selectedToppingId){
+          TZ.tpDrag=true;TZ.isPan=false;TZ.dragMode='move';
+          TZ.dPCX=cx;TZ.dPCY=cy;tpWrap.classList.add('tp-grabbing');
+        }else{
+          TZ.isPan=true;TZ.tpDrag=false;
+          TZ.pSX=e.clientX;TZ.pSY=e.clientY;TZ.pSTX=TZ.tx;TZ.pSTY=TZ.ty;
+        }
       }
     }
   }else if(TZ.ptrs.size===2){
@@ -2046,8 +2174,9 @@ tpWrap.addEventListener('pointermove',e=>{
     const tc=$('topping-canvas');
     const t=state.toppings.find(tp=>tp.id===state.selectedToppingId);if(!t)return;
     const type=t.type||'text';const cl=v=>Math.round(Math.max(0,Math.min(100,v)));
+    const W=tc.width,H=tc.height;
     if(TZ.dragMode==='vertex'&&t.points&&TZ.dragVertexIdx>=0){
-      t.points[TZ.dragVertexIdx]={x:cl(cx/tc.width*100),y:cl(cy/tc.height*100)};
+      t.points[TZ.dragVertexIdx]={x:cl(cx/W*100),y:cl(cy/H*100)};
       const sp=$('tp-selected-panel');if(sp){
         const i=TZ.dragVertexIdx;
         const vx=sp.querySelector('.tp-vx-'+i),vy=sp.querySelector('.tp-vy-'+i);
@@ -2057,7 +2186,50 @@ tpWrap.addEventListener('pointermove',e=>{
       }
       renderToppingCanvas();return;
     }
-    const dx=(cx-TZ.dPCX)/tc.width*100,dy=(cy-TZ.dPCY)/tc.height*100;
+    // ハンドルドラッグ（中心移動 or 角/辺リサイズ）
+    if(TZ.dragMode==='center'||['tl','tr','bl','br','t','b','l','r'].includes(TZ.dragMode)){
+      const dm=TZ.dragMode,oc=TZ.oc;
+      if(dm==='center'){
+        // 中心ドラッグ = 移動 (x,y のみ更新、w,h は不変)
+        const dx=(cx-TZ.dPCX)/W*100,dy=(cy-TZ.dPCY)/H*100;
+        TZ.dPCX=cx;TZ.dPCY=cy;
+        t.x=cl((t.x||0)+dx);t.y=cl((t.y||0)+dy);
+        if(type==='line'||type==='arrow'){t.x2=cl(t.x2+dx);t.y2=cl(t.y2+dy);}
+      }else{
+        // コーナー/辺リサイズ: 絶対座標計算
+        const dx=cx-TZ.dStartCX,dy=cy-TZ.dStartCY;  // canvas px
+        const dxW=dx/W*100,dyH=dy/H*100,dyW=dy/W*100;  // % 変換 (h は W 基準)
+        const MIN=2;
+        let nx=oc.x/W*100,ny=oc.y/H*100,nw=oc.w/W*100,nh=oc.h/W*100;
+        // rect 4角
+        if(dm==='tl'){nx=cl(oc.x/W*100+dxW);nw=Math.max(MIN,oc.w/W*100-dxW);ny=cl(oc.y/H*100+dyH);nh=Math.max(MIN,oc.h/W*100-dyW);}
+        else if(dm==='tr'){nw=Math.max(MIN,oc.w/W*100+dxW);ny=cl(oc.y/H*100+dyH);nh=Math.max(MIN,oc.h/W*100-dyW);}
+        else if(dm==='bl'){nx=cl(oc.x/W*100+dxW);nw=Math.max(MIN,oc.w/W*100-dxW);nh=Math.max(MIN,oc.h/W*100+dyW);}
+        else if(dm==='br'){nw=Math.max(MIN,oc.w/W*100+dxW);nh=Math.max(MIN,oc.h/W*100+dyW);}
+        // ellipse 辺
+        else if(dm==='l' ){nx=cl(oc.x/W*100+dxW);nw=Math.max(MIN,oc.w/W*100-dxW);}
+        else if(dm==='r' ){nw=Math.max(MIN,oc.w/W*100+dxW);}
+        else if(dm==='t' ){ny=cl(oc.y/H*100+dyH);nh=Math.max(MIN,oc.h/W*100-dyW);}
+        else if(dm==='b' ){nh=Math.max(MIN,oc.h/W*100+dyW);}
+        // アスペクト比ロック
+        if(t.lockAspect&&t._ar&&(dm==='tl'||dm==='tr'||dm==='bl'||dm==='br')){
+          nh=nw*t._ar;
+          if(dm==='tl'||dm==='tr')ny=cl((oc.y+oc.h)/H*100-nh*W/H);
+        }
+        t.x=Math.max(0,Math.min(100-nw,nx));t.y=Math.max(0,Math.min(100,ny));
+        t.w=Math.min(100-t.x,nw);t.h=Math.max(MIN,nh);
+      }
+      // パネルの数値更新
+      const sp=$('tp-selected-panel');
+      if(sp){
+        const up=(cls,val,vcls)=>{const el=sp.querySelector('.'+cls),ve=sp.querySelector('.'+vcls);if(el)el.value=Math.round(val);if(ve)ve.textContent=Math.round(val);};
+        up('tp-x',t.x,'tp-x-val');up('tp-y',t.y,'tp-y-val');
+        up('tp-w',t.w,'tp-w-val');up('tp-h',t.h,'tp-h-val');
+      }
+      renderToppingCanvas();return;
+    }
+    // 通常移動 (move)
+    const dx=(cx-TZ.dPCX)/W*100,dy=(cy-TZ.dPCY)/H*100;
     TZ.dPCX=cx;TZ.dPCY=cy;
     if(type.endsWith('-poly')&&t.points){t.points=t.points.map(p=>({x:cl(p.x+dx),y:cl(p.y+dy)}));}
     else{t.x=cl((t.x||0)+dx);t.y=cl((t.y||0)+dy);}
@@ -2129,7 +2301,7 @@ function openColorModal(ri,ci){
   });
   drawColorPreview(img);
   $('color-title').textContent='カラー調整 — '+img.name;
-  $('color-modal').classList.remove('hidden');
+  $('color-modal').classList.remove('hidden'); resetColorZoom();
 }
 function drawColorPreview(img){
   const cv=$('color-canvas'),maxS=Math.min(window.innerWidth-40,600),maxH=Math.floor(window.innerHeight*0.52);
@@ -2187,7 +2359,7 @@ function openCutoutModal(ri,ci,mode){
   cv.width=Math.round(img.w*CU.scale);cv.height=Math.round(img.h*CU.scale);
   $('cutout-title').textContent=(mode==='v'?'中抜き（縦方向）':'中抜き（横方向）')+' — '+img.name;
   renderCutoutRegions();updateCutoutInfo();drawCutout();
-  $('cutout-modal').classList.remove('hidden');
+  $('cutout-modal').classList.remove('hidden'); resetCutoutZoom();
 }
 
 function renderCutoutRegions(){
@@ -2298,7 +2470,7 @@ function openTrimModal(ri,ci){
   T.scale=Math.min(1,mxW/img.w,mxH/img.h);
   const tc=$('trim-canvas'); tc.width=Math.round(img.w*T.scale); tc.height=Math.round(img.h*T.scale);
   $('trim-title').textContent='トリミング — '+img.name;
-  $('trim-modal').classList.remove('hidden'); drawTrim(); updateTrimInputs();
+  $('trim-modal').classList.remove('hidden'); drawTrim(); updateTrimInputs(); resetTrimZoom();
 }
 function drawTrim(){
   const tc=$('trim-canvas'),ctx=tc.getContext('2d'),s=T.scale;
@@ -2362,6 +2534,50 @@ $('trim-apply-btn').addEventListener('click',()=>{
 });
 $('trim-reset-btn').addEventListener('click',()=>{T.cx=0;T.cy=0;T.cw=T.imgW;T.ch=T.imgH;drawTrim();updateTrimInputs();});
 $('trim-cancel-btn').addEventListener('click',()=>$('trim-modal').classList.add('hidden'));
+
+// ===== モーダル共通ズーム（ホイール＋ピンチ） =====
+function addModalZoom(wrap){
+  const Z={scale:1,tx:0,ty:0,ptrs:new Map(),ld:0,active:false};
+  function applyTZ(){
+    const cv=wrap.querySelector('canvas');if(!cv)return;
+    cv.style.transformOrigin='0 0';
+    cv.style.transform='translate('+Z.tx+'px,'+Z.ty+'px) scale('+Z.scale+')';
+  }
+  function clampTX(s,w){const mw=wrap.clientWidth,cw=(w||wrap.querySelector('canvas')?.clientWidth||mw)*s;return cw<mw?Math.max(0,Math.min((mw-cw)/2,0)):Math.max(mw-cw,Math.min(0,Z.tx));}
+  wrap.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const r=wrap.getBoundingClientRect(),ratio=e.deltaY<0?1.15:0.87;
+    const ns=Math.max(0.5,Math.min(10,Z.scale*ratio));
+    const fx=e.clientX-r.left,fy=e.clientY-r.top;
+    Z.tx=fx-(fx-Z.tx)*(ns/Z.scale);Z.ty=fy-(fy-Z.ty)*(ns/Z.scale);Z.scale=ns;applyTZ();
+  },{passive:false});
+  wrap.addEventListener('pointerdown',e=>{
+    Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(Z.ptrs.size===2){const ps=[...Z.ptrs.values()];Z.ld=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);Z.active=true;}
+  },{passive:true});
+  wrap.addEventListener('pointermove',e=>{
+    if(!Z.ptrs.has(e.pointerId))return;
+    Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(Z.active&&Z.ptrs.size>=2){
+      const ps=[...Z.ptrs.values()];
+      const dist=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);
+      if(Z.ld>0){
+        const r=wrap.getBoundingClientRect(),ratio=dist/Z.ld;
+        const ns=Math.max(0.5,Math.min(10,Z.scale*ratio));
+        const fx=(ps[0].x+ps[1].x)/2-r.left,fy=(ps[0].y+ps[1].y)/2-r.top;
+        Z.tx=fx-(fx-Z.tx)*(ns/Z.scale);Z.ty=fy-(fy-Z.ty)*(ns/Z.scale);Z.scale=ns;applyTZ();
+      }
+      Z.ld=dist;
+    }
+  },{capture:true,passive:true});
+  wrap.addEventListener('pointerup',e=>{Z.ptrs.delete(e.pointerId);if(Z.ptrs.size<2){Z.active=false;Z.ld=0;}},{passive:true});
+  wrap.addEventListener('pointercancel',e=>{Z.ptrs.delete(e.pointerId);Z.active=false;Z.ld=0;},{passive:true});
+  // ズームリセット関数を返す（モーダルを開く時に呼ぶ）
+  return ()=>{Z.scale=1;Z.tx=0;Z.ty=0;Z.active=false;Z.ptrs.clear();Z.ld=0;applyTZ();};
+}
+const resetTrimZoom=addModalZoom($('trim-canvas-wrap'));
+const resetColorZoom=addModalZoom($('color-canvas-wrap'));
+const resetCutoutZoom=addModalZoom($('cutout-canvas-wrap'));
 
 // ===== 保存タブ =====
 $$('.format-pill').forEach(pill=>{
