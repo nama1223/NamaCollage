@@ -2611,9 +2611,10 @@ $('trim-apply-btn').addEventListener('click',()=>{
 $('trim-reset-btn').addEventListener('click',()=>{T.cx=0;T.cy=0;T.cw=T.imgW;T.ch=T.imgH;drawTrim();updateTrimInputs();});
 $('trim-cancel-btn').addEventListener('click',()=>{$('trim-modal').classList.add('hidden');history.back();});
 
-// ===== モーダル共通ズーム（ホイール＋ピンチ）=====
-// 2本指検出時に wrap.setPointerCapture() で両指を拘束
-// → 指が wrap 外に出ても pointermove が途切れない
+// ===== モーダル共通ズーム（ホイール・ピンチ・2本指パン）=====
+// ポイント：1本目の指が下りた瞬間に wrap.setPointerCapture() する
+// → 2本とも画像エリア外でも・指が wrap 外に出ても events が途切れない
+// ズームと2本指パンは「中点の移動」を使う正しい複合変換式で同時処理
 function addModalZoom(wrap){
   const Z={scale:1,tx:0,ty:0,ptrs:new Map(),ld:0,active:false};
   function applyTZ(){
@@ -2621,47 +2622,75 @@ function addModalZoom(wrap){
     cv.style.transformOrigin='0 0';
     cv.style.transform='translate('+Z.tx+'px,'+Z.ty+'px) scale('+Z.scale+')';
   }
+
+  // ホイールズーム（デスクトップ）
   wrap.addEventListener('wheel',e=>{
     e.preventDefault();
-    const r=wrap.getBoundingClientRect(),ratio=e.deltaY<0?1.15:0.87;
+    const r=wrap.getBoundingClientRect();
+    const ratio=e.deltaY<0?1.15:0.87;
     const ns=Math.max(0.5,Math.min(10,Z.scale*ratio));
-    const fx=e.clientX-r.left,fy=e.clientY-r.top;
-    Z.tx=fx-(fx-Z.tx)*(ns/Z.scale);Z.ty=fy-(fy-Z.ty)*(ns/Z.scale);Z.scale=ns;applyTZ();
+    const fx=e.clientX-r.left, fy=e.clientY-r.top;
+    Z.tx=fx-(fx-Z.tx)*(ns/Z.scale); Z.ty=fy-(fy-Z.ty)*(ns/Z.scale);
+    Z.scale=ns; applyTZ();
   },{passive:false});
-  // capture:true で canvas より先に ptrs 更新
-  // 2本指になったら wrap.setPointerCapture() で全指を wrap に束縛
+
+  // pointerdown: 1本目から即キャプチャ（これが最重要）
+  // capture:true で canvas/trimWrap の handler より先に実行
   wrap.addEventListener('pointerdown',e=>{
     Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    // ★ 1本目でも即座に wrap にキャプチャ（wrap 外に出ても move が届く）
+    try{wrap.setPointerCapture(e.pointerId);}catch(_){}
     if(Z.ptrs.size>=2){
-      // 全指のキャプチャを wrap に移譲（canvas/trimWrap から奪取して途切れを防ぐ）
+      // 2本目が来たら全指のキャプチャを wrap に集約
+      // （canvas や trimWrap が持っている場合も奪取）
       for(const pid of Z.ptrs.keys()){try{wrap.setPointerCapture(pid);}catch(_){}}
       const ps=[...Z.ptrs.values()];
       Z.ld=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);
       Z.active=true;
     }
   },{capture:true});
-  // capture:true + stopPropagation でズーム中はキャンバス側に move を届かせない
+
+  // pointermove: ズーム＋パンを同時処理
+  // 正しい変換式: tx' = newMid - (prevMid - tx) * (newScale/oldScale)
+  // → これ1本でズームとパンが同時に綺麗に動く
   wrap.addEventListener('pointermove',e=>{
     if(!Z.ptrs.has(e.pointerId))return;
-    Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(Z.active&&Z.ptrs.size>=2){
       e.stopPropagation();
-      const ps=[...Z.ptrs.values()];
-      const dist=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);
+      // 更新前の中点を先に取得
+      const prev=[...Z.ptrs.values()];
+      const prevMx=(prev[0].x+prev[1].x)/2, prevMy=(prev[0].y+prev[1].y)/2;
+      // 現在の指の位置を更新
+      Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      const cur=[...Z.ptrs.values()];
+      const newMx=(cur[0].x+cur[1].x)/2, newMy=(cur[0].y+cur[1].y)/2;
+      const dist=Math.hypot(cur[0].x-cur[1].x,cur[0].y-cur[1].y);
       if(Z.ld>0){
-        const r=wrap.getBoundingClientRect(),ratio=dist/Z.ld;
+        const r=wrap.getBoundingClientRect();
+        const ratio=dist/Z.ld;
         const ns=Math.max(0.5,Math.min(10,Z.scale*ratio));
-        const fx=(ps[0].x+ps[1].x)/2-r.left,fy=(ps[0].y+ps[1].y)/2-r.top;
-        Z.tx=fx-(fx-Z.tx)*(ns/Z.scale);Z.ty=fy-(fy-Z.ty)*(ns/Z.scale);Z.scale=ns;applyTZ();
+        // 中点（wrap相対座標）でのズーム＋パン複合変換
+        // → 「中点が示す画像上の点が常に中点に留まる」動き
+        const pmx=prevMx-r.left, pmy=prevMy-r.top;
+        const nmx=newMx-r.left,  nmy=newMy-r.top;
+        Z.tx=nmx-(pmx-Z.tx)*(ns/Z.scale);
+        Z.ty=nmy-(pmy-Z.ty)*(ns/Z.scale);
+        Z.scale=ns; applyTZ();
       }
       Z.ld=dist;
+    }else{
+      Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
     }
   },{capture:true,passive:true});
+
   wrap.addEventListener('pointerup',e=>{
     Z.ptrs.delete(e.pointerId);
     if(Z.ptrs.size<2){Z.active=false;Z.ld=0;}
   },{passive:true});
-  wrap.addEventListener('pointercancel',e=>{Z.ptrs.delete(e.pointerId);Z.active=false;Z.ld=0;},{passive:true});
+  wrap.addEventListener('pointercancel',e=>{
+    Z.ptrs.delete(e.pointerId);Z.active=false;Z.ld=0;
+  },{passive:true});
+
   const reset=()=>{Z.scale=1;Z.tx=0;Z.ty=0;Z.active=false;Z.ptrs.clear();Z.ld=0;applyTZ();};
   const isZooming=()=>Z.ptrs.size>=2||Z.active;
   return{reset,isZooming};
