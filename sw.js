@@ -2,10 +2,9 @@
 //
 // 更新ポリシー:
 //   - CACHE_NAME は「キャッシュを完全リセットしたい時だけ」バージョンを上げる。
-//     index.html や画像ファイルの更新だけなら変更不要（stale-while-revalidate で自動更新）。
 //   - SW 自体（このファイル）を変更すれば、ブラウザが自動的に再登録する。
 
-const CACHE_NAME = 'namacollage-v2';
+const CACHE_NAME = 'namacollage-v3'; // キャッシュをパージさせるため念のためv3などに上げるのをおすすめします
 
 const PRECACHE = [
   './',
@@ -16,16 +15,27 @@ const PRECACHE = [
 ];
 
 // ============================================================
-// Install: プリキャッシュ（失敗しても続行）
+// Install: プリキャッシュ（HTTPキャッシュを無視して強制取得）
 // ============================================================
-let _isUpdate = false; // 初回インストールか更新かを判別
+let _isUpdate = false;
 
 self.addEventListener('install', event => {
-  // 既存のアクティブなSWがあれば更新と判断
   _isUpdate = !!self.registration.active;
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => Promise.allSettled(PRECACHE.map(url => cache.add(url))))
+      .then(cache => {
+        // cache.add() だとHTTPキャッシュが使われる可能性があるため、
+        // cache: 'reload' を指定して強制的にネットワークから最新を取得する
+        return Promise.allSettled(PRECACHE.map(async url => {
+          try {
+            const req = new Request(url, { cache: 'reload' });
+            const res = await fetch(req);
+            if (res.ok) await cache.put(url, res);
+          } catch (e) {
+            console.warn(`SW: Failed to precache ${url}`, e);
+          }
+        }));
+      })
       .then(() => self.skipWaiting())
   );
 });
@@ -42,7 +52,6 @@ self.addEventListener('activate', event => {
       .then(() => self.clients.claim())
       .then(async () => {
         if (_isUpdate) {
-          // 更新完了を開いているウィンドウに通知
           const clients = await self.clients.matchAll({ type: 'window' });
           for (const client of clients) {
             client.postMessage({ type: 'sw_updated' });
@@ -53,7 +62,7 @@ self.addEventListener('activate', event => {
 });
 
 // ============================================================
-// Fetch: Share Target POST + Stale-While-Revalidate
+// Fetch: 戦略の使い分け（HTMLはNetwork-First, 他はSWR）
 // ============================================================
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
@@ -64,15 +73,29 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // GET のみキャッシュ対象
+  // GET のみ対象、外部オリジンはスキップ
   if (event.request.method !== 'GET') return;
-  // 外部オリジンはスキップ
   if (url.origin !== location.origin) return;
 
-  // Stale-While-Revalidate:
-  //   1. キャッシュがあれば即座に返す（オフライン対応・高速起動）
-  //   2. バックグラウンドで常に最新版を取得しキャッシュを更新
-  //   3. キャッシュなし → ネットワークを待つ
+  // 1. HTMLリクエスト（画面遷移）は Network-First
+  // 常に最新版を見に行き、オフライン時のみキャッシュを使う
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          const resClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, resClone));
+          return response;
+        })
+        .catch(() => {
+          // オフライン時はキャッシュから返す
+          return caches.match('./index.html', { ignoreSearch: true });
+        })
+    );
+    return;
+  }
+
+  // 2. それ以外（画像やJSなど）は Stale-While-Revalidate
   event.respondWith(
     caches.open(CACHE_NAME).then(cache =>
       cache.match(event.request).then(cached => {
@@ -92,10 +115,7 @@ self.addEventListener('fetch', event => {
 });
 
 // ============================================================
-// Share Target ハンドラ
-//   受け取ったファイルを IndexedDB(pending_shares) に保存し
-//   メインページにリダイレクト。
-//   メインページ側は起動時に pending_shares を読み取って処理する。
+// Share Target & IndexedDB ハンドラ（変更なし）
 // ============================================================
 async function handleShareTarget(request) {
   let formData;
@@ -109,7 +129,6 @@ async function handleShareTarget(request) {
       const db = await openDB();
       const tx = db.transaction('pending_shares', 'readwrite');
       const store = tx.objectStore('pending_shares');
-      // 古い未処理分をクリア
       store.clear();
       for (const file of files) {
         const buf = await file.arrayBuffer();
@@ -118,7 +137,6 @@ async function handleShareTarget(request) {
       await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
       db.close();
 
-      // 開いているウィンドウに通知（既にアプリが起動中の場合）
       const clients = await self.clients.matchAll({ type: 'window' });
       for (const client of clients) {
         client.postMessage({ type: 'share_received' });
@@ -131,7 +149,6 @@ async function handleShareTarget(request) {
   return Response.redirect('./?share_pending=1', 303);
 }
 
-// SW 内で IndexedDB を開く（バージョンは index.html と揃える）
 function openDB() {
   return new Promise((res, rej) => {
     const r = indexedDB.open('NamaCollage_v1', 2);
