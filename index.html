@@ -1427,8 +1427,8 @@ function _thUpdateBtns(){
   const uCnt=TH.idx,rCnt=TH.stack.length-1-TH.idx;
   const ub=$('tp-undo'),rb=$('tp-redo');
   const ubg=$('tp-undo-badge'),rbg=$('tp-redo-badge');
-  if(ub){ub.disabled=uCnt<=0;if(ubg){ubg.textContent=uCnt>0?uCnt:'';ubg.style.display=uCnt>0?'':'none';}}
-  if(rb){rb.disabled=rCnt<=0;if(rbg){rbg.textContent=rCnt>0?rCnt:'';rbg.style.display=rCnt>0?'':'none';}}
+  if(ub){ub.disabled=uCnt<=0;if(ubg){ubg.textContent=uCnt>0?uCnt:'';ubg.style.display=uCnt>0?'inline-block':'none';}}
+  if(rb){rb.disabled=rCnt<=0;if(rbg){rbg.textContent=rCnt>0?rCnt:'';rbg.style.display=rCnt>0?'inline-block':'none';}}
 }
 let _thDebTimer=null;
 // 即時保存（追加・削除・並び替え等）
@@ -1515,7 +1515,8 @@ function drawShapeItem(ctx,s,W,H,scale){
     const hp1=[x2-hl*Math.cos(ang-ha),y2-hl*Math.sin(ang-ha)];
     const hp2=[x2-hl*Math.cos(ang+ha),y2-hl*Math.sin(ang+ha)];
     const pts=[[x1,y1],[x2,y2],shaftEnd,hp1,hp2];
-    const lw2s=s.stroke2Enabled?lw+(s.stroke2Width||3)*scale*2:lw;
+    const lw2b=(s.stroke2Width||3)*scale*2; // 縁取り幅のみ（矢じり用）
+    const lw2s=s.stroke2Enabled?lw+lw2b:lw; // シャフト用（本体+縁取り）
     const shadMg=s.shadowEnabled?Math.max((s.shadowBlur||8)*scale+Math.abs((s.shadowX||3)*scale)+Math.abs((s.shadowY||3)*scale),8):4;
     const mg=Math.ceil(lw2s/2+hl+shadMg+8);
     const bx=Math.floor(Math.min(...pts.map(p=>p[0]))-mg);
@@ -1526,8 +1527,11 @@ function drawShapeItem(ctx,s,W,H,scale){
     const octx=offC.getContext('2d');
     octx.translate(-bx,-by);octx.lineCap='round';octx.lineJoin='round';
     if(s.stroke2Enabled){
+      // シャフト縁取り: 本体線幅 + 縁取り幅
       octx.strokeStyle=s.stroke2Color||'#fff';octx.lineWidth=lw2s;
       octx.beginPath();octx.moveTo(x1,y1);octx.lineTo(shaftEnd[0],shaftEnd[1]);octx.stroke();
+      // 矢じり縁取り: 縁取り幅のみ（シャフト幅を足さない）
+      octx.lineWidth=lw2b;
       octx.beginPath();octx.moveTo(x2,y2);octx.lineTo(hp1[0],hp1[1]);octx.lineTo(hp2[0],hp2[1]);octx.closePath();
       octx.fillStyle=s.stroke2Color||'#fff';octx.fill();octx.stroke();
     }
@@ -1749,7 +1753,7 @@ function renderToppingControlsHTML(t){
       adjRowHTML('終X','tp-x2',0,100,t.x2,'tp-x2-val')+adjRowHTML('終Y','tp-y2',0,100,t.y2,'tp-y2-val')+
       colorLineHTML(t)+
       '<div class="adj-row"><span class="adj-label">矢じり</span>'+
-      '<span style="font-size:11px">大きさ</span><input type="number" class="tp-headsize tp-num-inp" min="5" max="300" value="'+(t.headSize||40)+'">'+
+      '<span style="font-size:11px">大きさ</span><input type="number" class="tp-headsize tp-num-inp" min="5" max="600" value="'+(t.headSize||40)+'">'+
       '<span style="font-size:11px;margin-left:6px">角度</span><input type="number" class="tp-headangle tp-num-inp" min="5" max="80" value="'+(t.headAngle||30)+'">°</div>'+
       strokeShadowHTML(t);
   }
@@ -2516,7 +2520,7 @@ function drawCutout(){
 
 
 const T={ri:-1,ci:-1,imgEl:null,imgW:0,imgH:0,cx:0,cy:0,cw:0,ch:0,scale:1,drag:null,ox:0,oy:0,oc:null};
-const HSIZE=16;
+const HSIZE=28;
 function openTrimModal(ri,ci){
   const img=state.grid[ri][ci]; T.ri=ri;T.ci=ci;T.imgEl=img.imgEl;T.imgW=img.w;T.imgH=img.h;
   if(img.cropData){T.cx=img.cropData.cx;T.cy=img.cropData.cy;T.cw=img.cropData.cw;T.ch=img.cropData.ch;}
@@ -2608,7 +2612,8 @@ $('trim-reset-btn').addEventListener('click',()=>{T.cx=0;T.cy=0;T.cw=T.imgW;T.ch
 $('trim-cancel-btn').addEventListener('click',()=>{$('trim-modal').classList.add('hidden');history.back();});
 
 // ===== モーダル共通ズーム（ホイール＋ピンチ）=====
-// capture:true でキャンバスより先に反応し、2本指時は stopPropagation で干渉を防ぐ
+// 2本指検出時に wrap.setPointerCapture() で両指を拘束
+// → 指が wrap 外に出ても pointermove が途切れない
 function addModalZoom(wrap){
   const Z={scale:1,tx:0,ty:0,ptrs:new Map(),ld:0,active:false};
   function applyTZ(){
@@ -2623,16 +2628,19 @@ function addModalZoom(wrap){
     const fx=e.clientX-r.left,fy=e.clientY-r.top;
     Z.tx=fx-(fx-Z.tx)*(ns/Z.scale);Z.ty=fy-(fy-Z.ty)*(ns/Z.scale);Z.scale=ns;applyTZ();
   },{passive:false});
-  // capture:true → キャンバスの pointerdown より先に実行されるので ptrs が正確
+  // capture:true で canvas より先に ptrs 更新
+  // 2本指になったら wrap.setPointerCapture() で全指を wrap に束縛
   wrap.addEventListener('pointerdown',e=>{
     Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(Z.ptrs.size>=2){
+      // 全指のキャプチャを wrap に移譲（canvas/trimWrap から奪取して途切れを防ぐ）
+      for(const pid of Z.ptrs.keys()){try{wrap.setPointerCapture(pid);}catch(_){}}
       const ps=[...Z.ptrs.values()];
       Z.ld=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);
       Z.active=true;
     }
-  },{capture:true,passive:true});
-  // capture:true + stopPropagation でズーム中はキャンバスに move を届かせない
+  },{capture:true});
+  // capture:true + stopPropagation でズーム中はキャンバス側に move を届かせない
   wrap.addEventListener('pointermove',e=>{
     if(!Z.ptrs.has(e.pointerId))return;
     Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
