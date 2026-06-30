@@ -232,12 +232,12 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 
 /* Trim modal */
 #trim-modal{position:fixed;inset:0;background:rgba(0,20,60,0.9);z-index:900;overflow:hidden;}
-#trim-header{position:absolute;top:0;left:0;right:0;z-index:10;height:54px;background:var(--surf);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;gap:6px;}
+#trim-header{position:absolute;top:0;left:0;right:0;z-index:10;height:54px;background:var(--surf);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;gap:6px;touch-action:none;}
 #trim-title{flex:1;font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .trim-hbtn{padding:6px 12px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;touch-action:manipulation;}
-#trim-canvas-wrap{position:absolute;top:54px;bottom:106px;left:0;right:0;z-index:1;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:16px;-webkit-overflow-scrolling:touch;}
+#trim-canvas-wrap{position:absolute;top:54px;bottom:106px;left:0;right:0;z-index:1;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:16px;-webkit-overflow-scrolling:touch;touch-action:none;}
 #trim-canvas{cursor:crosshair;touch-action:none;display:block;max-width:100%;height:auto;}
-#trim-footer{position:absolute;bottom:0;left:0;right:0;z-index:10;height:106px;background:var(--surf);border-top:1px solid var(--border);padding:10px 14px;display:flex;flex-direction:column;gap:8px;}
+#trim-footer{position:absolute;bottom:0;left:0;right:0;z-index:10;height:106px;background:var(--surf);border-top:1px solid var(--border);padding:10px 14px;display:flex;flex-direction:column;gap:8px;touch-action:none;}
 .trim-inputs{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;}
 .trim-inp-wrap{display:flex;flex-direction:column;gap:2px;}
 .trim-inp-label{font-size:9.5px;font-weight:700;color:var(--muted);text-align:center;}
@@ -258,11 +258,11 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 .ctx-item-danger{color:var(--danger)!important;}
 /* カラー調整・中抜きモーダル (trim-modalと同じ構造を流用) */
 #color-modal,#cutout-modal{position:fixed;inset:0;background:rgba(0,20,60,0.9);z-index:900;overflow:hidden;}
-#color-header,#cutout-header{position:absolute;top:0;left:0;right:0;z-index:10;height:54px;background:var(--surf);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;gap:6px;}
-#color-canvas-wrap,#cutout-canvas-wrap{position:absolute;top:54px;bottom:130px;left:0;right:0;z-index:1;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:12px;-webkit-overflow-scrolling:touch;}
+#color-header,#cutout-header{position:absolute;top:0;left:0;right:0;z-index:10;height:54px;background:var(--surf);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;gap:6px;touch-action:none;}
+#color-canvas-wrap,#cutout-canvas-wrap{position:absolute;top:54px;bottom:130px;left:0;right:0;z-index:1;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:12px;-webkit-overflow-scrolling:touch;touch-action:none;}
 #color-canvas,#cutout-canvas{display:block;max-width:100%;height:auto;touch-action:none;}
 #cutout-canvas{cursor:ns-resize;}
-#color-footer,#cutout-footer{position:absolute;bottom:0;left:0;right:0;z-index:10;height:130px;background:var(--surf);border-top:1px solid var(--border);padding:8px 14px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;}
+#color-footer,#cutout-footer{position:absolute;bottom:0;left:0;right:0;z-index:10;height:130px;background:var(--surf);border-top:1px solid var(--border);padding:8px 14px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;touch-action:pan-y;}
 .ca-row{display:flex;align-items:center;gap:6px;}
 .ca-label{font-size:10.5px;font-weight:700;color:var(--muted);width:32px;flex-shrink:0;text-align:right;}
 .ca-slider{accent-color:var(--prime);flex:1;cursor:pointer;}
@@ -606,7 +606,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 </div>
 <script>
 'use strict';
-// ===== NamaCollage v5.0 =====
+// ===== NamaCollage v5.1 =====
 
 const state = {
   grid:[], nextId:1, pendingAdd:null,
@@ -2612,11 +2612,38 @@ $('trim-reset-btn').addEventListener('click',()=>{T.cx=0;T.cy=0;T.cw=T.imgW;T.ch
 $('trim-cancel-btn').addEventListener('click',()=>{$('trim-modal').classList.add('hidden');history.back();});
 
 // ===== モーダル共通ズーム（ホイール・ピンチ・2本指パン）=====
-// ポイント：1本目の指が下りた瞬間に wrap.setPointerCapture() する
-// → 2本とも画像エリア外でも・指が wrap 外に出ても events が途切れない
-// ズームと2本指パンは「中点の移動」を使う正しい複合変換式で同時処理
-function addModalZoom(wrap){
-  const Z={scale:1,tx:0,ty:0,ptrs:new Map(),ld:0,active:false};
+// 【v5.1 修正】2つの不具合に対応：
+// ①2本指パン中に拡大率がぐにょぐにょ動く
+//   原因：直前フレームの指間距離(旧Z.ld)を毎回「基準値」として上書きしていた。
+//   2本の指の移動はブラウザ的には1本ずつ別々の pointermove イベントとして届く
+//   （片方は最新位置・もう片方は1フレーム前の位置、という"ズレ"が常に起きる）ため、
+//   その瞬間瞬間の距離には小さな誤差が乗る。旧コードはその誤差込みの値を次の
+//   基準値にしてしまうので、誤差が雪だるま式に蓄積して見た目が揺れていた。
+//   対策：ジェスチャー「開始時」の指間距離・中点・倍率を固定の基準値として保存し、
+//   以後は常にその基準値との比率で計算し直す（毎フレーム基準を更新しない）。
+//   さらに実際の計算は requestAnimationFrame で1フレーム1回にまとめ、
+//   2本の指の最新位置が両方揃ってから計算されるようにする。
+// ②2本指とも画像表示エリア外（ヘッダーやフッターの余白）からタッチを開始すると
+//   反応しない／指を離すまで固まる
+//   原因A：CSS の touch-action が canvas 要素にしか none 指定されておらず、
+//   ヘッダー/フッターの余白に触れた指がある場合、ブラウザがそれをページの
+//   ネイティブピンチズームとして奪ってしまっていた（→ CSS 側で
+//   ヘッダー/フッター/wrap にも touch-action:none(またはpan-y) を追加済み）。
+//   原因B：ジェスチャー検出の pointerdown 監視が wrap（画像表示エリアそのもの）
+//   にしか付いておらず、wrap の外側（ヘッダーやフッター）から指が触れた場合は
+//   そもそも検出できていなかった。
+//   対策：監視対象を wrap からモーダル全体(modal)に拡大。ただし
+//   wrap.setPointerCapture() は「2本目の指が下りた瞬間」にのみ呼ぶ設計にしたので、
+//   1本指でのボタンタップやスライダー操作には一切影響しない。
+function addModalZoom(wrap,modal){
+  const Z={
+    scale:1,tx:0,ty:0,                  // 現在の表示状態（CSS transform に反映）
+    ptrs:new Map(),                      // 押下中の指: pointerId → {x,y}
+    active:false,                        // 2本指ジェスチャー中か
+    baseDist:0,baseMidX:0,baseMidY:0,    // ジェスチャー開始時点の基準値（固定・更新しない）
+    baseScale:1,baseTx:0,baseTy:0,
+    rafQueued:false
+  };
   function applyTZ(){
     const cv=wrap.querySelector('canvas');if(!cv)return;
     cv.style.transformOrigin='0 0';
@@ -2634,70 +2661,75 @@ function addModalZoom(wrap){
     Z.scale=ns; applyTZ();
   },{passive:false});
 
-  // pointerdown: 1本目から即キャプチャ（これが最重要）
-  // capture:true で canvas/trimWrap の handler より先に実行
-  wrap.addEventListener('pointerdown',e=>{
+  // 2本目の指が下りた瞬間の状態を「動かない基準値」として保存する
+  function startGesture(){
+    const ps=[...Z.ptrs.values()];
+    Z.baseDist=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);
+    Z.baseMidX=(ps[0].x+ps[1].x)/2;
+    Z.baseMidY=(ps[0].y+ps[1].y)/2;
+    Z.baseScale=Z.scale;
+    Z.baseTx=Z.tx;
+    Z.baseTy=Z.ty;
+    Z.active=true;
+  }
+
+  // 基準値との比率だけでズーム＋パンを再計算する（前回値は一切使わない）
+  function recompute(){
+    if(!Z.active||Z.ptrs.size<2||Z.baseDist<=0)return;
+    const cur=[...Z.ptrs.values()];
+    const dist=Math.hypot(cur[0].x-cur[1].x,cur[0].y-cur[1].y);
+    const midX=(cur[0].x+cur[1].x)/2, midY=(cur[0].y+cur[1].y)/2;
+    const r=wrap.getBoundingClientRect();
+    const ns=Math.max(0.5,Math.min(10,Z.baseScale*(dist/Z.baseDist)));
+    // 基準中点(baseMid)が指していた画像上の点を、現在の中点(mid)に追従させる
+    const bx=Z.baseMidX-r.left, by=Z.baseMidY-r.top;
+    const cx=midX-r.left, cy=midY-r.top;
+    Z.tx=cx-(bx-Z.baseTx)*(ns/Z.baseScale);
+    Z.ty=cy-(by-Z.baseTy)*(ns/Z.baseScale);
+    Z.scale=ns; applyTZ();
+  }
+  function scheduleRecompute(){
+    if(Z.rafQueued)return;
+    Z.rafQueued=true;
+    requestAnimationFrame(()=>{Z.rafQueued=false;recompute();});
+  }
+
+  // pointerdown: モーダル全体（ヘッダー・フッター含む）を監視。
+  // 1本目では何もキャプチャしない＝ボタン等のタップを邪魔しない。
+  // 2本目が下りた瞬間にだけ、両方の指のキャプチャを wrap に集約する
+  // （canvas や trimWrap 等が既にキャプチャを持っていても奪取する）。
+  modal.addEventListener('pointerdown',e=>{
     Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    // ★ 1本目でも即座に wrap にキャプチャ（wrap 外に出ても move が届く）
-    try{wrap.setPointerCapture(e.pointerId);}catch(_){}
-    if(Z.ptrs.size>=2){
-      // 2本目が来たら全指のキャプチャを wrap に集約
-      // （canvas や trimWrap が持っている場合も奪取）
+    if(Z.ptrs.size===2){
       for(const pid of Z.ptrs.keys()){try{wrap.setPointerCapture(pid);}catch(_){}}
-      const ps=[...Z.ptrs.values()];
-      Z.ld=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);
-      Z.active=true;
+      startGesture();
     }
   },{capture:true});
 
-  // pointermove: ズーム＋パンを同時処理
-  // 正しい変換式: tx' = newMid - (prevMid - tx) * (newScale/oldScale)
-  // → これ1本でズームとパンが同時に綺麗に動く
-  wrap.addEventListener('pointermove',e=>{
+  modal.addEventListener('pointermove',e=>{
     if(!Z.ptrs.has(e.pointerId))return;
-    if(Z.active&&Z.ptrs.size>=2){
-      e.stopPropagation();
-      // 更新前の中点を先に取得
-      const prev=[...Z.ptrs.values()];
-      const prevMx=(prev[0].x+prev[1].x)/2, prevMy=(prev[0].y+prev[1].y)/2;
-      // 現在の指の位置を更新
-      Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-      const cur=[...Z.ptrs.values()];
-      const newMx=(cur[0].x+cur[1].x)/2, newMy=(cur[0].y+cur[1].y)/2;
-      const dist=Math.hypot(cur[0].x-cur[1].x,cur[0].y-cur[1].y);
-      if(Z.ld>0){
-        const r=wrap.getBoundingClientRect();
-        const ratio=dist/Z.ld;
-        const ns=Math.max(0.5,Math.min(10,Z.scale*ratio));
-        // 中点（wrap相対座標）でのズーム＋パン複合変換
-        // → 「中点が示す画像上の点が常に中点に留まる」動き
-        const pmx=prevMx-r.left, pmy=prevMy-r.top;
-        const nmx=newMx-r.left,  nmy=newMy-r.top;
-        Z.tx=nmx-(pmx-Z.tx)*(ns/Z.scale);
-        Z.ty=nmy-(pmy-Z.ty)*(ns/Z.scale);
-        Z.scale=ns; applyTZ();
-      }
-      Z.ld=dist;
-    }else{
-      Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    }
+    Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(!Z.active||Z.ptrs.size<2)return;
+    e.stopPropagation();
+    scheduleRecompute();
   },{capture:true,passive:true});
 
-  wrap.addEventListener('pointerup',e=>{
+  function endPointer(e){
+    if(!Z.ptrs.has(e.pointerId))return;
     Z.ptrs.delete(e.pointerId);
-    if(Z.ptrs.size<2){Z.active=false;Z.ld=0;}
-  },{passive:true});
-  wrap.addEventListener('pointercancel',e=>{
-    Z.ptrs.delete(e.pointerId);Z.active=false;Z.ld=0;
-  },{passive:true});
+    try{wrap.releasePointerCapture(e.pointerId);}catch(_){}
+    if(Z.ptrs.size<2){Z.active=false;Z.baseDist=0;}
+  }
+  modal.addEventListener('pointerup',endPointer,{capture:true,passive:true});
+  modal.addEventListener('pointercancel',endPointer,{capture:true,passive:true});
 
-  const reset=()=>{Z.scale=1;Z.tx=0;Z.ty=0;Z.active=false;Z.ptrs.clear();Z.ld=0;applyTZ();};
+  const reset=()=>{Z.scale=1;Z.tx=0;Z.ty=0;Z.active=false;Z.ptrs.clear();Z.baseDist=0;applyTZ();};
   const isZooming=()=>Z.ptrs.size>=2||Z.active;
   return{reset,isZooming};
 }
-const trimZoom=addModalZoom($('trim-canvas-wrap'));
-const colorZoom=addModalZoom($('color-canvas-wrap'));
-const cutoutZoom=addModalZoom($('cutout-canvas-wrap'));
+const trimZoom=addModalZoom($('trim-canvas-wrap'),$('trim-modal'));
+const colorZoom=addModalZoom($('color-canvas-wrap'),$('color-modal'));
+const cutoutZoom=addModalZoom($('cutout-canvas-wrap'),$('cutout-modal'));
 const resetTrimZoom=trimZoom.reset;
 const resetColorZoom=colorZoom.reset;
 const resetCutoutZoom=cutoutZoom.reset;
