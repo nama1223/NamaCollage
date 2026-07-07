@@ -2637,12 +2637,13 @@ $('trim-cancel-btn').addEventListener('click',()=>{$('trim-modal').classList.add
 //   1本指でのボタンタップやスライダー操作には一切影響しない。
 function addModalZoom(wrap,modal){
   const Z={
-    scale:1,tx:0,ty:0,                  // 現在の表示状態（CSS transform に反映）
-    ptrs:new Map(),                      // 押下中の指: pointerId → {x,y}
-    active:false,                        // 2本指ジェスチャー中か
-    baseDist:0,baseMidX:0,baseMidY:0,    // ジェスチャー開始時点の基準値（固定・更新しない）
+    scale:1,tx:0,ty:0,
+    ptrs:new Map(),
+    active:false,
+    baseDist:0,baseMidX:0,baseMidY:0,
     baseScale:1,baseTx:0,baseTy:0,
-    rafQueued:false
+    rafQueued:false,
+    zoomUnlocked:false  // 指間距離が閾値(10%)を超えるまでスケール変更を禁止
   };
   function applyTZ(){
     const cv=wrap.querySelector('canvas');if(!cv)return;
@@ -2661,7 +2662,7 @@ function addModalZoom(wrap,modal){
     Z.scale=ns; applyTZ();
   },{passive:false});
 
-  // 2本目の指が下りた瞬間の状態を「動かない基準値」として保存する
+  // 2本目の指が下りた瞬間の状態を基準値として保存する
   function startGesture(){
     const ps=[...Z.ptrs.values()];
     Z.baseDist=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);
@@ -2671,17 +2672,34 @@ function addModalZoom(wrap,modal){
     Z.baseTx=Z.tx;
     Z.baseTy=Z.ty;
     Z.active=true;
+    Z.zoomUnlocked=false; // ジェスチャーごとにリセット
   }
 
-  // 基準値との比率だけでズーム＋パンを再計算する（前回値は一切使わない）
+  // 基準値との比率でズーム＋パンを再計算する
+  // スケール不感帯: 指間距離の変化が ±10% 以内はスケール固定・パンのみ。
+  // 10% を超えた瞬間にその位置を新しい基準として再設定し、以後は通常ズーム。
+  // 再設定はジャンプなし（数式上、再設定直後の ns は必ず現在の Z.scale に一致する）。
+  const ZOOM_THRESHOLD=0.10;
   function recompute(){
     if(!Z.active||Z.ptrs.size<2||Z.baseDist<=0)return;
     const cur=[...Z.ptrs.values()];
     const dist=Math.hypot(cur[0].x-cur[1].x,cur[0].y-cur[1].y);
     const midX=(cur[0].x+cur[1].x)/2, midY=(cur[0].y+cur[1].y)/2;
     const r=wrap.getBoundingClientRect();
-    const ns=Math.max(0.5,Math.min(10,Z.baseScale*(dist/Z.baseDist)));
-    // 基準中点(baseMid)が指していた画像上の点を、現在の中点(mid)に追従させる
+
+    // 閾値を超えた瞬間だけ基準を再設定（以後 zoomUnlocked=true のまま）
+    if(!Z.zoomUnlocked && Math.abs(dist/Z.baseDist-1)>=ZOOM_THRESHOLD){
+      Z.zoomUnlocked=true;
+      // 現在地を新しい基準点として再設定 → 再設定直後の ns = Z.scale でジャンプなし
+      Z.baseDist=dist; Z.baseMidX=midX; Z.baseMidY=midY;
+      Z.baseScale=Z.scale; Z.baseTx=Z.tx; Z.baseTy=Z.ty;
+    }
+
+    // 不感帯内: ns=baseScale（スケール変化なし）。式は変わらないので tx/ty はパンのみ動く。
+    const ns=Z.zoomUnlocked
+      ? Math.max(0.5,Math.min(10,Z.baseScale*(dist/Z.baseDist)))
+      : Z.baseScale;
+
     const bx=Z.baseMidX-r.left, by=Z.baseMidY-r.top;
     const cx=midX-r.left, cy=midY-r.top;
     Z.tx=cx-(bx-Z.baseTx)*(ns/Z.baseScale);
@@ -2754,7 +2772,7 @@ function addModalZoom(wrap,modal){
 
   const reset=()=>{
     Z.scale=1;Z.tx=0;Z.ty=0;Z.active=false;
-    Z.ptrs.clear();Z.baseDist=0;
+    Z.ptrs.clear();Z.baseDist=0;Z.zoomUnlocked=false;
     stopPan1(); applyTZ();
   };
   // pan1 中も isZooming=true にして canvas 側のドラッグ処理をブロック
