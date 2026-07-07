@@ -2164,16 +2164,22 @@ function renderToppingList(){
       '</div>'+
 '';
 
-    // ヘッダークリック → 選択/解除
+    // ヘッダークリック → 選択/解除（描画モード中に同種アイテムを選ぶと追記再開）
     item.querySelector('.tp-head').addEventListener('click',e=>{
       if(e.target.classList.contains('tp-del'))return;
-      if(t.id!==DRAW.currentItemId)finalizeDrawItem();
+      const willSelect=state.selectedToppingId!==t.id;
+      if(willSelect&&DRAW.mode&&t.type===DRAW.mode){
+        if(t.id!==DRAW.currentItemId)finalizeDrawItem();
+        resumeDrawItem(t);
+      }else if(t.id!==DRAW.currentItemId){
+        finalizeDrawItem();
+      }
       state.selectedToppingId=(state.selectedToppingId===t.id)?null:t.id;
       renderToppingList();renderToppingCanvas();renderSelectedPanel();
     });
     // 削除
     item.querySelector('.tp-del').onclick=()=>{
-      if(t.id===DRAW.currentItemId)DRAW.currentItemId=null;
+      if(t.id===DRAW.currentItemId){DRAW.currentItemId=null;const fb=$('tp-draw-finish');if(fb)fb.style.display='none';}
       if(state.selectedToppingId===t.id)state.selectedToppingId=null;
       state.toppings.splice(state.toppings.indexOf(t),1);
       renderToppingList();renderToppingCanvas();tpSaveNow();
@@ -2250,9 +2256,30 @@ function finalizeDrawItem(){
   DRAW.currentItemId=null;
   const fb=$('tp-draw-finish');if(fb)fb.style.display='none';
 }
+// 既存アイテムに描画オプション（色・太さ・強度）を合わせて追記モードを再開する
+function resumeDrawItem(item){
+  DRAW.currentItemId=item.id;
+  DRAW.strokeWidth=item.strokeWidth||DRAW.strokeWidth;
+  const sz=$('tp-draw-size'),szv=$('tp-draw-size-val');
+  if(sz){sz.value=DRAW.strokeWidth;if(szv)szv.textContent=Math.round(DRAW.strokeWidth);}
+  if(item.type==='draw-line'){
+    DRAW.color=item.color||DRAW.color;
+    const c=$('tp-draw-color');if(c)c.value=DRAW.color;
+  }else{
+    DRAW.intensity=item.intensity||DRAW.intensity;
+    const inten=$('tp-draw-intensity'),intenv=$('tp-draw-intensity-val');
+    if(inten){inten.value=DRAW.intensity;if(intenv)intenv.textContent=Math.round(DRAW.intensity);}
+  }
+  const fb=$('tp-draw-finish');if(fb)fb.style.display='inline-block';
+}
 function setDrawMode(mode){
-  finalizeDrawItem();
-  DRAW.mode=DRAW.mode===mode?null:mode; // 同じボタンで解除
+  const newMode=DRAW.mode===mode?null:mode; // 同じボタンで解除
+  // 選択中のアイテムが新モードと同じ描画種類なら、そのまま追記を再開する
+  const selT=state.toppings.find(t=>t.id===state.selectedToppingId);
+  const canResume=newMode&&selT&&selT.type===newMode;
+  if(canResume)resumeDrawItem(selT);
+  else finalizeDrawItem();
+  DRAW.mode=newMode;
   DRAW.active=false; DRAW.pts=[];
   $$('.tp-draw-btn').forEach(b=>b.classList.toggle('active',b.dataset.draw===DRAW.mode));
   const optsEl=$('tp-draw-opts');
@@ -2285,7 +2312,10 @@ $$('.tp-draw-btn').forEach(btn=>btn.addEventListener('click',()=>setDrawMode(btn
 const TZ={scale:1,tx:0,ty:0,initScale:1,ptrs:new Map(),lastPD:0,
           tpDrag:false,isPan:false,pSX:0,pSY:0,pSTX:0,pSTY:0,dPCX:0,dPCY:0,
           dStartCX:0,dStartCY:0,oc:null,
-          dragMode:'move',dragVertexIdx:-1};
+          dragMode:'move',dragVertexIdx:-1,
+          // 2本指ピンチ+パン用の固定基準値（ジェスチャー開始時に設定、以後更新しない）
+          pinchBaseDist:0,pinchBaseMidX:0,pinchBaseMidY:0,pinchBaseScale:1,pinchBaseTx:0,pinchBaseTy:0,
+          zoomUnlocked:false};
 
 function _w2c(ex,ey){
   const r=$('tp-canvas-wrap').getBoundingClientRect();
@@ -2429,7 +2459,12 @@ tpWrap.addEventListener('pointerdown',e=>{
     if(DRAW.active){DRAW.active=false;DRAW.pts=[];}
     TZ.tpDrag=false;TZ.isPan=false;
     const pts=[...TZ.ptrs.values()];
-    TZ.lastPD=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
+    const r=$('tp-canvas-wrap').getBoundingClientRect();
+    TZ.pinchBaseDist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
+    TZ.pinchBaseMidX=(pts[0].x+pts[1].x)/2-r.left;
+    TZ.pinchBaseMidY=(pts[0].y+pts[1].y)/2-r.top;
+    TZ.pinchBaseScale=TZ.scale;TZ.pinchBaseTx=TZ.tx;TZ.pinchBaseTy=TZ.ty;
+    TZ.zoomUnlocked=false;
   }
 });
 tpWrap.addEventListener('pointermove',e=>{
@@ -2437,18 +2472,25 @@ tpWrap.addEventListener('pointermove',e=>{
   TZ.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   const pts=[...TZ.ptrs.values()];
   if(pts.length>=2){
-    // 2本指ズーム（従来通り）
-    const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
-    if(TZ.lastPD>0){
-      const ratio=dist/TZ.lastPD;
-      const fx=(pts[0].x+pts[1].x)/2-$('tp-canvas-wrap').getBoundingClientRect().left;
-      const fy=(pts[0].y+pts[1].y)/2-$('tp-canvas-wrap').getBoundingClientRect().top;
-      const ns=Math.max(TZ.initScale*0.8,Math.min(8,TZ.scale*ratio));
-      TZ.tx=fx-(fx-TZ.tx)*(ns/TZ.scale);
-      TZ.ty=fy-(fy-TZ.ty)*(ns/TZ.scale);
+    // 2本指ズーム＋パン（固定基準値との比率で計算 → 平行移動にも追従し、揺れも出ない）
+    // 指間距離の変化が±10%未満はスケール固定（パンのみ）、超えたら基準を再設定してズーム開始
+    if(TZ.pinchBaseDist>0){
+      const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
+      const r=$('tp-canvas-wrap').getBoundingClientRect();
+      const midX=(pts[0].x+pts[1].x)/2-r.left, midY=(pts[0].y+pts[1].y)/2-r.top;
+      if(!TZ.zoomUnlocked && Math.abs(dist/TZ.pinchBaseDist-1)>=0.10){
+        TZ.zoomUnlocked=true;
+        TZ.pinchBaseDist=dist;TZ.pinchBaseMidX=midX;TZ.pinchBaseMidY=midY;
+        TZ.pinchBaseScale=TZ.scale;TZ.pinchBaseTx=TZ.tx;TZ.pinchBaseTy=TZ.ty;
+      }
+      const ns=TZ.zoomUnlocked
+        ? Math.max(TZ.initScale*0.8,Math.min(8,TZ.pinchBaseScale*(dist/TZ.pinchBaseDist)))
+        : TZ.pinchBaseScale;
+      TZ.tx=midX-(TZ.pinchBaseMidX-TZ.pinchBaseTx)*(ns/TZ.pinchBaseScale);
+      TZ.ty=midY-(TZ.pinchBaseMidY-TZ.pinchBaseTy)*(ns/TZ.pinchBaseScale);
       TZ.scale=ns;_updateTZ();
     }
-    TZ.lastPD=dist;return;
+    return;
   }
   if(DRAW.active&&DRAW.mode){
     // ★ 描画モード: 点を追加（一定距離ごと）してRAFでリフレッシュ
@@ -2553,8 +2595,10 @@ tpWrap.addEventListener('pointerup',e=>{
   if(TZ.tpDrag){TZ.tpDrag=false;tpSaveNow();}
   TZ.isPan=false;
   if(TZ.ptrs.size===1){
+    // 2本指→1本指: そのままパン継続できるようにする（描画モード中は対象外）
     const[p]=TZ.ptrs.values();
     TZ.pSX=p.x;TZ.pSY=p.y;TZ.pSTX=TZ.tx;TZ.pSTY=TZ.ty;
+    if(!DRAW.mode)TZ.isPan=true;
   }
 });
 tpWrap.addEventListener('pointercancel',e=>{TZ.ptrs.delete(e.pointerId);TZ.tpDrag=false;TZ.isPan=false;tpWrap.classList.remove('tp-grabbing');});
