@@ -2694,37 +2694,71 @@ function addModalZoom(wrap,modal){
     requestAnimationFrame(()=>{Z.rafQueued=false;recompute();});
   }
 
-  // pointerdown: モーダル全体（ヘッダー・フッター含む）を監視。
-  // 1本目では何もキャプチャしない＝ボタン等のタップを邪魔しない。
-  // 2本目が下りた瞬間にだけ、両方の指のキャプチャを wrap に集約する
-  // （canvas や trimWrap 等が既にキャプチャを持っていても奪取する）。
+  // --- 状態に pan1（1本指エリア外パン）を追加 ---
+  // canvas 上でもボタン等でもない場所を1本指でタッチ → 画像をパン移動
+  // 2本指が下りた瞬間に pan1 は停止してピンチモードへ引き継ぐ
+  const INTERACTIVE_TAGS=['BUTTON','INPUT','SELECT','LABEL','TEXTAREA'];
+  Z.pan1={active:false,pid:null,lx:0,ly:0};
+
+  function stopPan1(){
+    if(!Z.pan1.active)return;
+    try{wrap.releasePointerCapture(Z.pan1.pid);}catch(_){}
+    Z.pan1={active:false,pid:null,lx:0,ly:0};
+  }
+
   modal.addEventListener('pointerdown',e=>{
     Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(Z.ptrs.size===2){
+    if(Z.ptrs.size>=2){
+      // 2本指: pan1 が進行中なら止め、全指を wrap にキャプチャしてピンチ開始
+      stopPan1();
       for(const pid of Z.ptrs.keys()){try{wrap.setPointerCapture(pid);}catch(_){}}
       startGesture();
+    } else {
+      // 1本指: canvas・インタラクティブ要素以外ならエリア外パン開始
+      const tag=e.target.tagName.toUpperCase();
+      if(tag!=='CANVAS'&&!INTERACTIVE_TAGS.includes(tag)){
+        Z.pan1={active:true,pid:e.pointerId,lx:e.clientX,ly:e.clientY};
+        try{wrap.setPointerCapture(e.pointerId);}catch(_){}
+      }
     }
   },{capture:true});
 
   modal.addEventListener('pointermove',e=>{
     if(!Z.ptrs.has(e.pointerId))return;
     Z.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(!Z.active||Z.ptrs.size<2)return;
-    e.stopPropagation();
-    scheduleRecompute();
+    if(Z.active&&Z.ptrs.size>=2){
+      // 2本指ピンチ・パン
+      e.stopPropagation();
+      scheduleRecompute();
+    } else if(Z.pan1.active&&Z.pan1.pid===e.pointerId){
+      // 1本指エリア外パン（差分を直接加算、揺れなし）
+      Z.tx+=e.clientX-Z.pan1.lx;
+      Z.ty+=e.clientY-Z.pan1.ly;
+      Z.pan1.lx=e.clientX; Z.pan1.ly=e.clientY;
+      applyTZ();
+      e.stopPropagation();
+    }
   },{capture:true,passive:true});
 
   function endPointer(e){
     if(!Z.ptrs.has(e.pointerId))return;
     Z.ptrs.delete(e.pointerId);
     try{wrap.releasePointerCapture(e.pointerId);}catch(_){}
+    if(Z.pan1.active&&Z.pan1.pid===e.pointerId){
+      Z.pan1={active:false,pid:null,lx:0,ly:0};
+    }
     if(Z.ptrs.size<2){Z.active=false;Z.baseDist=0;}
   }
   modal.addEventListener('pointerup',endPointer,{capture:true,passive:true});
   modal.addEventListener('pointercancel',endPointer,{capture:true,passive:true});
 
-  const reset=()=>{Z.scale=1;Z.tx=0;Z.ty=0;Z.active=false;Z.ptrs.clear();Z.baseDist=0;applyTZ();};
-  const isZooming=()=>Z.ptrs.size>=2||Z.active;
+  const reset=()=>{
+    Z.scale=1;Z.tx=0;Z.ty=0;Z.active=false;
+    Z.ptrs.clear();Z.baseDist=0;
+    stopPan1(); applyTZ();
+  };
+  // pan1 中も isZooming=true にして canvas 側のドラッグ処理をブロック
+  const isZooming=()=>Z.ptrs.size>=2||Z.active||Z.pan1.active;
   return{reset,isZooming};
 }
 const trimZoom=addModalZoom($('trim-canvas-wrap'),$('trim-modal'));
