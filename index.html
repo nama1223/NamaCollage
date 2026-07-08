@@ -478,6 +478,9 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
       </div>
       <div id="tp-selected-panel"></div>
       <div id="topping-list"></div>
+      <div style="margin-top:22px;padding-top:14px;border-top:1px solid var(--border);text-align:center;">
+        <button type="button" id="tp-clear-all-btn" style="background:none;border:none;color:var(--muted);font-size:11px;text-decoration:underline;cursor:pointer;padding:6px;">🗑️ トッピングを全て消去</button>
+      </div>
     </div>
   </section>
 
@@ -595,6 +598,18 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
     <div class="modal-title" id="modal-title"></div>
     <div class="modal-body" id="modal-body"></div>
     <button type="button" class="modal-close" id="modal-close">閉じる</button>
+  </div>
+</div>
+
+<!-- トッピング全消去 確認モーダル -->
+<div id="tp-clear-modal" style="display:none;position:fixed;inset:0;background:rgba(0,20,60,0.45);z-index:999;align-items:center;justify-content:center;padding:20px;">
+  <div class="modal-box">
+    <div class="modal-title">トッピングを全て消去しますか？</div>
+    <div class="modal-body">テキスト・図形・フィルタ・フリーハンド描画など、追加した全てのトッピングが削除されます。（実行後は「↩元に戻す」ボタンで復元できます）</div>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button type="button" id="tp-clear-cancel" style="flex:1;padding:12px;border-radius:9px;border:1px solid var(--border2);background:var(--surf2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;">キャンセル</button>
+      <button type="button" id="tp-clear-confirm" style="flex:1;padding:12px;border-radius:9px;border:none;background:#e53935;color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">全て消去</button>
+    </div>
   </div>
 </div>
 
@@ -1476,6 +1491,23 @@ function tpSaveDebounced(){
 }
 $('tp-undo').addEventListener('click',()=>{if(TH.idx>0){DRAW.currentItemId=null;DRAW.active=false;DRAW.pts=[];const fb=$('tp-draw-finish');if(fb)fb.style.display='none';TH.idx--;_thRestore();}});
 $('tp-redo').addEventListener('click',()=>{if(TH.idx<TH.stack.length-1){DRAW.currentItemId=null;DRAW.active=false;DRAW.pts=[];const fb=$('tp-draw-finish');if(fb)fb.style.display='none';TH.idx++;_thRestore();}});
+
+// ===== トッピング全消去 =====
+$('tp-clear-all-btn').addEventListener('click',()=>{
+  if(!state.toppings.length){showModal('トッピングなし','消去できるトッピングがありません。');return;}
+  $('tp-clear-modal').style.display='flex';
+});
+$('tp-clear-cancel').addEventListener('click',()=>{$('tp-clear-modal').style.display='none';});
+$('tp-clear-modal').addEventListener('click',e=>{if(e.target===$('tp-clear-modal'))$('tp-clear-modal').style.display='none';});
+$('tp-clear-confirm').addEventListener('click',()=>{
+  finalizeDrawItem();
+  setDrawMode(DRAW.mode); // 描画モードもOFFにしてUIをリセット
+  state.toppings=[];
+  state.selectedToppingId=null;
+  renderToppingList();renderToppingCanvas();renderSelectedPanel();
+  tpSaveNow();
+  $('tp-clear-modal').style.display='none';
+});
 
 function addToppingItem(type){
   const item=createToppingItem(type);
