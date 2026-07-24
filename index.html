@@ -202,6 +202,13 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 .cu-nav-btn{width:34px;flex:1;border:1px solid var(--border2);border-radius:7px;background:var(--surf2);color:var(--text);font-size:13px;cursor:pointer;touch-action:manipulation;}
 .cu-nav-btn:disabled{opacity:0.3;pointer-events:none;}
 .cu-nav-btn:active{background:var(--hover);}
+/* ===== 画像タブ: 原寸表示ビューア ===== */
+#img-viewer-modal{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:1001;display:none;overflow:hidden;touch-action:none;}
+#img-viewer-modal.open{display:block;}
+#img-viewer-wrap{position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;}
+#img-viewer-canvas{position:absolute;top:0;left:0;transform-origin:0 0;}
+#img-viewer-hint{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.55);color:#fff;font-size:12px;padding:6px 14px;border-radius:20px;pointer-events:none;white-space:nowrap;}
+#img-viewer-close{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:12px;width:34px;height:34px;border-radius:50%;border:none;background:rgba(0,0,0,0.55);color:#fff;font-size:16px;cursor:pointer;touch-action:manipulation;z-index:2;}
 /* カラースウォッチ（隠しinput type=colorの代わりに表示するボタン） */
 .tp-color-swatch{width:32px;height:29px;border:2px solid var(--border2);border-radius:6px;cursor:pointer;padding:0;touch-action:manipulation;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.5);}
 .tp-color-swatch:hover{border-color:var(--prime);}
@@ -623,6 +630,13 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
   </div>
 </div>
 
+<!-- 画像タブ: 原寸表示ビューア -->
+<div id="img-viewer-modal">
+  <div id="img-viewer-wrap"><canvas id="img-viewer-canvas"></canvas></div>
+  <div id="img-viewer-hint">ドラッグで移動 ・ タップで閉じる</div>
+  <button type="button" id="img-viewer-close">✕</button>
+</div>
+
 <!-- カスタムカラーピッカー（Windows ペイント風） -->
 <div id="ccm-modal">
   <div class="ccm-box">
@@ -984,10 +998,41 @@ function renderGridView(){
       cell.querySelector('.gv-del').onclick=e=>{e.stopPropagation();deleteCell(ri,ci);};
       cell.querySelectorAll('.gv-move-btn').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();
         const mv=btn.dataset.mv; if(mv==='l')moveCellH(ri,ci,-1);else if(mv==='r')moveCellH(ri,ci,1);else if(mv==='u')moveCellV(ri,ci,-1);else moveCellV(ri,ci,1);};});
+      cell.querySelector('img').addEventListener('click',e=>{e.stopPropagation();openImageViewer(ri,ci);});
       attachLongPress(cell,e=>showCtxMenu(e,ri,ci));
       rowDiv.appendChild(cell);
     });
     rowDiv.appendChild(makeGvAddCol(ri,row.length)); gv.appendChild(rowDiv); gv.appendChild(makeGvAddRow(ri+1));
+  });
+  fixupGridOverlaps();
+}
+// セル内の「✕削除ボタン」と矢印オーバーレイが重なったり、矢印行が幅からはみ出ている場合に
+// 自動でそのセルの表示枠（幅・高さ）を広げて衝突を解消する
+function fixupGridOverlaps(){
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('.gv-cell').forEach(cell=>{
+      const overlay=cell.querySelector('.gv-overlay');
+      const del=cell.querySelector('.gv-del');
+      const moves=cell.querySelector('.gv-moves');
+      if(!overlay)return;
+      let curH=cell.offsetHeight,curW=cell.offsetWidth,changed=false;
+      // 縦方向: オーバーレイ（矢印含む）の必要高さが、削除ボタンの下端より上に来ているか確認
+      const delBottom=del?(del.offsetTop+del.offsetHeight+4):0;
+      const overlayTop=curH-overlay.scrollHeight;
+      if(overlayTop<delBottom){
+        curH=overlay.scrollHeight+delBottom;
+        changed=true;
+      }
+      // 横方向: 矢印行がセル幅からはみ出ていないか確認
+      if(moves&&moves.scrollWidth>moves.clientWidth+1){
+        curW=curW+(moves.scrollWidth-moves.clientWidth)+8;
+        changed=true;
+      }
+      if(changed){
+        cell.style.height=Math.round(curH)+'px';
+        cell.style.width=Math.round(curW)+'px';
+      }
+    });
   });
 }
 function makeGvAddRow(idx){
@@ -1015,6 +1060,49 @@ function attachLongPress(el,cb){
   el.addEventListener('pointercancel',()=>clearTimeout(timer),{passive:true});
   el.addEventListener('contextmenu',e=>{e.preventDefault();cb(e);});
 }
+
+// ===== 画像タブ: 原寸表示ビューア（トリミング等の加工を適用した状態で原寸表示・ドラッグでパン） =====
+const IV={tx:0,ty:0};
+function openImageViewer(ri,ci){
+  const img=state.grid[ri]?.[ci];if(!img)return;
+  const eff=getEffectiveDimensions(img);
+  const cv=$('img-viewer-canvas');
+  cv.width=Math.max(1,Math.round(eff.w));cv.height=Math.max(1,Math.round(eff.h));
+  cv.style.width=cv.width+'px';cv.style.height=cv.height+'px';
+  const ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+  drawImgOnCanvas(ctx,img,0,0,cv.width,cv.height);
+  // 中央寄せで初期表示（画像がビューポートより小さい場合はそのまま中央、大きい場合はパンで確認）
+  const modal=$('img-viewer-modal');
+  modal.classList.add('open');
+  const vw=modal.clientWidth,vh=modal.clientHeight;
+  IV.tx=(vw-cv.width)/2;
+  IV.ty=(vh-cv.height)/2;
+  _ivApply();
+}
+function _ivApply(){
+  $('img-viewer-canvas').style.transform='translate('+IV.tx+'px,'+IV.ty+'px)';
+}
+function closeImageViewer(){$('img-viewer-modal').classList.remove('open');}
+(function initImageViewer(){
+  const modal=$('img-viewer-modal');
+  let dragging=false,moved=false,sx=0,sy=0,stx=0,sty=0;
+  modal.addEventListener('pointerdown',e=>{
+    dragging=true;moved=false;sx=e.clientX;sy=e.clientY;stx=IV.tx;sty=IV.ty;
+    modal.setPointerCapture(e.pointerId);
+  });
+  modal.addEventListener('pointermove',e=>{
+    if(!dragging)return;
+    const dx=e.clientX-sx,dy=e.clientY-sy;
+    if(Math.abs(dx)>6||Math.abs(dy)>6)moved=true;
+    IV.tx=stx+dx;IV.ty=sty+dy;_ivApply();
+  });
+  modal.addEventListener('pointerup',()=>{
+    dragging=false;
+    if(!moved)closeImageViewer(); // 動かしていなければタップ扱い→閉じる
+  });
+  modal.addEventListener('pointercancel',()=>{dragging=false;});
+  $('img-viewer-close').addEventListener('click',e=>{e.stopPropagation();closeImageViewer();});
+})();
 
 
 // ===== 画像変換統合 =====
@@ -3535,6 +3623,11 @@ window.addEventListener('pageshow',()=>{sessionStorage.removeItem('nc_reloading'
 // ===== 初期化 =====
 (function init(){
   syncAdjPanel(); renderGridView(); updateCountBadge();
+  let _gvResizeT=null;
+  window.addEventListener('resize',()=>{
+    clearTimeout(_gvResizeT);
+    _gvResizeT=setTimeout(()=>{if(flatImages().length)renderGridView();},200);
+  });
   $('preview-empty').classList.remove('hidden'); $('preview-content').classList.add('hidden');
   $('color-pick-bar').classList.add('hidden');
   $('topping-empty').classList.remove('hidden'); $('topping-content').classList.add('hidden');
