@@ -39,8 +39,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 #sub-name{font-size:9.5px;color:var(--muted);margin-top:1px;}
 #btn-install{margin-left:auto;background:var(--prime);color:#fff;border:none;
   border-radius:8px;padding:6px 10px;font-size:13px;font-weight:700;cursor:pointer;
-  flex-shrink:0;touch-action:manipulation;white-space:nowrap;}
+  flex-shrink:0;touch-action:manipulation;white-space:nowrap;transition:background .15s,color .15s;}
 #btn-install:active{opacity:0.8;}
+#btn-install.installed{background:var(--surf2);color:var(--muted);cursor:default;}
+#btn-install.installed:active{opacity:1;}
 #count-badge{background:var(--prime);color:#fff;font-size:11px;font-weight:700;
   padding:3px 8px;border-radius:20px;display:none;flex-shrink:0;}
 
@@ -118,16 +120,34 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 .gv-row{display:flex;align-items:stretch;flex-shrink:0;}
 .gv-add-col{width:28px;min-height:68px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;font-weight:700;color:rgba(255,105,64,0.3);border-radius:6px;transition:all 0.15s;flex-shrink:0;}
 .gv-add-col:hover,.gv-add-col.drag-target{color:var(--prime);background:rgba(255,105,64,0.1);}
-.gv-cell{position:relative;overflow:hidden;border-radius:8px;background:#000;flex-shrink:0;margin:2px;border:1.5px solid var(--border2);transition:border-color 0.15s;}
+.gv-cell{position:relative;overflow:hidden;border-radius:8px;background:#000;flex-shrink:0;margin:2px;border:1.5px solid var(--border2);transition:border-color 0.15s;container-type:inline-size;container-name:gvcell;}
 .gv-cell:hover{border-color:var(--prime);}
 .gv-cell img{display:block;width:100%;height:100%;object-fit:contain;}
 .gv-overlay{position:absolute;bottom:0;left:0;right:0;padding:5px 6px;font-size:9.5px;color:#fff;line-height:1.5;pointer-events:none;}
 .gv-overlay *{text-shadow:-1px -1px 0 #000,0 -1px 0 #000,1px -1px 0 #000,-1px 0 0 #000,1px 0 0 #000,-1px 1px 0 #000,0 1px 0 #000,1px 1px 0 #000;}
 .gv-num{font-size:11px;font-weight:700;color:var(--prime);}
-.gv-moves{display:flex;gap:2px;margin-top:5px;pointer-events:auto;}
+/* 矢印4つ横並びが基本形。data-mv属性でgrid-areaを割り当てているので、
+   コンテナクエリで十字型(3行)に切り替える際もHTML変更不要 */
+.gv-moves{display:grid;grid-template-columns:repeat(4,auto);grid-template-areas:"u l r d";gap:2px;margin-top:5px;pointer-events:auto;justify-content:center;}
+.gv-moves [data-mv="u"]{grid-area:u}
+.gv-moves [data-mv="l"]{grid-area:l}
+.gv-moves [data-mv="r"]{grid-area:r}
+.gv-moves [data-mv="d"]{grid-area:d}
 .gv-move-btn{font-size:10px;padding:2px 6px;font-weight:800;letter-spacing:0.3px;background:rgba(255,105,64,0.82);border:1px solid rgba(255,255,255,0.55);border-radius:4px;color:#fff;cursor:pointer;transition:background 0.1s;}
 .gv-move-btn:hover{background:rgba(255,105,64,1);}
 .gv-move-btn:disabled{opacity:0.22;pointer-events:none;}
+/* セル幅に応じて段階的に矢印を縮小 */
+@container gvcell (max-width:170px){
+  .gv-move-btn{font-size:9px;padding:2px 5px;}
+}
+@container gvcell (max-width:130px){
+  .gv-move-btn{font-size:8px;padding:1.5px 4px;}
+}
+/* 65%を切るくらい狭い時：十字型(3行)に折り返して縦に収める */
+@container gvcell (max-width:100px){
+  .gv-moves{grid-template-columns:repeat(3,auto);grid-template-areas:". u ." "l . r" ". d .";}
+  .gv-move-btn{font-size:8px;padding:2px 5px;}
+}
 .gv-del{position:absolute;top:4px;right:4px;width:20px;height:20px;border:none;border-radius:50%;background:rgba(200,40,40,0.82);color:#fff;font-size:12px;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;}
 .gv-del:hover{background:var(--danger);}
 .gv-crop-badge{position:absolute;top:4px;left:4px;background:rgba(255,105,64,0.88);color:#fff;font-size:10px;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:5;}
@@ -174,6 +194,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 .tp-head{display:flex;align-items:center;padding:8px 12px;background:rgba(85,72,214,0.05);border-bottom:1px solid var(--border);}
 .tp-num{flex:1;font-size:12px;font-weight:700;color:var(--violet);}
 .tp-del{border:none;background:rgba(196,28,0,0.1);color:var(--danger);border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;font-weight:700;touch-action:manipulation;}
+.tp-dup{border:none;background:rgba(85,72,214,0.1);color:var(--violet);border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;font-weight:700;touch-action:manipulation;margin-right:4px;}
 .tp-body{padding:10px 12px;display:flex;flex-direction:column;gap:7px;}
 .tp-textarea{background:var(--surf2);border:1px solid var(--border2);border-radius:8px;padding:7px 9px;font-size:13px;color:var(--text);width:100%;resize:vertical;min-height:54px;font-family:inherit;-webkit-user-select:text;user-select:text;}
 .tp-num-inp{background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:7px;padding:5px 6px;font-size:12px;width:52px;text-align:center;-webkit-user-select:text;user-select:text;}
@@ -448,24 +469,6 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
         </select>
         <button type="button" id="tp-undo" class="tp-ud-btn" disabled title="元に戻す">↩<span class="tp-ud-badge" id="tp-undo-badge"></span></button>
         <button type="button" id="tp-redo" class="tp-ud-btn" disabled title="やり直し">↪<span class="tp-ud-badge" id="tp-redo-badge"></span></button>
-      </div>
-      <!-- 描画オプションパネル（線・矢印/フィルタで「フリー」選択中のみ表示） -->
-      <div id="tp-draw-opts" style="display:none;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 6px;background:rgba(85,72,214,0.07);border-radius:7px;border:1px solid rgba(85,72,214,0.2);">
-        <span id="tp-draw-color-row" style="display:flex;align-items:center;gap:5px;">
-          <span style="font-size:11px;color:var(--muted)">色</span>
-          <input type="color" id="tp-draw-color" value="#ff4444" style="width:32px;height:26px;padding:1px 2px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:none;">
-        </span>
-        <span style="display:flex;align-items:center;gap:4px;flex:1;min-width:110px;">
-          <span style="font-size:11px;color:var(--muted)">太さ</span>
-          <input type="range" id="tp-draw-size" min="2" max="200" value="10" style="flex:1;min-width:60px;">
-          <span id="tp-draw-size-val" style="font-size:11px;min-width:22px;text-align:right;color:var(--text)">10</span>
-        </span>
-        <span id="tp-draw-intensity-row" style="display:none;align-items:center;gap:4px;flex:1;min-width:110px;">
-          <span style="font-size:11px;color:var(--muted)">強度</span>
-          <input type="range" id="tp-draw-intensity" min="1" max="50" value="15" style="flex:1;min-width:60px;">
-          <span id="tp-draw-intensity-val" style="font-size:11px;min-width:22px;text-align:right;color:var(--text)">15</span>
-        </span>
-        <span style="font-size:10px;color:var(--muted)">（キャンバスに描き込めます・同じアイテムを選択中なら書き足せます）</span>
       </div>
       <div id="tp-selected-panel"></div>
       <div id="topping-list"></div>
@@ -749,7 +752,6 @@ document.addEventListener('paste',async e=>{
 
 // ===== タブ =====
 function showTab(name){
-  if(name!=='topping')exitDrawMode();
   $$('.tab').forEach(t=>t.classList.remove('active'));
   $$('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
@@ -808,6 +810,12 @@ $('adj-bg-transparent').addEventListener('change',()=>{ settings.bgTransparent=$
 let deferredInstall=null;
 const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!/crios/i.test(navigator.userAgent);
 const isStandalone=window.matchMedia('(display-mode: standalone)').matches||('standalone' in navigator&&navigator.standalone===true);
+if(isStandalone){
+  const btn=$('btn-install');
+  btn.classList.add('installed');
+  btn.textContent='✅ インストール済み';
+  btn.title='すでにアプリとしてインストールされています';
+}
 window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredInstall=e; });
 window.addEventListener('appinstalled',()=>{ deferredInstall=null; });
 function showModal(t,b){ $('modal-title').textContent=t; $('modal-body').innerHTML=b; $('install-modal').classList.add('open'); }
@@ -1210,41 +1218,7 @@ function drawEffectItem(ctx,s,W,H,scale){
   ctx.restore();
 }
 
-function applyToppings(ctx,W,H,scale){
-  state.toppings.forEach(t=>{
-    if(!t.text?.trim()) return;
-    const x=t.x/100*W, y=t.y/100*H;
-    const fs=Math.max(1,Math.round(t.fontSize*scale));
-    ctx.save();
-    const ff2=t.fontFamily&&t.fontFamily!=='sans-serif'?'"'+t.fontFamily+'"':'sans-serif';ctx.font='bold '+fs+'px '+ff2;
-    ctx.textAlign=t.textAlign||'center';
-    ctx.textBaseline='middle';
-    const lines=t.text.split('\n');
-    const lh=fs*1.28;
-    const totalH=(lines.length-1)*lh;
-    lines.forEach((line,li)=>{
-      const ly=y-totalH/2+li*lh;
-      // 縁取り（stroke first, no shadow）
-      if((t.strokeWidth||0)>0){
-        ctx.save();
-        ctx.shadowColor='transparent';ctx.shadowBlur=0;
-        ctx.strokeStyle=t.strokeColor||'#000';
-        ctx.lineWidth=(t.strokeWidth||3)*scale*2;
-        ctx.lineJoin='round';
-        ctx.strokeText(line,x,ly);
-        ctx.restore();
-      }
-      // 塗り＋影
-      ctx.shadowColor=(t.shadowEnabled&&t.shadowColor)||'transparent';
-      ctx.shadowOffsetX=(t.shadowX||2)*scale;
-      ctx.shadowOffsetY=(t.shadowY||2)*scale;
-      ctx.shadowBlur=(t.shadowBlur||6)*scale;
-      ctx.fillStyle=t.color||'#fff';
-      ctx.fillText(line,x,ly);
-    });
-    ctx.restore();
-  });
-}
+// 注: applyToppings本体は drawTextItem/drawShapeItem 等を定義した後段（下方）にまとめて定義されています
 
 async function renderBaseAt(scale,fmt){
   const nat=calcNaturalDimensions(); if(!nat) return null;
@@ -1442,9 +1416,9 @@ function createToppingItem(type){
     case 'mosaic-rect':  return{...base,x:30,y:30,w:40,h:30,intensity:20,lockAspect:false};
     case 'mosaic-ellipse':return{...base,x:30,y:30,w:40,h:30,intensity:20,lockAspect:false};
     case 'mosaic-poly':  return{...base,points:[{x:35,y:25},{x:65,y:25},{x:75,y:65},{x:50,y:75},{x:25,y:65}],intensity:20};
-    case 'draw-line':   return{...base,strokes:[],color:'#ff4444',strokeWidth:8};
-    case 'draw-blur':   return{...base,strokes:[],strokeWidth:50,intensity:15};
-    case 'draw-mosaic': return{...base,strokes:[],strokeWidth:50,intensity:15};
+    case 'draw-line':   return{...base,strokes:[],color:'#ff4444',strokeWidth:8,opacity:100,eraseMode:false};
+    case 'draw-blur':   return{...base,strokes:[],strokeWidth:50,intensity:15,opacity:100,eraseMode:false};
+    case 'draw-mosaic': return{...base,strokes:[],strokeWidth:50,intensity:15,opacity:100,eraseMode:false};
     default:return base;
   }
 }
@@ -1480,8 +1454,8 @@ function tpSaveDebounced(){
   clearTimeout(_thDebTimer);
   _thDebTimer=setTimeout(()=>{thSnapshot();},700);
 }
-$('tp-undo').addEventListener('click',()=>{if(TH.idx>0){DRAW.active=false;DRAW.pts=[];DRAW.targetItemId=null;DRAW.freshItemId=null;TH.idx--;_thRestore();}});
-$('tp-redo').addEventListener('click',()=>{if(TH.idx<TH.stack.length-1){DRAW.active=false;DRAW.pts=[];DRAW.targetItemId=null;DRAW.freshItemId=null;TH.idx++;_thRestore();}});
+$('tp-undo').addEventListener('click',()=>{if(TH.idx>0){DRAW.active=false;DRAW.pts=[];DRAW.targetItemId=null;TH.idx--;_thRestore();}});
+$('tp-redo').addEventListener('click',()=>{if(TH.idx<TH.stack.length-1){DRAW.active=false;DRAW.pts=[];DRAW.targetItemId=null;TH.idx++;_thRestore();}});
 
 // ===== トッピング全消去 =====
 $('tp-clear-all-btn').addEventListener('click',()=>{
@@ -1491,7 +1465,7 @@ $('tp-clear-all-btn').addEventListener('click',()=>{
 $('tp-clear-cancel').addEventListener('click',()=>{$('tp-clear-modal').style.display='none';});
 $('tp-clear-modal').addEventListener('click',e=>{if(e.target===$('tp-clear-modal'))$('tp-clear-modal').style.display='none';});
 $('tp-clear-confirm').addEventListener('click',()=>{
-  exitDrawMode();
+  DRAW.active=false;DRAW.pts=[];DRAW.targetItemId=null;
   state.toppings=[];
   state.selectedToppingId=null;
   renderToppingList();renderToppingCanvas();renderSelectedPanel();
@@ -1500,26 +1474,16 @@ $('tp-clear-confirm').addEventListener('click',()=>{
 });
 
 function addToppingItem(type){
-  exitDrawMode(); // 描画モード中に別アイテムを追加したら通常モードへ戻す（選択移行バグ対策）
   const item=createToppingItem(type);
   state.toppings.push(item); state.selectedToppingId=item.id;
   renderToppingList(); renderToppingCanvas(); tpSaveNow();
 }
 $$('.tp-add-btn').forEach(btn=>btn.addEventListener('click',()=>addToppingItem(btn.dataset.tp)));
 document.addEventListener('change',e=>{
-  if(!e.target.classList.contains('tp-cat-sel'))return;
-  const val=e.target.value;
-  if(val&&val.startsWith('draw-')){
-    enterDrawMode(val,e.target); // 「✏️ フリー」選択 → 描画モードへ（値は保持したまま）
-    return;
-  }
-  if(val){
-    addToppingItem(val); // 通常アイテム追加（内部で描画モードは自動終了）
+  if(e.target.classList.contains('tp-cat-sel')&&e.target.value){
+    addToppingItem(e.target.value); // フリー（draw-*）も通常アイテムとして即時追加
     e.target.value='';
-    return;
   }
-  // 空選択（プレースホルダーに戻した）＝ フリー中のセレクトなら描画モード終了
-  if(DRAW.mode&&(e.target.id==='tp-sel-line'||e.target.id==='tp-sel-filter'))exitDrawMode();
 });
 
 // ===== 描画 =====
@@ -1676,9 +1640,17 @@ function drawEffectItem(ctx,s,W,H,scale){
   ctx.restore();
 }
 
-function applyToppings(ctx,W,H,scale){
+// liveId/livePreviewStrokeを渡すと、そのIDのアイテムだけ「既存ストローク＋描画中の1筆」を
+// 合成してから描画する（描画モード中のリアルタイムプレビュー用）。通常描画時は省略可。
+function applyToppings(ctx,W,H,scale,liveId,livePreviewStroke){
   state.toppings.forEach(item=>{
     const type=item.type||'text';
+    if(liveId!=null&&item.id===liveId&&(type==='draw-line'||type==='draw-blur'||type==='draw-mosaic')){
+      const previewItem={...item,strokes:[...getItemStrokeObjs(item),livePreviewStroke]};
+      if(type==='draw-line')drawFreehandLine(ctx,previewItem,W,H,scale);
+      else drawFreehandEffect(ctx,previewItem,W,H,scale);
+      return;
+    }
     if(type==='text')drawTextItem(ctx,item,W,H,scale);
     else if(type==='draw-line')drawFreehandLine(ctx,item,W,H,scale);
     else if(type==='draw-blur'||type==='draw-mosaic')drawFreehandEffect(ctx,item,W,H,scale);
@@ -1709,34 +1681,55 @@ function _drawStrokePath(ctx,pts,W,H){
   ctx.stroke();
 }
 
-// アイテムのストローク配列を取得（新形式 strokes / 旧形式 points の互換）
-function getItemStrokes(t){
-  if(t.strokes)return t.strokes;
-  if(t.points&&t.points.length)return[t.points];
-  return[];
+// アイテムのストローク配列を {pts,erase} 形式に正規化して取得
+// 旧形式（points:[...] や strokes:[[pt,pt,...],...] の生配列）との互換あり
+function getItemStrokeObjs(t){
+  const raw=t.strokes||(t.points&&t.points.length?[t.points]:[]);
+  return raw.map(s=>Array.isArray(s)?{pts:s,erase:false}:s);
 }
 
 function drawFreehandLine(ctx,t,W,H,scale){
-  const strokes=getItemStrokes(t);if(!strokes.length)return;
+  const strokes=getItemStrokeObjs(t);if(!strokes.length)return;
+  const lw=Math.max(1,(t.strokeWidth||8)*scale);
+  // 縁取り・本体・消しゴムを1枚のレイヤーに合成してから、影・透明度を一括適用
+  // （消しゴムのstrokeはdestination-outで、直前までに描いた分だけを打ち消す）
+  const layer=document.createElement('canvas');layer.width=W;layer.height=H;
+  const lctx=layer.getContext('2d');
+  lctx.lineCap='round';lctx.lineJoin='round';
+  const paint=(color,width)=>{
+    strokes.forEach(s=>{
+      lctx.save();
+      lctx.globalCompositeOperation=s.erase?'destination-out':'source-over';
+      lctx.strokeStyle=color;lctx.lineWidth=width;
+      _drawStrokePath(lctx,s.pts,W,H);
+      lctx.restore();
+    });
+  };
+  if(t.stroke2Enabled)paint(t.stroke2Color||'#ffffff',lw+(t.stroke2Width||3)*scale*2);
+  paint(t.color||'#ff4444',lw);
   ctx.save();
-  ctx.strokeStyle=t.color||'#ff4444';
-  ctx.lineWidth=Math.max(1,(t.strokeWidth||8)*scale);
-  ctx.lineCap='round'; ctx.lineJoin='round';
-  strokes.forEach(pts=>_drawStrokePath(ctx,pts,W,H));
+  if(t.shadowEnabled){ctx.shadowColor=t.shadowColor||'#000';ctx.shadowBlur=(t.shadowBlur||8)*scale;ctx.shadowOffsetX=(t.shadowX||3)*scale;ctx.shadowOffsetY=(t.shadowY||3)*scale;}
+  ctx.globalAlpha=(t.opacity!=null?t.opacity:100)/100;
+  ctx.drawImage(layer,0,0);
   ctx.restore();
 }
 
 function drawFreehandEffect(ctx,t,W,H,scale){
-  const strokes=getItemStrokes(t);if(!strokes.length)return;
+  const strokes=getItemStrokeObjs(t);if(!strokes.length)return;
   const lw=Math.max(2,(t.strokeWidth||50)*scale);
   const isBlur=t.type==='draw-blur';
 
-  // 1. マスクキャンバス（全ストロークの形をまとめて1枚に）
+  // 1. マスクキャンバス（全ストロークの形をまとめて1枚に・消しゴムはdestination-outで除外）
   const maskC=document.createElement('canvas');maskC.width=W;maskC.height=H;
   const mctx=maskC.getContext('2d');
-  mctx.strokeStyle='#000'; mctx.lineWidth=lw;
   mctx.lineCap='round'; mctx.lineJoin='round';
-  strokes.forEach(pts=>_drawStrokePath(mctx,pts,W,H));
+  strokes.forEach(s=>{
+    mctx.save();
+    mctx.globalCompositeOperation=s.erase?'destination-out':'source-over';
+    mctx.strokeStyle='#000'; mctx.lineWidth=lw;
+    _drawStrokePath(mctx,s.pts,W,H);
+    mctx.restore();
+  });
 
   // 2. エフェクトキャンバス（現在のキャンバス状態を加工）
   const effC=document.createElement('canvas');effC.width=W;effC.height=H;
@@ -1757,8 +1750,28 @@ function drawFreehandEffect(ctx,t,W,H,scale){
   // 3. マスクで切り抜く
   ectx.globalCompositeOperation='destination-in';
   ectx.drawImage(maskC,0,0);
-  // 4. 合成
-  ctx.drawImage(effC,0,0);
+
+  // 4. 縁取り（あれば）とエフェクトを1枚に統合してから、影・透明度を一括適用
+  const layer=document.createElement('canvas');layer.width=W;layer.height=H;
+  const lctx=layer.getContext('2d');
+  if(t.stroke2Enabled){
+    lctx.lineCap='round';lctx.lineJoin='round';
+    strokes.forEach(s=>{
+      lctx.save();
+      lctx.globalCompositeOperation=s.erase?'destination-out':'source-over';
+      lctx.strokeStyle=t.stroke2Color||'#ffffff';
+      lctx.lineWidth=lw+(t.stroke2Width||3)*scale*2;
+      _drawStrokePath(lctx,s.pts,W,H);
+      lctx.restore();
+    });
+  }
+  lctx.drawImage(effC,0,0);
+
+  ctx.save();
+  if(t.shadowEnabled){ctx.shadowColor=t.shadowColor||'#000';ctx.shadowBlur=(t.shadowBlur||8)*scale;ctx.shadowOffsetX=(t.shadowX||3)*scale;ctx.shadowOffsetY=(t.shadowY||3)*scale;}
+  ctx.globalAlpha=(t.opacity!=null?t.opacity:100)/100;
+  ctx.drawImage(layer,0,0);
+  ctx.restore();
 }
 
 // ===== ミニプレビュー =====
@@ -1853,6 +1866,15 @@ function fillHTML(s){
     '<div class="adj-row"><span class="adj-label">透明度</span>'+
     '<input type="range" class="adj-slider tp-fillop" min="0" max="100" value="'+(s.fillOpacity!=null?s.fillOpacity:30)+'">'+
     '<span class="adj-val tp-fillop-val">'+(s.fillOpacity!=null?s.fillOpacity:30)+'</span></div>';
+}
+function opacityHTML(s){
+  return '<div class="adj-row"><span class="adj-label">透明度</span>'+
+    '<input type="range" class="adj-slider tp-opacity" min="0" max="100" value="'+(s.opacity!=null?s.opacity:100)+'">'+
+    '<span class="adj-val tp-opacity-val">'+(s.opacity!=null?s.opacity:100)+'</span></div>';
+}
+function eraserHTML(s){
+  return '<div class="adj-row"><span class="adj-label">消しゴム</span>'+
+    '<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" class="tp-erase-mode"'+(s.eraseMode?' checked':'')+'> このアイテムに消しゴムで描く</label></div>';
 }
 function sizeLockHTML(s){
   const locked=s.lockAspect;
@@ -1949,11 +1971,13 @@ function renderToppingControlsHTML(t){
   if(type==='draw-line'){
     return '<div class="adj-row"><span class="adj-label">色</span>'+
       '<input type="color" class="tp-color-inp tp-mainc" value="'+(t.color||'#ff4444')+'"></div>'+
-      adjRowHTML('太さ','tp-sw',2,200,t.strokeWidth||8,'tp-sw-val');
+      adjRowHTML('太さ','tp-sw',2,200,t.strokeWidth||8,'tp-sw-val')+
+      opacityHTML(t)+strokeShadowHTML(t)+eraserHTML(t);
   }
   if(type==='draw-blur'||type==='draw-mosaic'){
     return adjRowHTML('太さ（筆）','tp-sw',5,300,t.strokeWidth||50,'tp-sw-val')+
-      adjRowHTML(type==='draw-blur'?'ぼかし強度':'モザイク強度','tp-intensity',1,50,t.intensity||15,'tp-intensity-val');
+      adjRowHTML(type==='draw-blur'?'ぼかし強度':'モザイク強度','tp-intensity',1,50,t.intensity||15,'tp-intensity-val')+
+      opacityHTML(t)+strokeShadowHTML(t)+eraserHTML(t);
   }
   return '';
 }
@@ -2033,15 +2057,20 @@ function bindToppingControls(container,t){
     if(mc)mc.addEventListener('input',e=>{t.color=e.target.value;upd();});
     const sw=container.querySelector('.tp-sw'),swv=container.querySelector('.tp-sw-val');
     if(sw)sw.addEventListener('input',()=>{t.strokeWidth=parseFloat(sw.value)||8;if(swv)swv.textContent=Math.round(t.strokeWidth);upd();});
-    return;
-  }
-  if(type==='draw-blur'||type==='draw-mosaic'){
+    const op=container.querySelector('.tp-opacity'),opv=container.querySelector('.tp-opacity-val');
+    if(op)op.addEventListener('input',()=>{t.opacity=parseFloat(op.value);if(opv)opv.textContent=Math.round(t.opacity);upd();});
+    const em=container.querySelector('.tp-erase-mode');
+    if(em)em.addEventListener('change',e=>{t.eraseMode=e.target.checked;});
+  }else if(type==='draw-blur'||type==='draw-mosaic'){
     const sw=container.querySelector('.tp-sw'),swv=container.querySelector('.tp-sw-val');
     if(sw)sw.addEventListener('input',()=>{t.strokeWidth=parseFloat(sw.value)||50;if(swv)swv.textContent=Math.round(t.strokeWidth);upd();});
     const intEl=container.querySelector('.tp-intensity'),intVl=container.querySelector('.tp-intensity-val');
     if(intEl)intEl.addEventListener('input',()=>{t.intensity=parseFloat(intEl.value);if(intVl)intVl.textContent=Math.round(t.intensity);upd();});
-    return;
-  }
+    const op=container.querySelector('.tp-opacity'),opv=container.querySelector('.tp-opacity-val');
+    if(op)op.addEventListener('input',()=>{t.opacity=parseFloat(op.value);if(opv)opv.textContent=Math.round(t.opacity);upd();});
+    const em=container.querySelector('.tp-erase-mode');
+    if(em)em.addEventListener('change',e=>{t.eraseMode=e.target.checked;});
+  }else
   // blur/mosaic エフェクト
   if(type.startsWith('blur')||type.startsWith('mosaic')){
     const sh=type.split('-')[1];
@@ -2087,19 +2116,18 @@ function renderToppingCanvas(){
   const needReset=tc.width!==pc.width||tc.height!==pc.height;
   tc.width=pc.width;tc.height=pc.height;
   if(needReset||!TZ.initScale){
-    const wrap=$('tp-canvas-wrap'),wW=wrap.clientWidth||360;
+    const wrap=$('tp-canvas-wrap'),wW=wrap.clientWidth||360,wH=wrap.clientHeight||360;
     TZ.initScale=Math.min(1,wW/pc.width);TZ.scale=TZ.initScale;TZ.tx=0;TZ.ty=0;
+    // 画像全体（縦横とも）が枠に収まるスケール = ズームアウトの下限
+    TZ.minScale=Math.min(1,wW/pc.width,wH/pc.height);
   }
   const ctx=tc.getContext('2d');ctx.clearRect(0,0,tc.width,tc.height);ctx.drawImage(pc,0,0);
   const ps=pc.width/(state.previewNat.totalW||1);
-  applyToppings(ctx,tc.width,tc.height,ps);
-  // フリーハンド描画中のライブプレビュー（現在描画中の1筆分のみ・既存分はapplyToppingsで描画済み）
-  if(DRAW.active&&DRAW.pts.length>0){
-    if(DRAW.mode==='draw-line')
-      drawFreehandLine(ctx,{strokes:[DRAW.pts],color:DRAW.color,strokeWidth:DRAW.strokeWidth},tc.width,tc.height,ps);
-    else
-      drawFreehandEffect(ctx,{type:DRAW.mode,strokes:[DRAW.pts],strokeWidth:DRAW.strokeWidth,intensity:DRAW.intensity},tc.width,tc.height,ps);
-  }
+  const liveId=(DRAW.active&&DRAW.pts.length>0)?DRAW.targetItemId:null;
+  applyToppings(ctx,tc.width,tc.height,ps,liveId,liveId!=null?{pts:DRAW.pts,erase:!!DRAW.erase}:null);
+  // 選択中アイテムがフリーハンド系なら描画モード用カーソルに切り替え
+  const wrap=$('tp-canvas-wrap');
+  if(wrap)wrap.classList.toggle('tp-drawing-mode',!!currentDrawItem());
   // 選択クロスヘア & ハンドル
   if(state.selectedToppingId!==null){
     const sel=state.toppings.find(t=>t.id===state.selectedToppingId);
@@ -2181,6 +2209,27 @@ function renderToppingCanvas(){
 }
 
 // ===== リスト（アコーディオン） =====
+// アイテムを複製する。位置は画像中心から見て内側方向へ10%ずらす（画面外へのはみ出し防止）
+function duplicateToppingItem(t){
+  const copy=JSON.parse(JSON.stringify(t));
+  copy.id=state.nextToppingId++;
+  const type=t.type||'text';
+  let cx=50,cy=50;
+  if(type==='line'||type==='arrow'){cx=(t.x+t.x2)/2;cy=(t.y+t.y2)/2;}
+  else if(t.w!=null&&t.h!=null){cx=t.x+t.w/2;cy=t.y+t.h/2;}
+  else if(t.points&&t.points.length){cx=t.points.reduce((s,p)=>s+p.x,0)/t.points.length;cy=t.points.reduce((s,p)=>s+p.y,0)/t.points.length;}
+  else if(t.strokes&&t.strokes.length){let sx=0,sy=0,n=0;t.strokes.forEach(str=>str.forEach(p=>{sx+=p.x;sy+=p.y;n++;}));if(n>0){cx=sx/n;cy=sy/n;}}
+  else if(t.x!=null){cx=t.x;cy=t.y!=null?t.y:50;}
+  const dx=cx<50?10:-10,dy=cy<50?10:-10;
+  const cl=(v,max)=>Math.max(0,Math.min(max,v));
+  if(copy.w!=null)copy.x=cl(copy.x+dx,100-copy.w);else if(copy.x!=null)copy.x=cl(copy.x+dx,100);
+  if(copy.h!=null)copy.y=cl(copy.y+dy,100-copy.h);else if(copy.y!=null)copy.y=cl(copy.y+dy,100);
+  if(copy.x2!=null)copy.x2=cl(copy.x2+dx,100);
+  if(copy.y2!=null)copy.y2=cl(copy.y2+dy,100);
+  if(copy.points)copy.points=copy.points.map(p=>({x:cl(p.x+dx,100),y:cl(p.y+dy,100)}));
+  if(copy.strokes)copy.strokes=copy.strokes.map(str=>str.map(p=>({x:cl(p.x+dx,100),y:cl(p.y+dy,100)})));
+  return copy;
+}
 function renderToppingList(){
   const list=$('topping-list');list.innerHTML='';
   state.toppings.forEach((t,idx)=>{
@@ -2192,18 +2241,24 @@ function renderToppingList(){
         '<span class="tp-handle" title="ドラッグで並べ替え">⠿</span>'+
         '<span class="tp-num-label">'+(TP_LABELS[type]||type)+' #'+(idx+1)+'</span>'+
         '<span class="tp-mini">'+toppingMiniPreview(t)+'</span>'+
+        '<button type="button" class="tp-dup" title="複製">⧉</button>'+
         '<button type="button" class="tp-del" title="削除">✕</button>'+
       '</div>'+
 '';
 
-    // ヘッダークリック → 選択/解除（描画モード中に同種アイテムを選ぶと、そのアイテムに書き足せる）
+    // ヘッダークリック → 選択/解除（フリーハンド系を選ぶと、そのアイテムがそのまま描画対象になる）
     item.querySelector('.tp-head').addEventListener('click',e=>{
-      if(e.target.classList.contains('tp-del'))return;
-      const willSelect=state.selectedToppingId!==t.id;
-      state.selectedToppingId=willSelect?t.id:null;
-      if(willSelect&&DRAW.mode&&t.type===DRAW.mode)syncDrawOptionsFromItem(t);
+      if(e.target.classList.contains('tp-del')||e.target.classList.contains('tp-dup'))return;
+      state.selectedToppingId=(state.selectedToppingId!==t.id)?t.id:null;
       renderToppingList();renderToppingCanvas();renderSelectedPanel();
     });
+    // 複製
+    item.querySelector('.tp-dup').onclick=()=>{
+      const copy=duplicateToppingItem(t);
+      state.toppings.push(copy);
+      state.selectedToppingId=copy.id;
+      renderToppingList();renderToppingCanvas();tpSaveNow();
+    };
     // 削除
     item.querySelector('.tp-del').onclick=()=>{
       if(state.selectedToppingId===t.id)state.selectedToppingId=null;
@@ -2257,72 +2312,31 @@ function onReorderUp(e){
 }
 
 // ===== フリーハンド描画モード状態 =====
-// 設計方針（v5.2）:
-//  ・「線・矢印」「フィルタ」の各セレクトに「✏️ フリー」を追加し、そこから描画モードに入る
-//  ・描画モード中、リストで同種の既存アイテムを選択していれば、そのアイテムに書き足す
-//    （未選択 or 別種のアイテムを選択中なら、キャンバスに触れた瞬間に新規アイテムを作る）
-//  ・そのため「描き終える」ボタンは不要：新しいアイテムにしたければリストで選択を外すだけでよい
+// 設計方針（v5.3）:
+//  ・「線・矢印」「フィルタ」の「✏️ フリー」は他の項目と全く同じ扱い：選んだ瞬間に
+//    新規トッピングとして即追加され、リストで選択された状態になる（セレクトは即座にプレースホルダーへ戻る）
+//  ・「今キャンバスに描いたら、どのアイテムに追記されるか」は常に「今リストで選択中のアイテム」
+//    そのもの。draw-line/draw-blur/draw-mosaic のアイテムが選択されていれば自動的に描画モードになり、
+//    それ以外（無選択 or 他の種類）を選べば自動的に通常の移動・変形モードに戻る。
+//    → 別モード用の状態フラグを持たないので「切り替え忘れ」のバグが原理的に起きない。
+//  ・見た目上の設定（太さ・色・強度・透明度・影・縁取り・消しゴム）は、下の「選択中アイテムの設定」
+//    パネル1つだけで完結する（専用の重複パネルは廃止）。
 const DRAW={
-  mode:null,        // null | 'draw-line' | 'draw-blur' | 'draw-mosaic'
-  active:false,     // 現在ストローク中か（指が下りている）
-  pts:[],           // 描画中のストローク点列（% 座標、まだ確定していない）
-  targetItemId:null,   // 現在のストロークの追記先アイテムID（ジェスチャー開始時に確定）
-  freshItemId:null,    // このジェスチャーで新規作成したアイテムのID（中断時の空アイテム削除用）
-  color:'#ff4444',
-  strokeWidth:10,
-  intensity:15,
+  active:false,      // 現在ストローク中か（指が下りている）
+  pts:[],            // 描画中のストローク点列（% 座標、まだ確定していない）
+  targetItemId:null, // 現在のストロークの追記先アイテムID（ジェスチャー開始時に確定）
+  erase:false,       // このストロークが消しゴムか（開始時のアイテムのeraseModeを反映）
   _rafId:null
 };
-// 描画モードを終了する（UI表示を戻すだけ。ストロークは都度確定済みなのでデータ操作は不要）
-function exitDrawMode(){
-  if(!DRAW.mode)return;
-  DRAW.mode=null;DRAW.active=false;DRAW.pts=[];
-  const ls=$('tp-sel-line');if(ls)ls.value='';
-  const fs=$('tp-sel-filter');if(fs)fs.value='';
-  const optsEl=$('tp-draw-opts');if(optsEl)optsEl.style.display='none';
-  const wrap=$('tp-canvas-wrap');if(wrap)wrap.classList.remove('tp-drawing-mode');
+// 現在選択中のアイテムがフリーハンド系なら、それを返す（そうでなければnull）
+function currentDrawItem(){
+  const t=state.toppings.find(x=>x.id===state.selectedToppingId);
+  return(t&&(t.type==='draw-line'||t.type==='draw-blur'||t.type==='draw-mosaic'))?t:null;
 }
-// 描画オプションパネルの値をアイテムの現在値に同期する（続きを描く体験のため）
-function syncDrawOptionsFromItem(item){
-  DRAW.strokeWidth=item.strokeWidth||DRAW.strokeWidth;
-  const sz=$('tp-draw-size'),szv=$('tp-draw-size-val');
-  if(sz){sz.value=DRAW.strokeWidth;if(szv)szv.textContent=Math.round(DRAW.strokeWidth);}
-  if(item.type==='draw-line'){
-    DRAW.color=item.color||DRAW.color;
-    const c=$('tp-draw-color');if(c)c.value=DRAW.color;
-  }else{
-    DRAW.intensity=item.intensity||DRAW.intensity;
-    const inten=$('tp-draw-intensity'),intenv=$('tp-draw-intensity-val');
-    if(inten){inten.value=DRAW.intensity;if(intenv)intenv.textContent=Math.round(DRAW.intensity);}
-  }
-}
-// セレクトで「フリー」を選んだ時に描画モードへ入る
-function enterDrawMode(mode,sourceSelect){
-  DRAW.mode=mode;DRAW.active=false;DRAW.pts=[];
-  // もう一方のセレクトは空に戻す（同時に2種類のフリーモードは持たない）
-  const otherId=sourceSelect&&sourceSelect.id==='tp-sel-line'?'tp-sel-filter':'tp-sel-line';
-  const other=$(otherId);if(other)other.value='';
-  // 選択中のアイテムが同じ種類なら、その値をオプションパネルに反映
-  const selT=state.toppings.find(t=>t.id===state.selectedToppingId);
-  if(selT&&selT.type===mode)syncDrawOptionsFromItem(selT);
-  const optsEl=$('tp-draw-opts');if(optsEl)optsEl.style.display='flex';
-  const colRow=$('tp-draw-color-row');if(colRow)colRow.style.display=mode==='draw-line'?'flex':'none';
-  const intRow=$('tp-draw-intensity-row');if(intRow)intRow.style.display=(mode==='draw-blur'||mode==='draw-mosaic')?'flex':'none';
-  const wrap=$('tp-canvas-wrap');if(wrap)wrap.classList.add('tp-drawing-mode');
-}
-// 描画オプションのリアルタイム同期
-(()=>{
-  const sz=$('tp-draw-size'),szv=$('tp-draw-size-val');
-  if(sz){sz.addEventListener('input',()=>{DRAW.strokeWidth=parseFloat(sz.value)||10;if(szv)szv.textContent=sz.value;});}
-  const col=$('tp-draw-color');
-  if(col){col.addEventListener('input',()=>{DRAW.color=col.value;});}
-  const inten=$('tp-draw-intensity'),intenv=$('tp-draw-intensity-val');
-  if(inten){inten.addEventListener('input',()=>{DRAW.intensity=parseFloat(inten.value)||15;if(intenv)intenv.textContent=inten.value;});}
-})();
 
 // ===== キャンバスドラッグ移動（デルタ方式） =====
 // ===== トッピングキャンバス: ズーム・パン・ドラッグ =====
-const TZ={scale:1,tx:0,ty:0,initScale:1,ptrs:new Map(),lastPD:0,
+const TZ={scale:1,tx:0,ty:0,initScale:1,minScale:0.1,ptrs:new Map(),lastPD:0,
           tpDrag:false,isPan:false,pSX:0,pSY:0,pSTX:0,pSTY:0,dPCX:0,dPCY:0,
           dStartCX:0,dStartCY:0,oc:null,
           dragMode:'move',dragVertexIdx:-1,
@@ -2410,10 +2424,11 @@ function _hitTestVertex(cx,cy,t){
 }
 function _updateTZ(){
   const tc=$('topping-canvas'),wrap=$('tp-canvas-wrap');
-  const mTX=Math.min(0,wrap.clientWidth-tc.width*TZ.scale);
-  const mTY=Math.min(0,wrap.clientHeight-tc.height*TZ.scale);
-  TZ.tx=Math.max(mTX,Math.min(0,TZ.tx));
-  TZ.ty=Math.max(mTY,Math.min(0,TZ.ty));
+  const cw=tc.width*TZ.scale,ch=tc.height*TZ.scale;
+  const slackX=wrap.clientWidth-cw,slackY=wrap.clientHeight-ch;
+  // 余白がある（画像がフレームより小さい）方向は中央寄せ、無ければ通常のパン範囲クランプ
+  TZ.tx=slackX>=0?slackX/2:Math.max(slackX,Math.min(0,TZ.tx));
+  TZ.ty=slackY>=0?slackY/2:Math.max(slackY,Math.min(0,TZ.ty));
   tc.style.transform='translate('+TZ.tx+'px,'+TZ.ty+'px) scale('+TZ.scale+')';
 }
 
@@ -2422,24 +2437,15 @@ tpWrap.addEventListener('pointerdown',e=>{
   TZ.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   tpWrap.setPointerCapture(e.pointerId);
   if(TZ.ptrs.size===1){
-    if(DRAW.mode){
-      // ★ 描画モード: 選択中アイテムが同種ならそこに追記、そうでなければ新規作成
+    const dItem=currentDrawItem();
+    if(dItem){
+      // ★ フリーハンド系が選択中 → 常にこのアイテムへ描き込む（新規作成は選択時に既に完了済み）
       const{cx,cy}=_w2c(e.clientX,e.clientY);
       const tc=$('topping-canvas');
       const xp=Math.max(0,Math.min(100,cx/tc.width*100));
       const yp=Math.max(0,Math.min(100,cy/tc.height*100));
-      const selT=state.toppings.find(t=>t.id===state.selectedToppingId);
-      if(selT&&selT.type===DRAW.mode){
-        DRAW.targetItemId=selT.id;DRAW.freshItemId=null;
-      }else{
-        const item=createToppingItem(DRAW.mode);
-        item.strokeWidth=DRAW.strokeWidth;
-        if(DRAW.mode==='draw-line')item.color=DRAW.color;
-        else item.intensity=DRAW.intensity;
-        state.toppings.push(item);
-        state.selectedToppingId=item.id;
-        DRAW.targetItemId=item.id;DRAW.freshItemId=item.id;
-      }
+      DRAW.targetItemId=dItem.id;
+      DRAW.erase=!!dItem.eraseMode;
       DRAW.active=true; DRAW.pts=[{x:xp,y:yp}];
       renderToppingCanvas();
     }else{
@@ -2470,20 +2476,8 @@ tpWrap.addEventListener('pointerdown',e=>{
       }
     }
   }else if(TZ.ptrs.size===2){
-    // 2本指: 描画中なら中断してズームへ（新規作成した空アイテムはクリーンアップ）
-    if(DRAW.active){
-      DRAW.active=false;DRAW.pts=[];
-      if(DRAW.freshItemId!=null){
-        const idx=state.toppings.findIndex(t=>t.id===DRAW.freshItemId);
-        if(idx>=0&&(!state.toppings[idx].strokes||state.toppings[idx].strokes.length===0)){
-          state.toppings.splice(idx,1);
-          if(state.selectedToppingId===DRAW.freshItemId)state.selectedToppingId=null;
-          renderToppingList();renderToppingCanvas();
-        }
-        DRAW.freshItemId=null;
-      }
-      DRAW.targetItemId=null;
-    }
+    // 2本指: 描画中なら中断してズームへ（アイテム自体は選択時に既に存在するので削除不要）
+    if(DRAW.active){DRAW.active=false;DRAW.pts=[];DRAW.targetItemId=null;}
     TZ.tpDrag=false;TZ.isPan=false;
     const pts=[...TZ.ptrs.values()];
     const r=$('tp-canvas-wrap').getBoundingClientRect();
@@ -2511,7 +2505,7 @@ tpWrap.addEventListener('pointermove',e=>{
         TZ.pinchBaseScale=TZ.scale;TZ.pinchBaseTx=TZ.tx;TZ.pinchBaseTy=TZ.ty;
       }
       const ns=TZ.zoomUnlocked
-        ? Math.max(TZ.initScale*0.8,Math.min(8,TZ.pinchBaseScale*(dist/TZ.pinchBaseDist)))
+        ? Math.max(TZ.minScale,Math.min(8,TZ.pinchBaseScale*(dist/TZ.pinchBaseDist)))
         : TZ.pinchBaseScale;
       TZ.tx=midX-(TZ.pinchBaseMidX-TZ.pinchBaseTx)*(ns/TZ.pinchBaseScale);
       TZ.ty=midY-(TZ.pinchBaseMidY-TZ.pinchBaseTy)*(ns/TZ.pinchBaseScale);
@@ -2519,8 +2513,8 @@ tpWrap.addEventListener('pointermove',e=>{
     }
     return;
   }
-  if(DRAW.active&&DRAW.mode){
-    // ★ 描画モード: 点を追加（一定距離ごと）してRAFでリフレッシュ
+  if(DRAW.active&&DRAW.targetItemId!=null){
+    // ★ フリーハンド描画中: 点を追加（一定距離ごと）してRAFでリフレッシュ
     const{cx,cy}=_w2c(e.clientX,e.clientY);
     const tc=$('topping-canvas');
     const xp=Math.max(0,Math.min(100,cx/tc.width*100));
@@ -2607,25 +2601,25 @@ tpWrap.addEventListener('pointermove',e=>{
 tpWrap.addEventListener('pointerup',e=>{
   TZ.ptrs.delete(e.pointerId);
   tpWrap.classList.remove('tp-grabbing');
-  // ★ 描画モード: 1筆をアイテムに追記（アイテム自体はpointerdownで既に作成済み）
-  if(DRAW.active&&DRAW.mode&&DRAW.pts.length>0){
+  // ★ フリーハンド描画: 1筆をアイテムに追記（消しゴムかどうかはDRAW.eraseで判定）
+  if(DRAW.active&&DRAW.targetItemId!=null&&DRAW.pts.length>0){
     DRAW.active=false;
     const item=state.toppings.find(t=>t.id===DRAW.targetItemId);
     if(item){
       if(!item.strokes)item.strokes=[];
-      item.strokes.push([...DRAW.pts]);
+      item.strokes.push({pts:[...DRAW.pts],erase:!!DRAW.erase});
     }
-    DRAW.pts=[];DRAW.targetItemId=null;DRAW.freshItemId=null;
+    DRAW.pts=[];DRAW.targetItemId=null;DRAW.erase=false;
     renderToppingList();renderToppingCanvas();tpSaveNow();
     return;
   }
   if(TZ.tpDrag){TZ.tpDrag=false;tpSaveNow();}
   TZ.isPan=false;
   if(TZ.ptrs.size===1){
-    // 2本指→1本指: そのままパン継続できるようにする（描画モード中は対象外）
+    // 2本指→1本指: そのままパン継続できるようにする（フリーハンド選択中は対象外）
     const[p]=TZ.ptrs.values();
     TZ.pSX=p.x;TZ.pSY=p.y;TZ.pSTX=TZ.tx;TZ.pSTY=TZ.ty;
-    if(!DRAW.mode)TZ.isPan=true;
+    if(!currentDrawItem())TZ.isPan=true;
   }
 });
 tpWrap.addEventListener('pointercancel',e=>{TZ.ptrs.delete(e.pointerId);TZ.tpDrag=false;TZ.isPan=false;tpWrap.classList.remove('tp-grabbing');});
@@ -2634,7 +2628,7 @@ tpWrap.addEventListener('wheel',e=>{
   const ratio=e.deltaY<0?1.12:0.89;
   const wr=$('tp-canvas-wrap').getBoundingClientRect();
   const fx=e.clientX-wr.left,fy=e.clientY-wr.top;
-  const ns=Math.max(TZ.initScale*0.8,Math.min(8,TZ.scale*ratio));
+  const ns=Math.max(TZ.minScale,Math.min(8,TZ.scale*ratio));
   TZ.tx=fx-(fx-TZ.tx)*(ns/TZ.scale);TZ.ty=fy-(fy-TZ.ty)*(ns/TZ.scale);TZ.scale=ns;_updateTZ();
 },{passive:false});
 
@@ -3258,7 +3252,7 @@ function showUpdateToast(){
   $('trim-modal').classList.add('hidden'); $('ctx-menu').classList.add('hidden');
   if('serviceWorker' in navigator){
     const prevCtrl=navigator.serviceWorker.controller;
-    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js').catch(err=>{console.error('SW registration failed:',err);});
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
       if(prevCtrl)showUpdateToast(); // 旧SWが存在した＝更新時のみ通知
     });

@@ -3,15 +3,32 @@
 // 更新ポリシー:
 //   - CACHE_NAME は「キャッシュを完全リセットしたい時だけ」バージョンを上げる。
 //   - SW 自体（このファイル）を変更すれば、ブラウザが自動的に再登録する。
+//
+// v4 変更点（オフライン起動不良の修正）:
+//   旧実装は index.html のプリキャッシュが何らかの理由（一時的な通信不調など）で
+//   失敗しても Promise.allSettled により「install 成功」として扱われ、
+//   その直後の activate で古いキャッシュ（＝それまで正常にオフライン動作していたキャッシュ）を
+//   問答無用で削除していた。これにより一度でもプリキャッシュに失敗すると、新旧どちらの
+//   キャッシュにも index.html が存在しない状態になり、オフライン起動が壊れたまま
+//   （次に確実に成功するまで）直らないという構造的な不具合があった。
+//   → index.html などの「無いとアプリが起動できない必須リソース」は取得に失敗したら
+//     install 自体を失敗させ、ブラウザに古いSW（＝古いキャッシュ）をそのまま維持させる。
+//     これにより「新しいキャッシュへの中途半端な切り替え」が起こらなくなる。
 
-const CACHE_NAME = 'namacollage-v3'; // キャッシュをパージさせるため念のためv3などに上げるのをおすすめします
+const CACHE_NAME = 'namacollage-v4';
 
-const PRECACHE = [
+// 無いとアプリが起動できない必須リソース。1つでも取得失敗したら install 自体を失敗させる。
+const CRITICAL = [
   './',
   './index.html',
+];
+// あれば嬉しい程度のリソース（アイコン・マニフェスト・Webフォント）。
+// 失敗しても install は続行する（allSettled）。
+const OPTIONAL = [
   './manifest.json',
   './NamaCollageLogo192.png',
   './NamaCollageLogo512.png',
+  'https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Kaisei+Decol:wght@700&family=Mochiy+Pop+One&family=Noto+Sans+JP:wght@700&family=Noto+Serif+JP:wght@700&family=Yomogi&display=swap',
 ];
 
 // ============================================================
@@ -23,14 +40,22 @@ self.addEventListener('install', event => {
   _isUpdate = !!self.registration.active;
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
-        // cache.add() だとHTTPキャッシュが使われる可能性があるため、
-        // cache: 'reload' を指定して強制的にネットワークから最新を取得する
-        return Promise.allSettled(PRECACHE.map(async url => {
+      .then(async cache => {
+        // 1. 必須リソース: 1つでも失敗したら例外を投げて install 自体を失敗させる
+        //    （失敗時はブラウザが古いSW/古いキャッシュをそのまま維持し、次回リトライする）
+        for (const url of CRITICAL) {
+          const req = new Request(url, { cache: 'reload' });
+          const res = await fetch(req); // 失敗すればここで例外→install失敗
+          if (!res.ok) throw new Error(`SW: precache failed (${res.status}) for ${url}`);
+          await cache.put(url, res.clone());
+        }
+        // 2. 任意リソース（アイコン・マニフェスト・Webフォント等）: ベストエフォート
+        //    cache: 'reload' を指定して強制的にネットワークから最新を取得する
+        await Promise.allSettled(OPTIONAL.map(async url => {
           try {
             const req = new Request(url, { cache: 'reload' });
             const res = await fetch(req);
-            if (res.ok) await cache.put(url, res);
+            if (res.ok || res.type === 'opaque') await cache.put(url, res);
           } catch (e) {
             console.warn(`SW: Failed to precache ${url}`, e);
           }
@@ -64,6 +89,8 @@ self.addEventListener('activate', event => {
 // ============================================================
 // Fetch: 戦略の使い分け（HTMLはNetwork-First, 他はSWR）
 // ============================================================
+const FONT_ORIGINS = ['https://fonts.googleapis.com', 'https://fonts.gstatic.com'];
+
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
@@ -73,12 +100,17 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // GET のみ対象、外部オリジンはスキップ
+  // GET のみ対象
   if (event.request.method !== 'GET') return;
-  if (url.origin !== location.origin) return;
+
+  // 同一オリジン以外は、Webフォント（Google Fonts）だけ例外的にSWR対象にする。
+  // それ以外の外部オリジンはブラウザの通常挙動に任せる（オフライン時は自然に失敗＝フォールバック）。
+  const isSameOrigin = url.origin === location.origin;
+  const isFontOrigin = FONT_ORIGINS.includes(url.origin);
+  if (!isSameOrigin && !isFontOrigin) return;
 
   // 1. HTMLリクエスト（画面遷移）は Network-First
-  // 常に最新版を見に行き、オフライン時のみキャッシュを使う
+  // 常に最新版を見に行き、オフライン時のみキャッシュから返す
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -87,21 +119,26 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, resClone));
           return response;
         })
-        .catch(() => {
-          // オフライン時はキャッシュから返す
-          return caches.match('./index.html', { ignoreSearch: true });
+        .catch(async () => {
+          // オフライン時はキャッシュから返す。
+          // './index.html' と './' のどちらにも念のためフォールバックを試みる。
+          const cache = await caches.open(CACHE_NAME);
+          return (await cache.match('./index.html', { ignoreSearch: true }))
+              || (await cache.match('./', { ignoreSearch: true }))
+              || Response.error();
         })
     );
     return;
   }
 
-  // 2. それ以外（画像やJSなど）は Stale-While-Revalidate
+  // 2. それ以外（画像やフォントなど）は Stale-While-Revalidate
   event.respondWith(
     caches.open(CACHE_NAME).then(cache =>
       cache.match(event.request).then(cached => {
         const revalidate = fetch(event.request)
           .then(response => {
-            if (response && response.ok && response.type === 'basic') {
+            // basic: 同一オリジン / opaque: フォントなどno-corsクロスオリジン
+            if (response && (response.ok && response.type === 'basic' || response.type === 'opaque')) {
               cache.put(event.request, response.clone());
             }
             return response;
