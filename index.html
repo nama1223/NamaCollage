@@ -199,6 +199,34 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 .tp-textarea{background:var(--surf2);border:1px solid var(--border2);border-radius:8px;padding:7px 9px;font-size:13px;color:var(--text);width:100%;resize:vertical;min-height:54px;font-family:inherit;-webkit-user-select:text;user-select:text;}
 .tp-num-inp{background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:7px;padding:5px 6px;font-size:12px;width:52px;text-align:center;-webkit-user-select:text;user-select:text;}
 .tp-color-inp{border:2px solid var(--border2);border-radius:6px;background:none;width:32px;height:29px;cursor:pointer;padding:2px;}
+.cu-nav-btn{width:34px;flex:1;border:1px solid var(--border2);border-radius:7px;background:var(--surf2);color:var(--text);font-size:13px;cursor:pointer;touch-action:manipulation;}
+.cu-nav-btn:disabled{opacity:0.3;pointer-events:none;}
+.cu-nav-btn:active{background:var(--hover);}
+/* カラースウォッチ（隠しinput type=colorの代わりに表示するボタン） */
+.tp-color-swatch{width:32px;height:29px;border:2px solid var(--border2);border-radius:6px;cursor:pointer;padding:0;touch-action:manipulation;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.5);}
+.tp-color-swatch:hover{border-color:var(--prime);}
+/* ===== カスタムカラーピッカー（Windows ペイント風） ===== */
+#ccm-modal{position:fixed;inset:0;background:rgba(0,20,60,0.55);z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;}
+#ccm-modal.open{display:flex;}
+.ccm-box{background:var(--surf);border-radius:16px;padding:18px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,0.25);}
+.ccm-title{font-size:16px;font-weight:700;margin-bottom:12px;color:var(--text);}
+.ccm-presets{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:14px;}
+.ccm-swatch{aspect-ratio:1;border-radius:6px;border:2px solid rgba(0,0,0,0.12);cursor:pointer;padding:0;touch-action:manipulation;position:relative;}
+.ccm-swatch.selected{outline:2px solid var(--prime);outline-offset:1px;}
+.ccm-custom-row{display:flex;gap:12px;margin-bottom:14px;}
+#ccm-sv{border-radius:8px;cursor:crosshair;touch-action:none;flex-shrink:0;}
+#ccm-hue{border-radius:8px;cursor:pointer;touch-action:none;flex-shrink:0;}
+.ccm-cursor{position:absolute;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,0.6);transform:translate(-50%,-50%);pointer-events:none;}
+.ccm-hue-cursor{position:absolute;left:-3px;right:-3px;height:5px;border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,0.6);transform:translateY(-50%);pointer-events:none;border-radius:2px;}
+.ccm-fields{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.ccm-field-row{display:flex;align-items:center;gap:8px;}
+.ccm-field-row label{font-size:12px;color:var(--muted);width:36px;flex-shrink:0;}
+.ccm-field-row input[type="text"],.ccm-field-row input[type="number"]{flex:1;padding:6px 8px;border:1px solid var(--border2);border-radius:7px;font-size:13px;background:var(--surf2);color:var(--text);}
+.ccm-preview{width:36px;height:36px;border-radius:8px;border:2px solid var(--border2);flex-shrink:0;}
+.ccm-btns{display:flex;gap:8px;}
+.ccm-btns button{flex:1;padding:11px;border-radius:9px;border:none;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;}
+#ccm-cancel{background:var(--surf2);color:var(--text);border:1px solid var(--border2)!important;}
+#ccm-ok{background:var(--prime);color:#fff;}
 .tp-head{cursor:pointer;-webkit-user-select:none;user-select:none;display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid transparent;transition:background 0.15s;}
 .tp-item.selected .tp-head{background:rgba(85,72,214,0.16);border-bottom:2px solid var(--violet);}
 .tp-item.selected{border-color:var(--violet);box-shadow:0 0 0 2px rgba(85,72,214,0.32);}
@@ -595,6 +623,37 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
   </div>
 </div>
 
+<!-- カスタムカラーピッカー（Windows ペイント風） -->
+<div id="ccm-modal">
+  <div class="ccm-box">
+    <div class="ccm-title">色を選択</div>
+    <div class="ccm-presets" id="ccm-presets"></div>
+    <div class="ccm-custom-row">
+      <div style="position:relative;">
+        <canvas id="ccm-sv" width="180" height="160"></canvas>
+        <div class="ccm-cursor" id="ccm-cursor"></div>
+      </div>
+      <div style="position:relative;">
+        <canvas id="ccm-hue" width="24" height="160"></canvas>
+        <div class="ccm-hue-cursor" id="ccm-hue-cursor"></div>
+      </div>
+    </div>
+    <div class="ccm-fields">
+      <div class="ccm-field-row">
+        <div class="ccm-preview" id="ccm-preview"></div>
+        <label>HEX</label><input type="text" id="ccm-hex" maxlength="7">
+      </div>
+      <div class="ccm-field-row"><label>R</label><input type="number" id="ccm-r" min="0" max="255"></div>
+      <div class="ccm-field-row"><label>G</label><input type="number" id="ccm-g" min="0" max="255"></div>
+      <div class="ccm-field-row"><label>B</label><input type="number" id="ccm-b" min="0" max="255"></div>
+    </div>
+    <div class="ccm-btns">
+      <button type="button" id="ccm-cancel">キャンセル</button>
+      <button type="button" id="ccm-ok">OK</button>
+    </div>
+  </div>
+</div>
+
 <!-- トッピング全消去 確認モーダル -->
 <div id="tp-clear-modal" style="display:none;position:fixed;inset:0;background:rgba(0,20,60,0.45);z-index:999;align-items:center;justify-content:center;padding:20px;">
   <div class="modal-box">
@@ -640,8 +699,14 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
       <span id="cutout-info" style="font-weight:700;color:var(--prime)"></span>
       <button type="button" id="cu-add" style="margin-left:auto;background:var(--prime);color:#fff;border:none;border-radius:7px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation">＋ 追加</button>
     </div>
-    <div id="cu-regions" style="display:flex;flex-direction:column;gap:5px;max-height:130px;overflow-y:auto;padding:2px 0;"></div>
-    <div style="font-size:11px;color:var(--muted)">💡 ラインをドラッグまたはスライダーで調整。複数箇所の除去が可能です。</div>
+    <div style="display:flex;gap:8px;align-items:stretch;">
+      <div id="cu-regions" style="flex:1;min-width:0;"></div>
+      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+        <button type="button" id="cu-nav-up" class="cu-nav-btn">▲</button>
+        <button type="button" id="cu-nav-down" class="cu-nav-btn">▼</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted)">💡 ラインをドラッグまたはスライダーで調整。▲▼で複数の除去領域を切り替えられます。</div>
   </div>
 </div>
 <script>
@@ -813,7 +878,7 @@ const isStandalone=window.matchMedia('(display-mode: standalone)').matches||('st
 if(isStandalone){
   const btn=$('btn-install');
   btn.classList.add('installed');
-  btn.textContent='✅ インストール済み';
+  btn.textContent='☑️ インストール済み';
   btn.title='すでにアプリとしてインストールされています';
 }
 window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredInstall=e; });
@@ -996,7 +1061,7 @@ function drawImgOnCanvas(ctx,img,dx,dy,dw,dh){
     const iW=cuMode==='h'?sw*totF:sw,iH=cuMode==='v'?sh*totF:sh;
     const tmp=document.createElement('canvas');
     tmp.width=Math.max(1,Math.round(iW));tmp.height=Math.max(1,Math.round(iH));
-    const tc=tmp.getContext('2d');let dp=0;
+    const tc=tmp.getContext('2d');tc.imageSmoothingEnabled=true;tc.imageSmoothingQuality='high';let dp=0;
     for(const p of pieces){
       if(cuMode==='v'){const pH=sh*(p.to-p.from);tc.drawImage(img.imgEl,sx,sy+sh*p.from,sw,pH,0,dp,sw,pH);dp+=pH;}
       else{const pW=sw*(p.to-p.from);tc.drawImage(img.imgEl,sx+sw*p.from,sy,pW,sh,dp,0,pW,sh);dp+=pW;}
@@ -1027,7 +1092,8 @@ async function updateImgThumb(img){
   const maxS=220,s=Math.min(maxS/eff.w,maxS/eff.h,1);
   const W=Math.max(1,Math.round(eff.w*s)),H=Math.max(1,Math.round(eff.h*s));
   const cv=document.createElement('canvas');cv.width=W;cv.height=H;
-  drawImgOnCanvas(cv.getContext('2d'),img,0,0,W,H);
+  const cctx=cv.getContext('2d');cctx.imageSmoothingEnabled=true;cctx.imageSmoothingQuality='high';
+  drawImgOnCanvas(cctx,img,0,0,W,H);
   return new Promise(res=>{
     cv.toBlob(blob=>{
       if(img.thumbUrl)URL.revokeObjectURL(img.thumbUrl);
@@ -1473,6 +1539,184 @@ $('tp-clear-confirm').addEventListener('click',()=>{
   $('tp-clear-modal').style.display='none';
 });
 
+// ===== カスタムカラーピッカー（Windows ペイント風） =====
+// 16色プリセット（ダーク系→ライト系の順で、見やすさを考えて再配置）
+const CCM_PRESETS=[
+  '#000000','#666666','#7A4A2A','#1B5E20','#16264A','#7E3FF2','#C4001D','#E86A00',
+  '#C4C4C4','#FFFFFF','#F5F0DC','#FFD400','#43A047','#00BCD4','#2979FF','#FF4FA0'
+];
+function hex2rgb(hex){
+  const m=/^#?([0-9a-f]{6})$/i.exec(hex||'')||/^#?([0-9a-f]{6})$/i.exec('000000');
+  const n=parseInt(m[1],16);
+  return{r:(n>>16)&255,g:(n>>8)&255,b:n&255};
+}
+function rgb2hex(r,g,b){
+  const h=v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0');
+  return'#'+h(r)+h(g)+h(b);
+}
+function rgb2hsv(r,g,b){
+  r/=255;g/=255;b/=255;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;
+  let h=0;
+  if(d!==0){
+    if(mx===r)h=60*(((g-b)/d)%6);
+    else if(mx===g)h=60*((b-r)/d+2);
+    else h=60*((r-g)/d+4);
+  }
+  if(h<0)h+=360;
+  const s=mx===0?0:d/mx, v=mx;
+  return{h,s,v};
+}
+function hsv2rgb(h,s,v){
+  const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;
+  let r,g,b;
+  if(h<60){r=c;g=x;b=0;} else if(h<120){r=x;g=c;b=0;} else if(h<180){r=0;g=c;b=x;}
+  else if(h<240){r=0;g=x;b=c;} else if(h<300){r=x;g=0;b=c;} else {r=c;g=0;b=x;}
+  return{r:(r+m)*255,g:(g+m)*255,b:(b+m)*255};
+}
+
+// input[type=color] を、隠しinput＋クリックで開く見た目スウォッチボタンに変換する。
+// 既存の 'input'/'change' イベント購読コードには一切手を加えず、隠しinputの値だけ書き換えて
+// 合成イベントを発火させることで完全互換を保つ。
+function enhanceColorInputs(container){
+  container.querySelectorAll('input.tp-color-inp').forEach(inp=>{
+    if(inp.dataset.ccmEnhanced)return;
+    inp.dataset.ccmEnhanced='1';
+    inp.style.cssText='position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
+    const btn=document.createElement('button');
+    btn.type='button';btn.className='tp-color-swatch';
+    btn.style.background=inp.value;
+    inp.insertAdjacentElement('afterend',btn);
+    btn.addEventListener('click',()=>{
+      openColorPicker(inp.value,hex=>{
+        inp.value=hex;btn.style.background=hex;
+        inp.dispatchEvent(new Event('input',{bubbles:true}));
+        inp.dispatchEvent(new Event('change',{bubbles:true}));
+      });
+    });
+  });
+}
+
+const CCM={h:0,s:1,v:1,onApply:null};
+function ccmRenderPresets(){
+  const wrap=$('ccm-presets');wrap.innerHTML='';
+  CCM_PRESETS.forEach(hex=>{
+    const b=document.createElement('button');
+    b.type='button';b.className='ccm-swatch';b.style.background=hex;
+    b.addEventListener('click',()=>ccmSetColor(hex));
+    wrap.appendChild(b);
+  });
+}
+function ccmUpdatePresetSelection(hex){
+  const up=hex.toUpperCase();
+  $$('#ccm-presets .ccm-swatch').forEach((b,i)=>b.classList.toggle('selected',CCM_PRESETS[i].toUpperCase()===up));
+}
+function ccmDrawSV(){
+  const cv=$('ccm-sv'),ctx=cv.getContext('2d');
+  const{r,g,b}=hsv2rgb(CCM.h,1,1);
+  ctx.fillStyle='rgb('+Math.round(r)+','+Math.round(g)+','+Math.round(b)+')';
+  ctx.fillRect(0,0,cv.width,cv.height);
+  let grad=ctx.createLinearGradient(0,0,cv.width,0);
+  grad.addColorStop(0,'rgba(255,255,255,1)');grad.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,cv.width,cv.height);
+  grad=ctx.createLinearGradient(0,0,0,cv.height);
+  grad.addColorStop(0,'rgba(0,0,0,0)');grad.addColorStop(1,'rgba(0,0,0,1)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,cv.width,cv.height);
+}
+function ccmDrawHue(){
+  const cv=$('ccm-hue'),ctx=cv.getContext('2d');
+  const grad=ctx.createLinearGradient(0,0,0,cv.height);
+  for(let i=0;i<=6;i++){
+    const{r,g,b}=hsv2rgb(i*60,1,1);
+    grad.addColorStop(i/6,'rgb('+Math.round(r)+','+Math.round(g)+','+Math.round(b)+')');
+  }
+  ctx.fillStyle=grad;ctx.fillRect(0,0,cv.width,cv.height);
+}
+function ccmUpdateCursors(){
+  const sv=$('ccm-sv');
+  $('ccm-cursor').style.left=(CCM.s*sv.width)+'px';
+  $('ccm-cursor').style.top=((1-CCM.v)*sv.height)+'px';
+  $('ccm-hue-cursor').style.top=((CCM.h/360)*$('ccm-hue').height)+'px';
+}
+function ccmCurrentHex(){
+  const{r,g,b}=hsv2rgb(CCM.h,CCM.s,CCM.v);
+  return rgb2hex(r,g,b);
+}
+function ccmSyncFields(){
+  const hex=ccmCurrentHex(),{r,g,b}=hex2rgb(hex);
+  $('ccm-hex').value=hex;
+  $('ccm-r').value=Math.round(r);$('ccm-g').value=Math.round(g);$('ccm-b').value=Math.round(b);
+  $('ccm-preview').style.background=hex;
+  ccmUpdatePresetSelection(hex);
+}
+function ccmSetColor(hex){
+  const{r,g,b}=hex2rgb(hex);
+  const hsv=rgb2hsv(r,g,b);
+  CCM.h=hsv.h;CCM.s=hsv.s;CCM.v=hsv.v;
+  ccmDrawSV();ccmUpdateCursors();ccmSyncFields();
+}
+function ccmSetFromRGB(r,g,b){
+  const hsv=rgb2hsv(r,g,b);
+  CCM.h=hsv.h;CCM.s=hsv.s;CCM.v=hsv.v;
+  ccmDrawSV();ccmUpdateCursors();ccmSyncFields();
+}
+function openColorPicker(initialHex,onApply){
+  CCM.onApply=onApply;
+  ccmRenderPresets();
+  ccmDrawHue();
+  ccmSetColor(initialHex||'#000000');
+  $('ccm-modal').classList.add('open');
+}
+function closeColorPicker(){$('ccm-modal').classList.remove('open');}
+
+// SV四角形の操作
+(()=>{
+  const sv=$('ccm-sv');
+  let dragging=false;
+  const set=e=>{
+    const r=sv.getBoundingClientRect();
+    const x=Math.max(0,Math.min(sv.width,(e.clientX-r.left)*(sv.width/r.width)));
+    const y=Math.max(0,Math.min(sv.height,(e.clientY-r.top)*(sv.height/r.height)));
+    CCM.s=x/sv.width;CCM.v=1-y/sv.height;
+    ccmUpdateCursors();ccmSyncFields();
+  };
+  sv.addEventListener('pointerdown',e=>{dragging=true;sv.setPointerCapture(e.pointerId);set(e);});
+  sv.addEventListener('pointermove',e=>{if(dragging)set(e);});
+  sv.addEventListener('pointerup',()=>{dragging=false;});
+})();
+// 色相バーの操作
+(()=>{
+  const hue=$('ccm-hue');
+  let dragging=false;
+  const set=e=>{
+    const r=hue.getBoundingClientRect();
+    const y=Math.max(0,Math.min(hue.height,(e.clientY-r.top)*(hue.height/r.height)));
+    CCM.h=(y/hue.height)*360;
+    ccmDrawSV();ccmUpdateCursors();ccmSyncFields();
+  };
+  hue.addEventListener('pointerdown',e=>{dragging=true;hue.setPointerCapture(e.pointerId);set(e);});
+  hue.addEventListener('pointermove',e=>{if(dragging)set(e);});
+  hue.addEventListener('pointerup',()=>{dragging=false;});
+})();
+// HEX/RGB 手入力
+$('ccm-hex').addEventListener('change',()=>{
+  let v=$('ccm-hex').value.trim();if(!v.startsWith('#'))v='#'+v;
+  if(/^#[0-9a-fA-F]{6}$/.test(v))ccmSetColor(v);else ccmSyncFields();
+});
+['ccm-r','ccm-g','ccm-b'].forEach(id=>{
+  $(id).addEventListener('change',()=>{
+    const r=parseFloat($('ccm-r').value)||0,g=parseFloat($('ccm-g').value)||0,b=parseFloat($('ccm-b').value)||0;
+    ccmSetFromRGB(r,g,b);
+  });
+});
+$('ccm-ok').addEventListener('click',()=>{
+  const hex=ccmCurrentHex();
+  if(CCM.onApply)CCM.onApply(hex);
+  closeColorPicker();
+});
+$('ccm-cancel').addEventListener('click',closeColorPicker);
+$('ccm-modal').addEventListener('click',e=>{if(e.target===$('ccm-modal'))closeColorPicker();});
+
 function addToppingItem(type){
   const item=createToppingItem(type);
   state.toppings.push(item); state.selectedToppingId=item.id;
@@ -1839,10 +2083,23 @@ function toppingMiniPreview(t){
 }
 
 // ===== コントロールHTML =====
-function adjRowHTML(lbl,cls,mn,mx,val,valCls){
+// stepに応じた丸め（step<1なら小数点対応、浮動小数点誤差も除去）
+function roundToStep(v,step){
+  step=step||1;
+  const r=Math.round((v||0)/step)*step;
+  return Math.round(r*1000)/1000;
+}
+// 表示用フォーマット（整数ならそのまま、小数なら1桁に整形）
+function fmtNum(v){
+  const r=Math.round((v||0)*10)/10;
+  return Number.isInteger(r)?String(r):r.toFixed(1);
+}
+function adjRowHTML(lbl,cls,mn,mx,val,valCls,step){
+  step=step||1;
+  const v=roundToStep(val,step);
   return '<div class="adj-row"><span class="adj-label">'+lbl+'</span>'+
-    '<input type="range" class="adj-slider '+cls+'" min="'+mn+'" max="'+mx+'" value="'+Math.round(val||0)+'">'+
-    '<span class="adj-val '+valCls+'">'+Math.round(val||0)+'</span></div>';
+    '<input type="range" class="adj-slider '+cls+'" min="'+mn+'" max="'+mx+'" step="'+step+'" value="'+v+'">'+
+    '<span class="adj-val '+valCls+'">'+fmtNum(v)+'</span></div>';
 }
 function strokeShadowHTML(s){
   return '<div class="adj-row"><span class="adj-label">縁取り</span>'+
@@ -1894,7 +2151,7 @@ function renderToppingControlsHTML(t){
   if(type==='text'){
     return '<textarea class="tp-textarea" rows="2">'+escHtml(t.text||'')+'</textarea>'+
       adjRowHTML('サイズ','tp-size',8,500,t.fontSize,'tp-size-val')+
-      adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val')+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val')+
+      adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val',0.1)+
       '<div class="adj-row"><span class="adj-label">文字色</span><input type="color" class="tp-color-inp tp-mainc" value="'+t.color+'">'+
       '<span class="adj-label" style="margin-left:auto">配置</span>'+
       '<select class="tp-align tp-select"><option value="center"'+(t.textAlign==='center'?' selected':'')+'>中央</option>'+
@@ -1931,7 +2188,7 @@ function renderToppingControlsHTML(t){
       strokeShadowHTML(t);
   }
   if(type==='rect'||type==='ellipse'){
-    return adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val')+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val')+
+    return adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val',0.1)+
       sizeLockHTML(t)+colorLineHTML(t)+fillHTML(t)+strokeShadowHTML(t);
   }
   if(type==='poly'){
@@ -1951,7 +2208,7 @@ function renderToppingControlsHTML(t){
     const isBlur=type.startsWith('blur'),sh=type.split('-')[1];
     let html='';
     if(sh==='rect'||sh==='ellipse'){
-      html=adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val')+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val')+sizeLockHTML(t);
+      html=adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val',0.1)+sizeLockHTML(t);
     }else if(sh==='poly'){
       html=(t.points||[]).map((p,i)=>
         '<div class="adj-row"><span class="adj-label">頂点'+(i+1)+'</span>'
@@ -2530,7 +2787,7 @@ tpWrap.addEventListener('pointermove',e=>{
     const{cx,cy}=_w2c(e.clientX,e.clientY);
     const tc=$('topping-canvas');
     const t=state.toppings.find(tp=>tp.id===state.selectedToppingId);if(!t)return;
-    const type=t.type||'text';const cl=v=>Math.round(Math.max(0,Math.min(100,v)));
+    const type=t.type||'text';const cl=v=>Math.max(0,Math.min(100,Math.round(v*10)/10));
     const W=tc.width,H=tc.height;
     if(TZ.dragMode==='vertex'&&t.points&&TZ.dragVertexIdx>=0){
       t.points[TZ.dragVertexIdx]={x:cl(cx/W*100),y:cl(cy/H*100)};
@@ -2539,7 +2796,7 @@ tpWrap.addEventListener('pointermove',e=>{
         const vx=sp.querySelector('.tp-vx-'+i),vy=sp.querySelector('.tp-vy-'+i);
         const vxv=sp.querySelector('.tp-vxv-'+i),vyv=sp.querySelector('.tp-vyv-'+i);
         if(vx)vx.value=t.points[i].x;if(vy)vy.value=t.points[i].y;
-        if(vxv)vxv.textContent=t.points[i].x;if(vyv)vyv.textContent=t.points[i].y;
+        if(vxv)vxv.textContent=fmtNum(t.points[i].x);if(vyv)vyv.textContent=fmtNum(t.points[i].y);
       }
       renderToppingCanvas();return;
     }
@@ -2573,7 +2830,7 @@ tpWrap.addEventListener('pointermove',e=>{
       }
       const sp=$('tp-selected-panel');
       if(sp){
-        const up=(cls,val,vcls)=>{const el=sp.querySelector('.'+cls),ve=sp.querySelector('.'+vcls);if(el)el.value=Math.round(val);if(ve)ve.textContent=Math.round(val);};
+        const up=(cls,val,vcls)=>{const el=sp.querySelector('.'+cls),ve=sp.querySelector('.'+vcls);if(el)el.value=val;if(ve)ve.textContent=fmtNum(val);};
         up('tp-x',t.x,'tp-x-val');up('tp-y',t.y,'tp-y-val');
         up('tp-w',t.w,'tp-w-val');up('tp-h',t.h,'tp-h-val');
       }
@@ -2587,7 +2844,7 @@ tpWrap.addEventListener('pointermove',e=>{
     if(type==='line'||type==='arrow'){t.x2=cl(t.x2+dx);t.y2=cl(t.y2+dy);}
     const sp=$('tp-selected-panel');
     if(sp){
-      const up=(cls,val,vcls)=>{const el=sp.querySelector('.'+cls),ve=sp.querySelector('.'+vcls);if(el)el.value=Math.round(val);if(ve)ve.textContent=Math.round(val);};
+      const up=(cls,val,vcls)=>{const el=sp.querySelector('.'+cls),ve=sp.querySelector('.'+vcls);if(el)el.value=val;if(ve)ve.textContent=fmtNum(val);};
       up('tp-x',t.x,'tp-x-val');up('tp-y',t.y,'tp-y-val');
       if(type==='line'||type==='arrow'){up('tp-x2',t.x2,'tp-x2-val');up('tp-y2',t.y2,'tp-y2-val');}
     }
@@ -2652,6 +2909,7 @@ function renderSelectedPanel(){
   panel.innerHTML='<div class="tp-panel-head">'+TP_LABELS[type]+' の設定</div>'+
     '<div id="tp-panel-body">'+renderToppingControlsHTML(t)+'</div>';
   bindToppingControls(panel,t);
+  enhanceColorInputs(panel);
 }
 
 
@@ -2712,11 +2970,12 @@ $('color-cancel-btn').addEventListener('click',()=>{$('color-modal').classList.a
 $('ca-preview').addEventListener('change',()=>refreshColorPreview());
 
 // ===== 中抜きカットモーダル =====
-const CU={ri:-1,ci:-1,mode:'v',regions:[{start:0.3,end:0.6}],imgEl:null,imgW:0,imgH:0,scale:1,drag:null};
+const CU={ri:-1,ci:-1,mode:'v',regions:[{start:0.3,end:0.6}],selIdx:0,imgEl:null,imgW:0,imgH:0,scale:1,drag:null};
+const CU_MIN=0.003; // 除去領域の最小幅（ほぼ制限なし。0除算だけ避ける程度）
 
 function openCutoutModal(ri,ci,mode){
   const img=state.grid[ri][ci];
-  CU.ri=ri;CU.ci=ci;CU.mode=mode;CU.imgEl=img.imgEl;CU.imgW=img.w;CU.imgH=img.h;
+  CU.ri=ri;CU.ci=ci;CU.mode=mode;CU.imgEl=img.imgEl;CU.imgW=img.w;CU.imgH=img.h;CU.selIdx=0;
   if(img.cutoutData&&img.cutoutData.mode===mode){
     CU.regions=img.cutoutData.regions
       ?img.cutoutData.regions.map(r=>({...r}))
@@ -2736,30 +2995,39 @@ function openCutoutModal(ri,ci,mode){
 }
 
 function renderCutoutRegions(){
+  if(CU.selIdx==null||CU.selIdx>=CU.regions.length)CU.selIdx=CU.regions.length-1;
+  if(CU.selIdx<0)CU.selIdx=0;
   const box=$('cu-regions');box.innerHTML='';
-  CU.regions.forEach((r,i)=>{
+  const i=CU.selIdx,r=CU.regions[i];
+  if(r){
     const div=document.createElement('div');
     div.style.cssText='background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;';
     div.innerHTML=
       '<div style="display:flex;align-items:center;margin-bottom:4px">'+
-        '<span style="font-size:11px;font-weight:700;color:var(--prime)">除去 '+(i+1)+'</span>'+
+        '<span style="font-size:11px;font-weight:700;color:var(--prime)">除去 '+(i+1)+' / '+CU.regions.length+'</span>'+
         (CU.regions.length>1?'<button type="button" class="cu-del-r" style="margin-left:auto;border:none;background:rgba(196,28,0,0.1);color:var(--danger);border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;font-weight:700;touch-action:manipulation">✕</button>':'')+
       '</div>'+
-      '<div class="ca-row"><span class="ca-label">開始</span><input type="range" class="ca-slider cu-rs" min="0" max="100" value="'+Math.round(r.start*100)+'"><span class="ca-val cu-rs-val">'+Math.round(r.start*100)+'%</span></div>'+
-      '<div class="ca-row"><span class="ca-label">終了</span><input type="range" class="ca-slider cu-re" min="0" max="100" value="'+Math.round(r.end*100)+'"><span class="ca-val cu-re-val">'+Math.round(r.end*100)+'%</span></div>';
+      '<div class="ca-row"><span class="ca-label">開始</span><input type="range" class="ca-slider cu-rs" min="0" max="100" step="0.1" value="'+(r.start*100)+'"><span class="ca-val cu-rs-val">'+fmtNum(r.start*100)+'%</span></div>'+
+      '<div class="ca-row"><span class="ca-label">終了</span><input type="range" class="ca-slider cu-re" min="0" max="100" step="0.1" value="'+(r.end*100)+'"><span class="ca-val cu-re-val">'+fmtNum(r.end*100)+'%</span></div>';
     div.querySelector('.cu-rs').addEventListener('input',e=>{
-      r.start=Math.min(parseFloat(e.target.value)/100,r.end-0.05);
-      e.target.value=Math.round(r.start*100);div.querySelector('.cu-rs-val').textContent=Math.round(r.start*100)+'%';
+      r.start=Math.min(parseFloat(e.target.value)/100,r.end-CU_MIN);
+      e.target.value=r.start*100;div.querySelector('.cu-rs-val').textContent=fmtNum(r.start*100)+'%';
       updateCutoutInfo();drawCutout();
     });
     div.querySelector('.cu-re').addEventListener('input',e=>{
-      r.end=Math.max(parseFloat(e.target.value)/100,r.start+0.05);
-      e.target.value=Math.round(r.end*100);div.querySelector('.cu-re-val').textContent=Math.round(r.end*100)+'%';
+      r.end=Math.max(parseFloat(e.target.value)/100,r.start+CU_MIN);
+      e.target.value=r.end*100;div.querySelector('.cu-re-val').textContent=fmtNum(r.end*100)+'%';
       updateCutoutInfo();drawCutout();
     });
-    if(CU.regions.length>1)div.querySelector('.cu-del-r').addEventListener('click',()=>{CU.regions.splice(i,1);renderCutoutRegions();updateCutoutInfo();drawCutout();});
+    if(CU.regions.length>1)div.querySelector('.cu-del-r').addEventListener('click',()=>{
+      CU.regions.splice(i,1);
+      CU.selIdx=Math.min(CU.selIdx,CU.regions.length-1);
+      renderCutoutRegions();updateCutoutInfo();drawCutout();
+    });
     box.appendChild(div);
-  });
+  }
+  const single=CU.regions.length<=1;
+  $('cu-nav-up').disabled=single;$('cu-nav-down').disabled=single;
 }
 
 function updateCutoutInfo(){
@@ -2770,12 +3038,13 @@ function updateCutoutInfo(){
 function drawCutout(){
   const cv=$('cutout-canvas'),ctx=cv.getContext('2d');
   ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(CU.imgEl,0,0,cv.width,cv.height);
-  CU.regions.forEach(r=>{
+  CU.regions.forEach((r,i)=>{
+    const sel=i===CU.selIdx;
     const sp=CU.mode==='v'?r.start*cv.height:r.start*cv.width;
     const ep=CU.mode==='v'?r.end*cv.height:r.end*cv.width;
-    ctx.fillStyle='rgba(200,0,0,0.35)';
+    ctx.fillStyle=sel?'rgba(255,105,64,0.45)':'rgba(120,120,120,0.30)';
     if(CU.mode==='v')ctx.fillRect(0,sp,cv.width,ep-sp);else ctx.fillRect(sp,0,ep-sp,cv.height);
-    ctx.strokeStyle='#FF6940';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+    ctx.strokeStyle=sel?'#FF6940':'#999';ctx.lineWidth=sel?2.5:1.5;ctx.setLineDash(sel?[6,4]:[4,4]);
     if(CU.mode==='v'){
       ctx.beginPath();ctx.moveTo(0,sp);ctx.lineTo(cv.width,sp);ctx.stroke();
       ctx.beginPath();ctx.moveTo(0,ep);ctx.lineTo(cv.width,ep);ctx.stroke();
@@ -2802,6 +3071,7 @@ function drawCutout(){
     // ハンドルから 10% 以上離れている場合はドラッグ開始しない
     if(minD>0.10){CU.drag=null;return;}
     CU.drag=best;cuCvs.setPointerCapture(e.pointerId);
+    if(CU.selIdx!==best.idx){CU.selIdx=best.idx;renderCutoutRegions();drawCutout();}
   });
   cuCvs.addEventListener('pointermove',e=>{
     if(!CU.drag||cutoutZoom.isZooming())return;
@@ -2809,12 +3079,20 @@ function drawCutout(){
     let p=CU.mode==='v'?(e.clientY-r.top)/r.height:(e.clientX-r.left)/r.width;
     p=Math.max(0,Math.min(1,p));
     const rg=CU.regions[CU.drag.idx];
-    if(CU.drag.which==='start')rg.start=Math.min(p,rg.end-0.05);
-    else rg.end=Math.max(p,rg.start+0.05);
+    if(CU.drag.which==='start')rg.start=Math.min(p,rg.end-CU_MIN);
+    else rg.end=Math.max(p,rg.start+CU_MIN);
     renderCutoutRegions();updateCutoutInfo();drawCutout();
   });
   cuCvs.addEventListener('pointerup',()=>{CU.drag=null;});
   cuCvs.addEventListener('pointercancel',()=>{CU.drag=null;});
+  $('cu-nav-up').addEventListener('click',()=>{
+    CU.selIdx=(CU.selIdx-1+CU.regions.length)%CU.regions.length;
+    renderCutoutRegions();drawCutout();
+  });
+  $('cu-nav-down').addEventListener('click',()=>{
+    CU.selIdx=(CU.selIdx+1)%CU.regions.length;
+    renderCutoutRegions();drawCutout();
+  });
   $('cu-add').addEventListener('click',()=>{
     const sorted=[...CU.regions].sort((a,b)=>a.start-b.start);
     const gaps=[];let pos=0;
@@ -2824,6 +3102,7 @@ function drawCutout(){
     const big=gaps.reduce((a,b)=>(b.to-b.from)>(a.to-a.from)?b:a);
     const mid=(big.from+big.to)/2,h=Math.min((big.to-big.from)/4,0.12);
     CU.regions.push({start:Math.max(0,mid-h),end:Math.min(1,mid+h)});
+    CU.selIdx=CU.regions.length-1;
     renderCutoutRegions();updateCutoutInfo();drawCutout();
   });
   $('cutout-apply-btn').addEventListener('click',()=>{
@@ -2833,7 +3112,7 @@ function drawCutout(){
     updateImgThumb(img).then(()=>{renderGridView();persistLayout();});
     $('cutout-modal').classList.add('hidden'); history.back();
   });
-  $('cutout-reset-btn').addEventListener('click',()=>{CU.regions=[{start:0.3,end:0.6}];renderCutoutRegions();updateCutoutInfo();drawCutout();});
+  $('cutout-reset-btn').addEventListener('click',()=>{CU.regions=[{start:0.3,end:0.6}];CU.selIdx=0;renderCutoutRegions();updateCutoutInfo();drawCutout();});
   $('cutout-cancel-btn').addEventListener('click',()=>{$('cutout-modal').classList.add('hidden');history.back();});
 })();
 
@@ -3189,8 +3468,10 @@ document.addEventListener('click',e=>{
   inp.focus();inp.select();
   const finish=()=>{
     const mn=parseFloat(slider.min)||0,mx=parseFloat(slider.max)||9999;
-    const v=Math.round(Math.max(mn,Math.min(mx,parseFloat(inp.value)||0)));
-    slider.value=v;span.textContent=v+(span.textContent.includes('%')?'':'');
+    const step=parseFloat(slider.step)||1;
+    let v=Math.max(mn,Math.min(mx,parseFloat(inp.value)||0));
+    v=roundToStep(v,step);
+    slider.value=v;span.textContent=fmtNum(v);
     slider.dispatchEvent(new Event('input',{bubbles:true}));
     inp.remove();span.style.display='';
   };
@@ -3237,11 +3518,20 @@ function showUpdateToast(){
   if(document.querySelector('.sw-toast'))return; // 二重表示防止
   const t=document.createElement('div');t.className='sw-toast';
   t.innerHTML='🔄 アプリが更新されました&nbsp;'
-    +'<button class="sw-toast-reload" onclick="location.reload()">再読込</button>'
-    +'<button class="sw-toast-close" onclick="this.parentElement.remove()">✕</button>';
+    +'<button class="sw-toast-reload">再読込</button>'
+    +'<button class="sw-toast-close">✕</button>';
+  t.querySelector('.sw-toast-reload').addEventListener('click',reloadApp);
+  t.querySelector('.sw-toast-close').addEventListener('click',()=>t.remove());
   document.body.appendChild(t);
   setTimeout(()=>t?.remove(),15000);
 }
+// 多重リロード防止＋SWの引き継ぎが完全に落ち着くのを少し待ってからリロードする
+function reloadApp(){
+  if(sessionStorage.getItem('nc_reloading'))return;
+  sessionStorage.setItem('nc_reloading','1');
+  setTimeout(()=>location.reload(),80);
+}
+window.addEventListener('pageshow',()=>{sessionStorage.removeItem('nc_reloading');});
 // ===== 初期化 =====
 (function init(){
   syncAdjPanel(); renderGridView(); updateCountBadge();
