@@ -364,6 +364,10 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
     <div id="grid-view" style="display:none"></div>
     <input type="file" id="file-input" accept="image/*" multiple style="display:none">
     <div id="gv-guide" style="display:none;text-align:center;font-size:11.5px;color:var(--muted2);padding:8px 0 2px;letter-spacing:0.3px">💡 画像を長押し（または右クリック）で加工メニュー</div>
+    <div style="margin-top:22px;padding-top:14px;border-top:1px solid var(--border);text-align:center;">
+      <button type="button" id="btn-load-namaco" style="background:none;border:1px solid var(--border2);color:var(--muted);font-size:12px;border-radius:8px;padding:8px 14px;cursor:pointer;touch-action:manipulation;">📦 オリジナル保存形式(.namaco)読み込み</button>
+    </div>
+    <input type="file" id="namaco-file-input" accept=".namaco" style="display:none">
   </section>
 
   <!-- ② プレビュー（レイアウト・背景・枠線統合） -->
@@ -515,6 +519,13 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 
   <!-- ④ 保存 -->
   <section class="tab" id="tab-save">
+    <div class="card">
+      <div class="card-head">📦 編集データごと保存</div>
+      <div class="card-body" style="gap:8px">
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6">画像そのもの・トリミングやトッピングなどの編集内容・配置を全て含んだ、あとで再編集できる独自形式（.namaco）で保存します。</div>
+        <button type="button" class="btn btn-full" style="background:var(--violet);color:#fff" id="btn-save-namaco">📦 .namaco形式で保存</button>
+      </div>
+    </div>
     <div id="save-empty" class="empty-state hidden"><div class="empty-icon">💾</div><div class="empty-text">先に「プレビュー」タブで<br>画像を生成してください</div></div>
     <div id="save-content" class="hidden">
       <div id="warn-size-danger" class="alert alert-danger hidden"><span class="alert-icon">🚫</span><span id="warn-size-danger-text"></span></div>
@@ -664,6 +675,18 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
     <div class="ccm-btns">
       <button type="button" id="ccm-cancel">キャンセル</button>
       <button type="button" id="ccm-ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- .namaco読み込み確認モーダル -->
+<div id="load-namaco-modal" style="display:none;position:fixed;inset:0;background:rgba(0,20,60,0.45);z-index:999;align-items:center;justify-content:center;padding:20px;">
+  <div class="modal-box">
+    <div class="modal-title">読み込みますか？</div>
+    <div class="modal-body">現在編集中のデータは破棄されます。よろしいですか？</div>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button type="button" id="load-namaco-cancel" style="flex:1;padding:12px;border-radius:9px;border:1px solid var(--border2);background:var(--surf2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;">キャンセル</button>
+      <button type="button" id="load-namaco-confirm" style="flex:1;padding:12px;border-radius:9px;border:none;background:var(--violet);color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">読み込む</button>
     </div>
   </div>
 </div>
@@ -823,6 +846,117 @@ async function loadPendingShares(){
     persistNewImages(loaded).then(()=>persistLayout()); showTab('images');
   }catch(e){ console.warn('loadPending:',e); }
 }
+// ===== 独自形式 .namaco（編集データごと保存/読み込み） =====
+// バイナリ構成: [8B マジック"NAMACO1\0"][4B uint32LE JSONバイト長][JSON UTF-8]
+//              [以降 画像の数だけ: 4B uint32LE バイト長 + 画像バイナリ]（順序はJSON内 images[] と対応）
+const NAMACO_MAGIC='NAMACO1\0';
+async function exportNamacoFile(){
+  const imgs=flatImages();
+  if(!imgs.length){ alert('保存する画像がありません。'); return; }
+  const btn=$('btn-save-namaco'); const origText=btn.textContent;
+  btn.disabled=true; btn.textContent='書き出し中…';
+  try{
+    const blobs=await Promise.all(imgs.map(img=>fetch(img.url).then(r=>r.blob())));
+    const metaImages=imgs.map((img,i)=>({
+      id:img.id,name:img.name,mimeType:blobs[i].type||'image/png',
+      cropData:img.cropData||null,transform:img.transform||null,
+      colorAdjust:img.colorAdjust||null,cutoutData:img.cutoutData||null,
+    }));
+    const meta={
+      format:'namaco',version:1,app:'NamaCollage',savedAt:new Date().toISOString(),
+      nextId:state.nextId,nextToppingId:state.nextToppingId,
+      settings:{...settings},toppings:state.toppings,
+      images:metaImages,
+      grid:state.grid.map(row=>row.map(img=>img.id)),
+    };
+    const metaBytes=new TextEncoder().encode(JSON.stringify(meta));
+    const parts=[new TextEncoder().encode(NAMACO_MAGIC)];
+    const lenBuf=new ArrayBuffer(4);new DataView(lenBuf).setUint32(0,metaBytes.byteLength,true);
+    parts.push(new Uint8Array(lenBuf),metaBytes);
+    for(const blob of blobs){
+      const buf=await blob.arrayBuffer();
+      const lb=new ArrayBuffer(4);new DataView(lb).setUint32(0,buf.byteLength,true);
+      parts.push(new Uint8Array(lb),new Uint8Array(buf));
+    }
+    const fileBlob=new Blob(parts,{type:'application/octet-stream'});
+    const url=URL.createObjectURL(fileBlob);
+    const a=document.createElement('a');
+    a.href=url;a.download='namacollage_'+Date.now()+'.namaco';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),8000);
+  }catch(e){
+    console.warn('namaco export error:',e);
+    alert('保存に失敗しました:\n'+e.message);
+  }finally{
+    btn.disabled=false; btn.textContent=origText;
+  }
+}
+async function importNamacoFile(file){
+  const buf=await file.arrayBuffer();
+  const dv=new DataView(buf);
+  const magic=new TextDecoder().decode(new Uint8Array(buf,0,8));
+  if(magic!==NAMACO_MAGIC) throw new Error('.namacoファイルとして認識できませんでした（形式不正）。');
+  let off=8;
+  const jsonLen=dv.getUint32(off,true); off+=4;
+  const meta=JSON.parse(new TextDecoder().decode(new Uint8Array(buf,off,jsonLen))); off+=jsonLen;
+  if(meta.format!=='namaco') throw new Error('.namacoファイルとして認識できませんでした（形式不正）。');
+  const blobMap=new Map(); // id → Blob
+  for(const im of meta.images){
+    const len=dv.getUint32(off,true); off+=4;
+    const bytes=new Uint8Array(buf,off,len); off+=len;
+    blobMap.set(im.id,new Blob([bytes],{type:im.mimeType||'image/png'}));
+  }
+  // 既存データを破棄して置き換え
+  flatImages().forEach(img=>{URL.revokeObjectURL(img.url);if(img.thumbUrl)URL.revokeObjectURL(img.thumbUrl);});
+  await dbTxW('imgs',s=>s.clear()).catch(()=>{});
+  const imgMap=new Map(); // id → 復元済み画像オブジェクト
+  await Promise.all(meta.images.map(async im=>{
+    const blob=blobMap.get(im.id);if(!blob)return;
+    const url=URL.createObjectURL(blob),el=new Image();
+    await new Promise(r=>{el.onload=r;el.onerror=r;el.src=url;});
+    imgMap.set(im.id,{
+      id:im.id,name:im.name,imgEl:el,url,w:el.naturalWidth,h:el.naturalHeight,
+      cropData:im.cropData||null,transform:im.transform||null,
+      colorAdjust:im.colorAdjust||null,cutoutData:im.cutoutData||null,thumbUrl:null,
+    });
+  }));
+  state.grid=(meta.grid||[]).map(row=>row.map(id=>imgMap.get(id)).filter(Boolean)).filter(r=>r.length>0);
+  if(!state.grid.length&&imgMap.size) state.grid=[Array.from(imgMap.values())];
+  state.nextId=meta.nextId||(Math.max(0,...Array.from(imgMap.keys()))+1);
+  state.toppings=(meta.toppings||[]).map(t=>({...t,type:t.type||'text'}));
+  state.nextToppingId=meta.nextToppingId||1;
+  state.selectedToppingId=null;
+  if(meta.settings){
+    Object.keys(settings).forEach(k=>{if(meta.settings[k]!==undefined)settings[k]=meta.settings[k];});
+    syncAdjPanel();
+  }
+  state.previewDirty=true; state.gridViewDirty=false;
+  renderGridView(); updateCountBadge(); renderToppingList(); renderToppingCanvas();
+  // 各画像のサムネイル・IndexedDBへの反映
+  await persistNewImages(Array.from(imgMap.values()));
+  await persistLayout();
+  await Promise.all(Array.from(imgMap.values()).filter(img=>img.cropData||img.cutoutData||img.colorAdjust||img.transform).map(img=>updateImgThumb(img)));
+  renderGridView();
+  showTab('images');
+}
+$('btn-save-namaco').addEventListener('click',exportNamacoFile);
+$('btn-load-namaco').addEventListener('click',()=>{
+  if(!flatImages().length){ $('namaco-file-input').value=''; $('namaco-file-input').click(); return; }
+  $('load-namaco-modal').style.display='flex';
+});
+$('load-namaco-cancel').addEventListener('click',()=>{$('load-namaco-modal').style.display='none';});
+$('load-namaco-modal').addEventListener('click',e=>{if(e.target===$('load-namaco-modal'))$('load-namaco-modal').style.display='none';});
+$('load-namaco-confirm').addEventListener('click',()=>{
+  $('load-namaco-modal').style.display='none';
+  $('namaco-file-input').value='';
+  $('namaco-file-input').click();
+});
+$('namaco-file-input').addEventListener('change',async e=>{
+  const file=e.target.files[0]; if(!file)return;
+  try{ await importNamacoFile(file); }
+  catch(err){ console.warn('namaco import error:',err); alert('読み込みに失敗しました:\n'+err.message); }
+});
+
 // メッセージ処理は init 内に統合
 document.addEventListener('paste',async e=>{
   const files=Array.from(e.clipboardData?.items||[]).filter(it=>it.type.startsWith('image/')).map(it=>it.getAsFile()).filter(Boolean);
