@@ -1508,60 +1508,7 @@ function _pointInPoly(px,py,pts){
   return inside;
 }
 
-function drawEffectItem(ctx,s,W,H,scale){
-  const isBlur=s.type.startsWith('blur');
-  const shape=s.type.split('-')[1];
-  const intensity=Math.max(2,(s.intensity||20)*scale);
-  const px=p=>p/100*W,py=p=>p/100*H;
-
-  // クリップパスを構築
-  const buildClip=()=>{
-    ctx.beginPath();
-    if(shape==='rect'){
-      ctx.rect(px(s.x),py(s.y),px(s.w),px(s.h));
-    }else if(shape==='ellipse'){
-      const ecx=px(s.x)+px(s.w)/2,ecy=py(s.y)+px(s.h)/2;
-      const erx=Math.abs(px(s.w))/2,ery=Math.abs(px(s.h))/2;
-      ctx.ellipse(ecx,ecy,erx,ery,0,0,Math.PI*2);
-    }else if(shape==='poly'&&s.points?.length>=3){
-      ctx.moveTo(px(s.points[0].x),py(s.points[0].y));
-      s.points.slice(1).forEach(p=>ctx.lineTo(px(p.x),py(p.y)));
-      ctx.closePath();
-    }else return false;
-    return true;
-  };
-
-  // 現在のキャンバス状態をスナップショット
-  const snap=document.createElement('canvas');snap.width=W;snap.height=H;
-  snap.getContext('2d').drawImage(ctx.canvas,0,0);
-
-  ctx.save();
-  if(!buildClip()){ctx.restore();return;}
-  ctx.clip();
-
-  if(isBlur){
-    // ぼかし: filter:blur() で処理
-    const blurred=document.createElement('canvas');blurred.width=W;blurred.height=H;
-    const bc=blurred.getContext('2d');
-    bc.filter=`blur(${intensity}px)`;
-    bc.drawImage(snap,0,0);
-    bc.filter='none';
-    ctx.drawImage(blurred,0,0);
-  }else{
-    // モザイク: 縮小→ニアレストネイバー拡大
-    const blockPx=Math.max(2,Math.round(intensity));
-    const smallW=Math.max(1,Math.round(W/blockPx)),smallH=Math.max(1,Math.round(H/blockPx));
-    const small=document.createElement('canvas');small.width=smallW;small.height=smallH;
-    const sc=small.getContext('2d');
-    sc.imageSmoothingEnabled=true;sc.drawImage(snap,0,0,smallW,smallH);
-    ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(small,0,0,smallW,smallH,0,0,W,H);
-    ctx.imageSmoothingEnabled=true;
-  }
-  ctx.restore();
-}
-
-// 注: applyToppings本体は drawTextItem/drawShapeItem 等を定義した後段（下方）にまとめて定義されています
+// 注: drawEffectItem本体は drawTextItem/drawShapeItem 等を定義した後段（下方）にまとめて定義されています
 
 async function renderBaseAt(scale,fmt){
   const nat=calcNaturalDimensions(); if(!nat) return null;
@@ -1745,7 +1692,7 @@ $('btn-eyedrop').addEventListener('click',async()=>{
 const TP_LABELS={text:'✍️ テキスト',line:'— 直線',arrow:'→ 矢印',rect:'□ 四角形',ellipse:'○ 楕円',poly:'⬟ 多角形','blur-rect':'🫧□ ぼかし','blur-ellipse':'🫧○ ぼかし','blur-poly':'🫧⬟ ぼかし','mosaic-rect':'⬛□ モザイク','mosaic-ellipse':'⬛○ モザイク','mosaic-poly':'⬛⬟ モザイク','draw-line':'✏️ 線描画','draw-blur':'🫧 ぼかし描画','draw-mosaic':'⬛ モザイク描画'};
 
 function createToppingItem(type){
-  const base={id:state.nextToppingId++,type,stroke2Enabled:false,stroke2Color:'#ffffff',stroke2Width:3,shadowEnabled:false,shadowColor:'#000000',shadowBlur:8,shadowX:3,shadowY:3};
+  const base={id:state.nextToppingId++,type,rotation:0,stroke2Enabled:false,stroke2Color:'#ffffff',stroke2Width:3,shadowEnabled:false,shadowColor:'#000000',shadowBlur:8,shadowX:3,shadowY:3};
   switch(type){
     case 'text':  return{...base,text:'テキスト',x:50,y:50,fontSize:80,color:'#ffffff',textAlign:'center',strokeWidth:3,strokeColor:'#000000',shadowEnabled:true,shadowColor:'#000000',shadowBlur:6,shadowX:2,shadowY:2};
     case 'line':  return{...base,x:20,y:50,x2:80,y2:50,color:'#ff4444',strokeWidth:4};
@@ -2012,6 +1959,7 @@ function drawTextItem(ctx,t,W,H,scale){
   if(!t.text?.trim())return;
   const x=t.x/100*W,y=t.y/100*H,fs=Math.max(1,Math.round((t.fontSize||80)*scale));
   ctx.save();
+  if(t.rotation)  {ctx.translate(x,y);ctx.rotate(t.rotation*Math.PI/180);ctx.translate(-x,-y);}
   const ff2=t.fontFamily&&t.fontFamily!=='sans-serif'?'"'+t.fontFamily+'"':'sans-serif';ctx.font='bold '+fs+'px '+ff2;
   ctx.textAlign=t.textAlign||'center';ctx.textBaseline='middle';
   const lines=t.text.split('\n'),lh=fs*1.28,totalH=(lines.length-1)*lh;
@@ -2036,6 +1984,10 @@ function drawShapeItem(ctx,s,W,H,scale){
   const px=p=>p/100*W,py=p=>p/100*H;
   const lw=Math.max(0.5,(s.strokeWidth||4)*scale);
   ctx.save();
+  if(s.rotation){
+    const c=getItemCenterPct(s);
+    ctx.translate(px(c.cx),py(c.cy));ctx.rotate(s.rotation*Math.PI/180);ctx.translate(-px(c.cx),-py(c.cy));
+  }
   ctx.lineJoin='round';ctx.lineCap='round';
 
   // 影の設定
@@ -2136,8 +2088,13 @@ function drawEffectItem(ctx,s,W,H,scale){
   snap.getContext('2d').drawImage(ctx.canvas,0,0);
 
   ctx.save();
+  if(s.rotation){
+    const c=getItemCenterPct(s);
+    ctx.translate(px(c.cx),py(c.cy));ctx.rotate(s.rotation*Math.PI/180);ctx.translate(-px(c.cx),-py(c.cy));
+  }
   if(!buildClip()){ctx.restore();return;}
   ctx.clip();
+  ctx.setTransform(1,0,0,1,0,0); // クリップ形状は回転済みで確定 → 以降は非回転座標で描画（中身自体は回転させない）
 
   if(isBlur){
     // ぼかし: filter:blur() で処理
@@ -2229,6 +2186,10 @@ function drawFreehandLine(ctx,t,W,H,scale){
   if(t.stroke2Enabled)paint(t.stroke2Color||'#ffffff',lw+(t.stroke2Width||3)*scale*2);
   paint(t.color||'#ff4444',lw);
   ctx.save();
+  if(t.rotation){
+    const c=getItemCenterPct(t),cx=c.cx/100*W,cy=c.cy/100*H;
+    ctx.translate(cx,cy);ctx.rotate(t.rotation*Math.PI/180);ctx.translate(-cx,-cy);
+  }
   if(t.shadowEnabled){ctx.shadowColor=t.shadowColor||'#000';ctx.shadowBlur=(t.shadowBlur||8)*scale;ctx.shadowOffsetX=(t.shadowX||3)*scale;ctx.shadowOffsetY=(t.shadowY||3)*scale;}
   ctx.globalAlpha=(t.opacity!=null?t.opacity:100)/100;
   ctx.drawImage(layer,0,0);
@@ -2244,6 +2205,10 @@ function drawFreehandEffect(ctx,t,W,H,scale){
   const maskC=document.createElement('canvas');maskC.width=W;maskC.height=H;
   const mctx=maskC.getContext('2d');
   mctx.lineCap='round'; mctx.lineJoin='round';
+  if(t.rotation){
+    const c=getItemCenterPct(t),cx=c.cx/100*W,cy=c.cy/100*H;
+    mctx.translate(cx,cy);mctx.rotate(t.rotation*Math.PI/180);mctx.translate(-cx,-cy);
+  }
   strokes.forEach(s=>{
     mctx.save();
     mctx.globalCompositeOperation=s.erase?'destination-out':'source-over';
@@ -2277,6 +2242,10 @@ function drawFreehandEffect(ctx,t,W,H,scale){
   const lctx=layer.getContext('2d');
   if(t.stroke2Enabled){
     lctx.lineCap='round';lctx.lineJoin='round';
+    if(t.rotation){
+      const c=getItemCenterPct(t),cx=c.cx/100*W,cy=c.cy/100*H;
+      lctx.translate(cx,cy);lctx.rotate(t.rotation*Math.PI/180);lctx.translate(-cx,-cy);
+    }
     strokes.forEach(s=>{
       lctx.save();
       lctx.globalCompositeOperation=s.erase?'destination-out':'source-over';
@@ -2286,6 +2255,7 @@ function drawFreehandEffect(ctx,t,W,H,scale){
       lctx.restore();
     });
   }
+  lctx.setTransform(1,0,0,1,0,0); // 縁取りは回転済みで確定 → エフェクト本体は非回転のまま重ねる
   lctx.drawImage(effC,0,0);
 
   ctx.save();
@@ -2690,6 +2660,11 @@ function renderToppingCanvas(){
       const isShape=(type==='rect'||type==='ellipse')||isEffect&&(sh==='rect'||sh==='ellipse');
       ctx.save();
       ctx.strokeStyle='#5548D6';ctx.lineWidth=1.5/TZ.scale;
+      // rect/ellipse/blur-rect等は回転する可能性があるため、中心を軸に選択枠全体を回転させて実際の見た目と一致させる
+      if((sh==='rect'||sh==='ellipse')&&sel.rotation){
+        const g0=getShapeGeomCanvas(sel,tc.width,tc.height);
+        ctx.translate(g0.cx,g0.cy);ctx.rotate(sel.rotation*Math.PI/180);ctx.translate(-g0.cx,-g0.cy);
+      }
       if(isEffect||type==='rect'||type==='ellipse'){
         ctx.setLineDash([5/TZ.scale,4/TZ.scale]);
         ctx.beginPath();
@@ -2722,6 +2697,11 @@ function renderToppingCanvas(){
         const HR=6/TZ.scale;
         ctx.setLineDash([]);
         ctx.lineWidth=1.5/TZ.scale;
+        // 回転ハンドルへの接続線
+        ctx.beginPath();ctx.moveTo(g.cx,g.y);ctx.lineTo(g.cx,g.y-34/TZ.scale);ctx.strokeStyle='#5548D6';ctx.stroke();
+        // 回転ハンドル本体
+        ctx.beginPath();ctx.arc(g.cx,g.y-34/TZ.scale,HR*1.2,0,Math.PI*2);
+        ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#5548D6';ctx.stroke();
         // 中心ハンドル（移動用）
         ctx.beginPath();ctx.arc(g.cx,g.cy,HR*2,0,Math.PI*2);
         ctx.fillStyle='rgba(85,72,214,0.25)';ctx.fill();
@@ -2743,17 +2723,28 @@ function renderToppingCanvas(){
 }
 
 // ===== リスト（アコーディオン） =====
+// アイテムの中心座標（%空間）を返す共通ヘルパー。回転の軸・複製時のオフセット計算などで使う
+function getItemCenterPct(t){
+  const type=t.type||'text';
+  if(type==='line'||type==='arrow')return{cx:(t.x+t.x2)/2,cy:(t.y+t.y2)/2};
+  if(t.w!=null&&t.h!=null)return{cx:t.x+t.w/2,cy:t.y+t.h/2};
+  if(t.points&&t.points.length){
+    return{cx:t.points.reduce((s,p)=>s+p.x,0)/t.points.length,cy:t.points.reduce((s,p)=>s+p.y,0)/t.points.length};
+  }
+  if(t.strokes&&t.strokes.length){
+    const strokes=getItemStrokeObjs(t);
+    let sx=0,sy=0,n=0;
+    strokes.forEach(s=>s.pts.forEach(p=>{sx+=p.x;sy+=p.y;n++;}));
+    if(n>0)return{cx:sx/n,cy:sy/n};
+  }
+  if(t.x!=null)return{cx:t.x,cy:t.y!=null?t.y:50};
+  return{cx:50,cy:50};
+}
 // アイテムを複製する。位置は画像中心から見て内側方向へ10%ずらす（画面外へのはみ出し防止）
 function duplicateToppingItem(t){
   const copy=JSON.parse(JSON.stringify(t));
   copy.id=state.nextToppingId++;
-  const type=t.type||'text';
-  let cx=50,cy=50;
-  if(type==='line'||type==='arrow'){cx=(t.x+t.x2)/2;cy=(t.y+t.y2)/2;}
-  else if(t.w!=null&&t.h!=null){cx=t.x+t.w/2;cy=t.y+t.h/2;}
-  else if(t.points&&t.points.length){cx=t.points.reduce((s,p)=>s+p.x,0)/t.points.length;cy=t.points.reduce((s,p)=>s+p.y,0)/t.points.length;}
-  else if(t.strokes&&t.strokes.length){let sx=0,sy=0,n=0;t.strokes.forEach(str=>str.forEach(p=>{sx+=p.x;sy+=p.y;n++;}));if(n>0){cx=sx/n;cy=sy/n;}}
-  else if(t.x!=null){cx=t.x;cy=t.y!=null?t.y:50;}
+  const{cx,cy}=getItemCenterPct(t);
   const dx=cx<50?10:-10,dy=cy<50?10:-10;
   const cl=(v,max)=>Math.max(0,Math.min(max,v));
   if(copy.w!=null)copy.x=cl(copy.x+dx,100-copy.w);else if(copy.x!=null)copy.x=cl(copy.x+dx,100);
@@ -2761,7 +2752,11 @@ function duplicateToppingItem(t){
   if(copy.x2!=null)copy.x2=cl(copy.x2+dx,100);
   if(copy.y2!=null)copy.y2=cl(copy.y2+dy,100);
   if(copy.points)copy.points=copy.points.map(p=>({x:cl(p.x+dx,100),y:cl(p.y+dy,100)}));
-  if(copy.strokes)copy.strokes=copy.strokes.map(str=>str.map(p=>({x:cl(p.x+dx,100),y:cl(p.y+dy,100)})));
+  // strokesは旧形式（生の点配列）・新形式（{pts,erase}）どちらもあり得るので正規化してから処理
+  if(copy.strokes)copy.strokes=copy.strokes.map(s=>{
+    const obj=Array.isArray(s)?{pts:s,erase:false}:s;
+    return{...obj,pts:obj.pts.map(p=>({x:cl(p.x+dx,100),y:cl(p.y+dy,100)}))};
+  });
   return copy;
 }
 function renderToppingList(){
@@ -2923,8 +2918,16 @@ function _hitTest(cx,cy){
   }
   return null;
 }
+// 図形の回転を打ち消す方向にポインタ座標を変換する（回転中の図形のハンドル当たり判定・ドラッグ計算用）
+function _unrotatePt(px,py,ccx,ccy,rotDeg){
+  if(!rotDeg)return{x:px,y:py};
+  const rad=-rotDeg*Math.PI/180;
+  const dx=px-ccx,dy=py-ccy;
+  return{x:ccx+dx*Math.cos(rad)-dy*Math.sin(rad),y:ccy+dx*Math.sin(rad)+dy*Math.cos(rad)};
+}
+function normDeg(a){a=a%360;if(a<0)a+=360;return a;}
 // ハンドルヒットテスト（選択中の図形のみ）
-// 戻り値: 'center' | 'tl'|'tr'|'bl'|'br' | 't'|'b'|'l'|'r' | null
+// 戻り値: 'rotate' | 'center' | 'tl'|'tr'|'bl'|'br' | 't'|'b'|'l'|'r' | null
 function _hitTestHandle(cx,cy,t){
   if(!t)return null;
   const tc=$('topping-canvas');if(!tc?.width)return null;
@@ -2933,6 +2936,9 @@ function _hitTestHandle(cx,cy,t){
   const sh=type.includes('-')?type.split('-')[1]:type;
   if(sh!=='rect'&&sh!=='ellipse')return null;
   const g=getShapeGeomCanvas(t,W,H);
+  if(t.rotation){const p=_unrotatePt(cx,cy,g.cx,g.cy,t.rotation);cx=p.x;cy=p.y;}
+  // 回転ハンドル（図形ローカル座標での「上」に固定表示）
+  if(Math.hypot(cx-g.cx,cy-(g.y-34))<HR)return'rotate';
   if(Math.hypot(cx-g.cx,cy-g.cy)<HR*1.6)return'center';
   if(sh==='rect'){
     if(Math.hypot(cx-g.x,       cy-g.y      )<HR)return'tl';
@@ -3077,7 +3083,16 @@ tpWrap.addEventListener('pointermove',e=>{
       }
       renderToppingCanvas();return;
     }
-    // ハンドルドラッグ（中心移動 or 角/辺リサイズ）
+    // ハンドルドラッグ（回転 or 中心移動 or 角/辺リサイズ）
+    if(TZ.dragMode==='rotate'){
+      const oc=TZ.oc;
+      const ang=Math.atan2(cy-oc.cy,cx-oc.cx)*180/Math.PI;
+      t.rotation=Math.round(normDeg(ang+90));
+      const rs=$('tp-selected-panel')?.querySelector('.tp-rotation');
+      const rv=$('tp-selected-panel')?.querySelector('.tp-rotation-val');
+      if(rs)rs.value=t.rotation;if(rv)rv.textContent=fmtNum(t.rotation)+'°';
+      renderToppingCanvas();return;
+    }
     if(TZ.dragMode==='center'||['tl','tr','bl','br','t','b','l','r'].includes(TZ.dragMode)){
       const dm=TZ.dragMode,oc=TZ.oc;
       if(dm==='center'){
@@ -3086,7 +3101,13 @@ tpWrap.addEventListener('pointermove',e=>{
         t.x=cl((t.x||0)+dx);t.y=cl((t.y||0)+dy);
         if(type==='line'||type==='arrow'){t.x2=cl(t.x2+dx);t.y2=cl(t.y2+dy);}
       }else{
-        const dx=cx-TZ.dStartCX,dy=cy-TZ.dStartCY;
+        // 回転中の図形は、ポインタ座標を図形ローカル座標系に戻してから既存の計算式に乗せる
+        let curX=cx,curY=cy,startX=TZ.dStartCX,startY=TZ.dStartCY;
+        if(t.rotation){
+          const cur=_unrotatePt(cx,cy,oc.cx,oc.cy,t.rotation);curX=cur.x;curY=cur.y;
+          const st=_unrotatePt(TZ.dStartCX,TZ.dStartCY,oc.cx,oc.cy,t.rotation);startX=st.x;startY=st.y;
+        }
+        const dx=curX-startX,dy=curY-startY;
         const dxW=dx/W*100,dyH=dy/H*100,dyW=dy/W*100;
         const MIN=2;
         let nx=oc.x/W*100,ny=oc.y/H*100,nw=oc.w/W*100,nh=oc.h/W*100;
@@ -3183,10 +3204,21 @@ function renderSelectedPanel(){
   const t=state.toppings.find(tp=>tp.id===state.selectedToppingId);
   if(!t){panel.innerHTML='';return;}
   const type=t.type||'text';
+  const rotHTML='<div class="adj-row"><span class="adj-label">回転</span>'+
+    '<input type="range" class="adj-slider tp-rotation" min="0" max="360" step="1" value="'+(t.rotation||0)+'">'+
+    '<span class="adj-val tp-rotation-val">'+fmtNum(t.rotation||0)+'°</span></div>';
   panel.innerHTML='<div class="tp-panel-head">'+TP_LABELS[type]+' の設定</div>'+
-    '<div id="tp-panel-body">'+renderToppingControlsHTML(t)+'</div>';
+    '<div id="tp-panel-body">'+renderToppingControlsHTML(t)+rotHTML+'</div>';
   bindToppingControls(panel,t);
   enhanceColorInputs(panel);
+  // 回転は全タイプ共通なのでここで直接バインド
+  const rotSlider=panel.querySelector('.tp-rotation'),rotVal=panel.querySelector('.tp-rotation-val');
+  if(rotSlider)rotSlider.addEventListener('input',()=>{
+    t.rotation=parseFloat(rotSlider.value)||0;
+    if(rotVal)rotVal.textContent=fmtNum(t.rotation)+'°';
+    renderToppingCanvas();
+  });
+  rotSlider?.addEventListener('change',()=>tpSaveNow());
 }
 
 
