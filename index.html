@@ -195,6 +195,8 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 .tp-num{flex:1;font-size:12px;font-weight:700;color:var(--violet);}
 .tp-del{border:none;background:rgba(196,28,0,0.1);color:var(--danger);border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;font-weight:700;touch-action:manipulation;}
 .tp-dup{border:none;background:rgba(85,72,214,0.1);color:var(--violet);border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;font-weight:700;touch-action:manipulation;margin-right:4px;}
+.tp-vis{border:none;background:none;color:var(--text);opacity:0.85;border-radius:6px;padding:3px 6px;font-size:14px;cursor:pointer;touch-action:manipulation;margin-right:2px;}
+.tp-vis.is-hidden{color:var(--muted2);opacity:0.4;text-decoration:line-through;}
 .tp-body{padding:10px 12px;display:flex;flex-direction:column;gap:7px;}
 .tp-textarea{background:var(--surf2);border:1px solid var(--border2);border-radius:8px;padding:7px 9px;font-size:13px;color:var(--text);width:100%;resize:vertical;min-height:54px;font-family:inherit;-webkit-user-select:text;user-select:text;}
 .tp-num-inp{background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:7px;padding:5px 6px;font-size:12px;width:52px;text-align:center;-webkit-user-select:text;user-select:text;}
@@ -1692,7 +1694,7 @@ $('btn-eyedrop').addEventListener('click',async()=>{
 const TP_LABELS={text:'✍️ テキスト',line:'— 直線',arrow:'→ 矢印',rect:'□ 四角形',ellipse:'○ 楕円',poly:'⬟ 多角形','blur-rect':'🫧□ ぼかし','blur-ellipse':'🫧○ ぼかし','blur-poly':'🫧⬟ ぼかし','mosaic-rect':'⬛□ モザイク','mosaic-ellipse':'⬛○ モザイク','mosaic-poly':'⬛⬟ モザイク','draw-line':'✏️ 線描画','draw-blur':'🫧 ぼかし描画','draw-mosaic':'⬛ モザイク描画'};
 
 function createToppingItem(type){
-  const base={id:state.nextToppingId++,type,rotation:0,stroke2Enabled:false,stroke2Color:'#ffffff',stroke2Width:3,shadowEnabled:false,shadowColor:'#000000',shadowBlur:8,shadowX:3,shadowY:3};
+  const base={id:state.nextToppingId++,type,rotation:0,hidden:false,stroke2Enabled:false,stroke2Color:'#ffffff',stroke2Width:3,shadowEnabled:false,shadowColor:'#000000',shadowBlur:8,shadowX:3,shadowY:3};
   switch(type){
     case 'text':  return{...base,text:'テキスト',x:50,y:50,fontSize:80,color:'#ffffff',textAlign:'center',strokeWidth:3,strokeColor:'#000000',shadowEnabled:true,shadowColor:'#000000',shadowBlur:6,shadowX:2,shadowY:2};
     case 'line':  return{...base,x:20,y:50,x2:80,y2:50,color:'#ff4444',strokeWidth:4};
@@ -1985,8 +1987,8 @@ function drawShapeItem(ctx,s,W,H,scale){
   const lw=Math.max(0.5,(s.strokeWidth||4)*scale);
   ctx.save();
   if(s.rotation){
-    const c=getItemCenterPct(s);
-    ctx.translate(px(c.cx),py(c.cy));ctx.rotate(s.rotation*Math.PI/180);ctx.translate(-px(c.cx),-py(c.cy));
+    const c=getRotationPivotPx(s,W,H);
+    ctx.translate(c.x,c.y);ctx.rotate(s.rotation*Math.PI/180);ctx.translate(-c.x,-c.y);
   }
   ctx.lineJoin='round';ctx.lineCap='round';
 
@@ -2089,8 +2091,8 @@ function drawEffectItem(ctx,s,W,H,scale){
 
   ctx.save();
   if(s.rotation){
-    const c=getItemCenterPct(s);
-    ctx.translate(px(c.cx),py(c.cy));ctx.rotate(s.rotation*Math.PI/180);ctx.translate(-px(c.cx),-py(c.cy));
+    const c=getRotationPivotPx(s,W,H);
+    ctx.translate(c.x,c.y);ctx.rotate(s.rotation*Math.PI/180);ctx.translate(-c.x,-c.y);
   }
   if(!buildClip()){ctx.restore();return;}
   ctx.clip();
@@ -2122,6 +2124,7 @@ function drawEffectItem(ctx,s,W,H,scale){
 // 合成してから描画する（描画モード中のリアルタイムプレビュー用）。通常描画時は省略可。
 function applyToppings(ctx,W,H,scale,liveId,livePreviewStroke){
   state.toppings.forEach(item=>{
+    if(item.hidden)return; // 非表示トッピングは描画（プレビュー・最終出力とも）しない
     const type=item.type||'text';
     if(liveId!=null&&item.id===liveId&&(type==='draw-line'||type==='draw-blur'||type==='draw-mosaic')){
       const previewItem={...item,strokes:[...getItemStrokeObjs(item),livePreviewStroke]};
@@ -2187,7 +2190,7 @@ function drawFreehandLine(ctx,t,W,H,scale){
   paint(t.color||'#ff4444',lw);
   ctx.save();
   if(t.rotation){
-    const c=getItemCenterPct(t),cx=c.cx/100*W,cy=c.cy/100*H;
+    const c=getRotationPivotPx(t,W,H),cx=c.x,cy=c.y;
     ctx.translate(cx,cy);ctx.rotate(t.rotation*Math.PI/180);ctx.translate(-cx,-cy);
   }
   if(t.shadowEnabled){ctx.shadowColor=t.shadowColor||'#000';ctx.shadowBlur=(t.shadowBlur||8)*scale;ctx.shadowOffsetX=(t.shadowX||3)*scale;ctx.shadowOffsetY=(t.shadowY||3)*scale;}
@@ -2206,7 +2209,7 @@ function drawFreehandEffect(ctx,t,W,H,scale){
   const mctx=maskC.getContext('2d');
   mctx.lineCap='round'; mctx.lineJoin='round';
   if(t.rotation){
-    const c=getItemCenterPct(t),cx=c.cx/100*W,cy=c.cy/100*H;
+    const c=getRotationPivotPx(t,W,H),cx=c.x,cy=c.y;
     mctx.translate(cx,cy);mctx.rotate(t.rotation*Math.PI/180);mctx.translate(-cx,-cy);
   }
   strokes.forEach(s=>{
@@ -2243,7 +2246,7 @@ function drawFreehandEffect(ctx,t,W,H,scale){
   if(t.stroke2Enabled){
     lctx.lineCap='round';lctx.lineJoin='round';
     if(t.rotation){
-      const c=getItemCenterPct(t),cx=c.cx/100*W,cy=c.cy/100*H;
+      const c=getRotationPivotPx(t,W,H),cx=c.x,cy=c.y;
       lctx.translate(cx,cy);lctx.rotate(t.rotation*Math.PI/180);lctx.translate(-cx,-cy);
     }
     strokes.forEach(s=>{
@@ -2652,17 +2655,18 @@ function renderToppingCanvas(){
       ctx.beginPath();ctx.moveTo(sx,sy-14/TZ.scale);ctx.lineTo(sx,sy+14/TZ.scale);ctx.stroke();
       ctx.restore();
     }
-    // エフェクト・図形選択中: 輪郭 + ハンドル
+    // エフェクト・図形・テキスト選択中: 輪郭 + ハンドル
     if(sel){
       const type=sel.type||'text';
       const sh=type.includes('-')?type.split('-')[1]:type;
       const isEffect=type.startsWith('blur')||type.startsWith('mosaic');
       const isShape=(type==='rect'||type==='ellipse')||isEffect&&(sh==='rect'||sh==='ellipse');
+      const isText=type==='text';
       ctx.save();
       ctx.strokeStyle='#5548D6';ctx.lineWidth=1.5/TZ.scale;
-      // rect/ellipse/blur-rect等は回転する可能性があるため、中心を軸に選択枠全体を回転させて実際の見た目と一致させる
-      if((sh==='rect'||sh==='ellipse')&&sel.rotation){
-        const g0=getShapeGeomCanvas(sel,tc.width,tc.height);
+      // rect/ellipse/blur-rect/テキストは回転する可能性があるため、中心を軸に選択枠全体を回転させて実際の見た目と一致させる
+      if((sh==='rect'||sh==='ellipse'||isText)&&sel.rotation){
+        const g0=isText?getTextGeomCanvas(sel,tc.width,tc.height):getShapeGeomCanvas(sel,tc.width,tc.height);
         ctx.translate(g0.cx,g0.cy);ctx.rotate(sel.rotation*Math.PI/180);ctx.translate(-g0.cx,-g0.cy);
       }
       if(isEffect||type==='rect'||type==='ellipse'){
@@ -2690,6 +2694,11 @@ function renderToppingCanvas(){
             ctx.fillText(i+1,vx,vy);
           });
         }
+      }else if(isText){
+        // テキストは概算バウンディングボックスを破線表示（リサイズ枠ではなく回転の目安）
+        const g=getTextGeomCanvas(sel,tc.width,tc.height);
+        ctx.setLineDash([5/TZ.scale,4/TZ.scale]);
+        ctx.beginPath();ctx.rect(g.x,g.y,g.w,g.h);ctx.stroke();
       }
       // rect/ellipse ハンドル（エフェクト・図形共通）
       if(sh==='rect'||sh==='ellipse'){
@@ -2715,6 +2724,14 @@ function renderToppingCanvas(){
           ctx.fillStyle='#fff';ctx.fill();
           ctx.strokeStyle='#5548D6';ctx.stroke();
         });
+      }else if(isText){
+        // テキスト用の回転ハンドル（接続線＋丸のみ。移動はドラッグで既存通り、リサイズ枠は無し）
+        const g=getTextGeomCanvas(sel,tc.width,tc.height);
+        const HR=6/TZ.scale;
+        ctx.setLineDash([]);ctx.lineWidth=1.5/TZ.scale;
+        ctx.beginPath();ctx.moveTo(g.cx,g.y);ctx.lineTo(g.cx,g.y-34/TZ.scale);ctx.strokeStyle='#5548D6';ctx.stroke();
+        ctx.beginPath();ctx.arc(g.cx,g.y-34/TZ.scale,HR*1.2,0,Math.PI*2);
+        ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#5548D6';ctx.stroke();
       }
       ctx.restore();
     }
@@ -2739,6 +2756,19 @@ function getItemCenterPct(t){
   }
   if(t.x!=null)return{cx:t.x,cy:t.y!=null?t.y:50};
   return{cx:50,cy:50};
+}
+// 回転の軸専用: ピクセル空間で正しい中心を返す。
+// rect/ellipse系は「高さ(%)」が実は幅(W)基準で計算される特殊仕様のため、
+// getItemCenterPctのように%同士を単純に足すとW≠Hの時に中心がズレる（＝回転で図形が飛ぶ原因だった）。
+// w/hを持つタイプはgetShapeGeomCanvas（既にW基準を正しく処理済み）に委譲し、
+// それ以外（テキスト・線矢印・多角形・フリーハンド）は%変換のみで問題ないためそのまま換算する。
+function getRotationPivotPx(t,W,H){
+  if(t.w!=null&&t.h!=null){
+    const g=getShapeGeomCanvas(t,W,H);
+    return{x:g.cx,y:g.cy};
+  }
+  const c=getItemCenterPct(t);
+  return{x:c.cx/100*W,y:c.cy/100*H};
 }
 // アイテムを複製する。位置は画像中心から見て内側方向へ10%ずらす（画面外へのはみ出し防止）
 function duplicateToppingItem(t){
@@ -2770,6 +2800,7 @@ function renderToppingList(){
         '<span class="tp-handle" title="ドラッグで並べ替え">⠿</span>'+
         '<span class="tp-num-label">'+(TP_LABELS[type]||type)+' #'+(idx+1)+'</span>'+
         '<span class="tp-mini">'+toppingMiniPreview(t)+'</span>'+
+        '<button type="button" class="tp-vis'+(t.hidden?' is-hidden':'')+'" title="表示/非表示">👁</button>'+
         '<button type="button" class="tp-dup" title="複製">⧉</button>'+
         '<button type="button" class="tp-del" title="削除">✕</button>'+
       '</div>'+
@@ -2777,10 +2808,15 @@ function renderToppingList(){
 
     // ヘッダークリック → 選択/解除（フリーハンド系を選ぶと、そのアイテムがそのまま描画対象になる）
     item.querySelector('.tp-head').addEventListener('click',e=>{
-      if(e.target.classList.contains('tp-del')||e.target.classList.contains('tp-dup'))return;
+      if(e.target.classList.contains('tp-del')||e.target.classList.contains('tp-dup')||e.target.classList.contains('tp-vis'))return;
       state.selectedToppingId=(state.selectedToppingId!==t.id)?t.id:null;
       renderToppingList();renderToppingCanvas();renderSelectedPanel();
     });
+    // 表示/非表示
+    item.querySelector('.tp-vis').onclick=()=>{
+      t.hidden=!t.hidden;
+      renderToppingList();renderToppingCanvas();tpSaveNow();
+    };
     // 複製
     item.querySelector('.tp-dup').onclick=()=>{
       const copy=duplicateToppingItem(t);
@@ -2885,6 +2921,23 @@ function _segDist(px,py,x1,y1,x2,y2){
 }
 // ===== 形状ジオメトリ共通ヘルパー =====
 // x,y は画像幅/高さ基準%、w,h は画像幅基準%（歪み防止）
+// テキストの概算バウンディングボックス（回転ハンドル表示用。リサイズには使わない簡易版）
+function getTextGeomCanvas(t,W,H){
+  const fs=Math.max(1,Math.round((t.fontSize||80)*(W/(state.previewNat?.totalW||W))));
+  const ff2=t.fontFamily&&t.fontFamily!=='sans-serif'?'"'+t.fontFamily+'"':'sans-serif';
+  const mctx=$('topping-canvas').getContext('2d');
+  mctx.save();mctx.font='bold '+fs+'px '+ff2;
+  const lines=(t.text||'').split('\n');
+  let maxW=0;
+  lines.forEach(line=>{const w=mctx.measureText(line).width;if(w>maxW)maxW=w;});
+  mctx.restore();
+  const lh=fs*1.28,totalH=(lines.length-1)*lh+fs*1.15;
+  const x=t.x/100*W,y=t.y/100*H;
+  const align=t.textAlign||'center';
+  let bx;
+  if(align==='left')bx=x;else if(align==='right')bx=x-maxW;else bx=x-maxW/2;
+  return{x:bx-10,y:y-totalH/2,w:maxW+20,h:totalH,cx:x,cy:y};
+}
 function getShapeGeomCanvas(t,W,H){
   const x=t.x/100*W, y=t.y/100*H;
   const w=t.w/100*W, h=t.h/100*W;  // h は W 基準
@@ -2895,6 +2948,7 @@ function _hitTest(cx,cy){
   const W=tc.width,H=tc.height,HR=30/TZ.scale;
   for(let i=state.toppings.length-1;i>=0;i--){
     const t=state.toppings[i],type=t.type||'text';
+    if(t.hidden)continue; // 非表示トッピングはキャンバス上でタップ選択できないようにする
     // フリーハンド描画型はキャンバス上でのヒットテスト対象外（リストから選択）
     if(type.startsWith('draw-'))continue;
     const sh=type.includes('-')?type.split('-')[1]:type;
@@ -2934,11 +2988,13 @@ function _hitTestHandle(cx,cy,t){
   const W=tc.width,H=tc.height,HR=18/TZ.scale;
   const type=t.type||'text';
   const sh=type.includes('-')?type.split('-')[1]:type;
-  if(sh!=='rect'&&sh!=='ellipse')return null;
-  const g=getShapeGeomCanvas(t,W,H);
+  const isText=type==='text';
+  if(sh!=='rect'&&sh!=='ellipse'&&!isText)return null;
+  const g=isText?getTextGeomCanvas(t,W,H):getShapeGeomCanvas(t,W,H);
   if(t.rotation){const p=_unrotatePt(cx,cy,g.cx,g.cy,t.rotation);cx=p.x;cy=p.y;}
-  // 回転ハンドル（図形ローカル座標での「上」に固定表示）
-  if(Math.hypot(cx-g.cx,cy-(g.y-34))<HR)return'rotate';
+  // 回転ハンドル（図形ローカル座標での「上」に固定表示・画面上の見た目と同じくTZ.scaleで補正）
+  if(Math.hypot(cx-g.cx,cy-(g.y-34/TZ.scale))<HR)return'rotate';
+  if(isText)return null; // テキストは回転ハンドルのみ。移動は既存の_hitTestに任せる
   if(Math.hypot(cx-g.cx,cy-g.cy)<HR*1.6)return'center';
   if(sh==='rect'){
     if(Math.hypot(cx-g.x,       cy-g.y      )<HR)return'tl';
@@ -3001,7 +3057,7 @@ tpWrap.addEventListener('pointerdown',e=>{
         if(handleMode){
           TZ.tpDrag=true;TZ.isPan=false;TZ.dragMode=handleMode;
           TZ.dPCX=cx;TZ.dPCY=cy;TZ.dStartCX=cx;TZ.dStartCY=cy;
-          TZ.oc=getShapeGeomCanvas(selT,$('topping-canvas').width,$('topping-canvas').height);
+          TZ.oc=(selT.type==='text')?getTextGeomCanvas(selT,$('topping-canvas').width,$('topping-canvas').height):getShapeGeomCanvas(selT,$('topping-canvas').width,$('topping-canvas').height);
           tpWrap.classList.add('tp-grabbing');
         }else{
           const hit=_hitTest(cx,cy);
