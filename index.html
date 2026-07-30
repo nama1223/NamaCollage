@@ -2943,32 +2943,43 @@ function getShapeGeomCanvas(t,W,H){
   const w=t.w/100*W, h=t.h/100*W;  // h は W 基準
   return{x,y,w,h,cx:x+w/2,cy:y+h/2};
 }
+// 個別アイテムに対する当たり判定（回転も考慮）。_hitTest（全体から一番上を探す）と
+// 「選択中アイテムそのものかどうか」の直接判定の両方から共通で使う。
+function _hitTestItem(cx,cy,t,W,H){
+  const type=t.type||'text';
+  if(type.startsWith('draw-'))return false; // フリーハンド描画型はキャンバス上でのヒットテスト対象外
+  const sh=type.includes('-')?type.split('-')[1]:type;
+  const HR=30/TZ.scale;
+  if(t.rotation){
+    const piv=getRotationPivotPx(t,W,H);
+    const p=_unrotatePt(cx,cy,piv.x,piv.y,t.rotation);cx=p.x;cy=p.y;
+  }
+  if(type==='text'){
+    return Math.hypot(cx-t.x/100*W,cy-t.y/100*H)<HR*2.5;
+  }else if(type==='line'||type==='arrow'){
+    return _segDist(cx,cy,t.x/100*W,t.y/100*H,t.x2/100*W,t.y2/100*H)<HR;
+  }else if(sh==='rect'){
+    const g=getShapeGeomCanvas(t,W,H);
+    return cx>=g.x-HR&&cx<=g.x+g.w+HR&&cy>=g.y-HR&&cy<=g.y+g.h+HR;
+  }else if(sh==='ellipse'){
+    const g=getShapeGeomCanvas(t,W,H);
+    const erx=g.w/2+HR,ery=g.h/2+HR;
+    return(cx-g.cx)**2/erx**2+(cy-g.cy)**2/ery**2<1.3;
+  }else if(sh==='poly'&&t.points?.length>=3){
+    const xs=t.points.map(p=>p.x/100*W),ys=t.points.map(p=>p.y/100*H);
+    const mnx=Math.min(...xs)-HR,mxx=Math.max(...xs)+HR;
+    const mny=Math.min(...ys)-HR,mxy=Math.max(...ys)+HR;
+    return cx>=mnx&&cx<=mxx&&cy>=mny&&cy<=mxy;
+  }
+  return false;
+}
 function _hitTest(cx,cy){
   const tc=$('topping-canvas');if(!tc.width)return null;
-  const W=tc.width,H=tc.height,HR=30/TZ.scale;
+  const W=tc.width,H=tc.height;
   for(let i=state.toppings.length-1;i>=0;i--){
-    const t=state.toppings[i],type=t.type||'text';
+    const t=state.toppings[i];
     if(t.hidden)continue; // 非表示トッピングはキャンバス上でタップ選択できないようにする
-    // フリーハンド描画型はキャンバス上でのヒットテスト対象外（リストから選択）
-    if(type.startsWith('draw-'))continue;
-    const sh=type.includes('-')?type.split('-')[1]:type;
-    if(type==='text'){
-      if(Math.hypot(cx-t.x/100*W,cy-t.y/100*H)<HR*2.5)return t.id;
-    }else if(type==='line'||type==='arrow'){
-      if(_segDist(cx,cy,t.x/100*W,t.y/100*H,t.x2/100*W,t.y2/100*H)<HR)return t.id;
-    }else if(sh==='rect'){
-      const g=getShapeGeomCanvas(t,W,H);
-      if(cx>=g.x-HR&&cx<=g.x+g.w+HR&&cy>=g.y-HR&&cy<=g.y+g.h+HR)return t.id;
-    }else if(sh==='ellipse'){
-      const g=getShapeGeomCanvas(t,W,H);
-      const erx=g.w/2+HR,ery=g.h/2+HR;
-      if((cx-g.cx)**2/erx**2+(cy-g.cy)**2/ery**2<1.3)return t.id;
-    }else if(sh==='poly'&&t.points?.length>=3){
-      const xs=t.points.map(p=>p.x/100*W),ys=t.points.map(p=>p.y/100*H);
-      const mnx=Math.min(...xs)-HR,mxx=Math.max(...xs)+HR;
-      const mny=Math.min(...ys)-HR,mxy=Math.max(...ys)+HR;
-      if(cx>=mnx&&cx<=mxx&&cy>=mny&&cy<=mxy)return t.id;
-    }
+    if(_hitTestItem(cx,cy,t,W,H))return t.id;
   }
   return null;
 }
@@ -3060,7 +3071,11 @@ tpWrap.addEventListener('pointerdown',e=>{
           TZ.oc=(selT.type==='text')?getTextGeomCanvas(selT,$('topping-canvas').width,$('topping-canvas').height):getShapeGeomCanvas(selT,$('topping-canvas').width,$('topping-canvas').height);
           tpWrap.classList.add('tp-grabbing');
         }else{
-          const hit=_hitTest(cx,cy);
+          const tcNow=$('topping-canvas');
+          // まず「選択中アイテムそのもの」を直接判定する（他のアイテムが上に重なっていても、
+          // 選択中のものであればそこを掴んで移動できるようにするため。z-order越しの取りこぼし対策）
+          const onSelected=selT&&tcNow.width&&_hitTestItem(cx,cy,selT,tcNow.width,tcNow.height);
+          const hit=onSelected?selT.id:_hitTest(cx,cy);
           if(hit!==null&&state.selectedToppingId!==null&&hit===state.selectedToppingId){
             TZ.tpDrag=true;TZ.isPan=false;TZ.dragMode='move';
             TZ.dPCX=cx;TZ.dPCY=cy;tpWrap.classList.add('tp-grabbing');
