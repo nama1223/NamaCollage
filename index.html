@@ -3355,18 +3355,31 @@ const CU_MIN=0.003; // 除去領域の最小幅（ほぼ制限なし。0除算�
 
 function openCutoutModal(ri,ci,mode){
   const img=state.grid[ri][ci];
-  CU.ri=ri;CU.ci=ci;CU.mode=mode;CU.imgEl=img.imgEl;CU.imgW=img.w;CU.imgH=img.h;CU.selIdx=0;
+  CU.ri=ri;CU.ci=ci;CU.mode=mode;CU.selIdx=0;
+  // トリミング済みなら、その領域だけを切り出したキャンバスを表示元にする。
+  // （実際の中抜き適用処理はトリミング後の領域を基準に%計算するため、プレビューもそれに合わせないと
+  //   画面上で選んだ位置と実際にカットされる位置がズレてしまう）
+  if(img.cropData){
+    const cd=img.cropData;
+    const cropped=document.createElement('canvas');
+    cropped.width=Math.max(1,Math.round(cd.cw));cropped.height=Math.max(1,Math.round(cd.ch));
+    const cctx=cropped.getContext('2d');cctx.imageSmoothingEnabled=true;cctx.imageSmoothingQuality='high';
+    cctx.drawImage(img.imgEl,cd.cx,cd.cy,cd.cw,cd.ch,0,0,cropped.width,cropped.height);
+    CU.imgEl=cropped;CU.imgW=cropped.width;CU.imgH=cropped.height;
+  }else{
+    CU.imgEl=img.imgEl;CU.imgW=img.w;CU.imgH=img.h;
+  }
   if(img.cutoutData&&img.cutoutData.mode===mode){
     CU.regions=img.cutoutData.regions
       ?img.cutoutData.regions.map(r=>({...r}))
       :[{start:img.cutoutData.start,end:img.cutoutData.end}];
   }else CU.regions=[{start:0.3,end:0.6}];
   const maxW=Math.min(window.innerWidth-32,780),maxH=Math.floor(window.innerHeight*0.5);
-  CU.scale=Math.min(1,maxW/img.w,maxH/img.h);
+  CU.scale=Math.min(1,maxW/CU.imgW,maxH/CU.imgH);
   const dpr=Math.min(window.devicePixelRatio||1,3);
-  const cssW=Math.round(img.w*CU.scale),cssH=Math.round(img.h*CU.scale);
+  const cssW=Math.round(CU.imgW*CU.scale),cssH=Math.round(CU.imgH*CU.scale);
   const cv=$('cutout-canvas');
-  cv.width=Math.min(img.w,cssW*dpr);cv.height=Math.min(img.h,cssH*dpr);
+  cv.width=Math.min(CU.imgW,cssW*dpr);cv.height=Math.min(CU.imgH,cssH*dpr);
   cv.style.width=cssW+'px';cv.style.height=cssH+'px';
   $('cutout-title').textContent=(mode==='v'?'中抜き（縦方向）':'中抜き（横方向）')+' — '+img.name;
   history.pushState({modal:'cutout'},'');
@@ -3514,6 +3527,7 @@ const T={ri:-1,ci:-1,imgEl:null,imgW:0,imgH:0,cx:0,cy:0,cw:0,ch:0,scale:1,drag:n
 const HSIZE=28;
 function openTrimModal(ri,ci){
   const img=state.grid[ri][ci]; T.ri=ri;T.ci=ci;T.imgEl=img.imgEl;T.imgW=img.w;T.imgH=img.h;
+  T.cutoutData=img.cutoutData||null; // トリミング枠内に既存の中抜き範囲を薄く重ねて表示するため
   if(img.cropData){T.cx=img.cropData.cx;T.cy=img.cropData.cy;T.cw=img.cropData.cw;T.ch=img.cropData.ch;}
   else{T.cx=0;T.cy=0;T.cw=img.w;T.ch=img.h;}
   const mxW=Math.min(window.innerWidth-32,780),mxH=Math.floor(window.innerHeight*0.52);
@@ -3539,6 +3553,21 @@ function drawTrim(){
   ctx.strokeStyle='#FF6940'; ctx.lineWidth=2; ctx.strokeRect(cx,cy,cw,ch);
   ctx.strokeStyle='rgba(255,105,64,0.38)'; ctx.lineWidth=0.7;
   for(let i=1;i<=2;i++){ ctx.beginPath();ctx.moveTo(cx+cw*i/3,cy);ctx.lineTo(cx+cw*i/3,cy+ch);ctx.stroke();ctx.beginPath();ctx.moveTo(cx,cy+ch*i/3);ctx.lineTo(cx+cw,cy+ch*i/3);ctx.stroke(); }
+  // 既存の中抜き範囲を、今編集中のクロップ枠を基準に薄く重ねて表示（クロップを変えると
+  // 中抜きの実際の位置も追従して動くため、その見え方をここで確認できるようにする）
+  if(T.cutoutData){
+    const regions=T.cutoutData.regions||[{start:T.cutoutData.start,end:T.cutoutData.end}];
+    ctx.fillStyle='rgba(41,121,255,0.35)';
+    regions.forEach(r=>{
+      if(T.cutoutData.mode==='v'){
+        const ry0=cy+ch*r.start, ry1=cy+ch*r.end;
+        ctx.fillRect(cx,ry0,cw,ry1-ry0);
+      }else{
+        const rx0=cx+cw*r.start, rx1=cx+cw*r.end;
+        ctx.fillRect(rx0,cy,rx1-rx0,ch);
+      }
+    });
+  }
   const hs=8; ctx.fillStyle='#FF6940';
   [[cx,cy],[cx+cw,cy],[cx,cy+ch],[cx+cw,cy+ch]].forEach(([hx,hy])=>ctx.fillRect(hx-hs,hy-hs,hs*2,hs*2));
 }
