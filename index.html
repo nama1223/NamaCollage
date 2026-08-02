@@ -561,6 +561,17 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
           </div>
         </div>
       </div>
+      <div class="card">
+        <div class="card-head">📁 保存先フォルダ</div>
+        <div class="card-body" style="gap:8px">
+          <div id="save-dir-status" style="font-size:12.5px;color:var(--muted);line-height:1.6"></div>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn" style="flex:1;background:var(--surf2);color:var(--text);border:1px solid var(--border2)" id="btn-pick-savedir">📁 フォルダを選択</button>
+            <button type="button" class="btn hidden" style="flex:0 0 auto;background:var(--surf2);color:var(--muted);border:1px solid var(--border2)" id="btn-clear-savedir">解除</button>
+          </div>
+          <div id="save-dir-unsupported" class="hidden" style="font-size:11.5px;color:var(--muted2);line-height:1.6">💡 このブラウザ／端末では保存先フォルダの指定に対応していません（Safari・iOS・Firefoxなど）。通常通りダウンロードフォルダに保存されます。</div>
+        </div>
+      </div>
       <button type="button" class="btn btn-primary btn-full btn-lg" id="btn-download">⬇️ ダウンロード</button>
       <div class="alert alert-info"><span class="alert-icon">💡</span><span>プレビュー＋トッピングの内容がダウンロードされます。</span></div>
       <div class="alert alert-warn"><span class="alert-icon">📱</span><div><strong>PWA・ブラウザの注意</strong><br>縦横16,000px超やメモリ超過でエラーになることがあります。</div></div>
@@ -777,6 +788,7 @@ const maxCols = () => Math.max(0, ...state.grid.map(r => r.length));
 // 変数宣言（TDZ防止のため冒頭）
 let composeTimer = null;
 let saveFormat = 'jpeg', saveQuality = 92, sizeEstTimer = null;
+let saveDirHandle = null; // File System Access API: 選択済みの保存先フォルダ（対応ブラウザのみ）
 
 // ===== IndexedDB =====
 let idb = null;
@@ -794,8 +806,57 @@ let idb = null;
     });
     await restoreFromDB();
     await loadPendingShares();
+    await restoreSaveDirHandle();
   }catch(e){ idb=null; console.warn('IDB:',e); }
 })();
+
+// ===== 保存先フォルダ（File System Access API） =====
+const FS_ACCESS_SUPPORTED = typeof window.showDirectoryPicker === 'function';
+async function restoreSaveDirHandle(){
+  if(!FS_ACCESS_SUPPORTED) return;
+  try{
+    const handle = await dbGet('meta','save_dir_handle');
+    if(handle){ saveDirHandle = handle; }
+  }catch(e){ console.warn('save dir restore:',e); }
+  updateSaveDirUI();
+}
+function updateSaveDirUI(){
+  const statusEl=$('save-dir-status'), unsupEl=$('save-dir-unsupported');
+  const pickBtn=$('btn-pick-savedir'), clearBtn=$('btn-clear-savedir');
+  if(!statusEl) return;
+  if(!FS_ACCESS_SUPPORTED){
+    statusEl.textContent='保存先: ダウンロード フォルダ（既定）';
+    unsupEl?.classList.remove('hidden');
+    if(pickBtn) pickBtn.disabled=true;
+    clearBtn?.classList.add('hidden');
+    return;
+  }
+  unsupEl?.classList.add('hidden');
+  if(pickBtn) pickBtn.disabled=false;
+  if(saveDirHandle){
+    statusEl.textContent='保存先: 📁 '+(saveDirHandle.name||'選択済みフォルダ');
+    clearBtn?.classList.remove('hidden');
+  }else{
+    statusEl.textContent='保存先: ダウンロード フォルダ（既定）';
+    clearBtn?.classList.add('hidden');
+  }
+}
+$('btn-pick-savedir')?.addEventListener('click',async()=>{
+  if(!FS_ACCESS_SUPPORTED) return;
+  try{
+    const handle=await window.showDirectoryPicker({mode:'readwrite'});
+    saveDirHandle=handle;
+    await dbTxW('meta',s=>s.put(handle,'save_dir_handle'));
+    updateSaveDirUI();
+  }catch(e){
+    if(e?.name!=='AbortError') console.warn('directory pick failed:',e); // ユーザーがキャンセルした場合は何もしない
+  }
+});
+$('btn-clear-savedir')?.addEventListener('click',async()=>{
+  saveDirHandle=null;
+  await dbTxW('meta',s=>s.delete('save_dir_handle'));
+  updateSaveDirUI();
+});
 
 const dbGetAll = s => idb ? new Promise(res=>{const r=idb.transaction(s,'readonly').objectStore(s).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>res([]);}) : Promise.resolve([]);
 const dbGet    = (s,k) => idb ? new Promise(res=>{const r=idb.transaction(s,'readonly').objectStore(s).get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);}) : Promise.resolve(null);
@@ -3835,6 +3896,7 @@ $('save-quality').addEventListener('input',()=>{
 function updateSaveTab(){
   if(!state.composed||!state.composedW){$('save-empty').classList.remove('hidden');$('save-content').classList.add('hidden');return;}
   $('save-empty').classList.add('hidden');$('save-content').classList.remove('hidden');
+  updateSaveDirUI();
   let fW=Math.round(state.composedW),fH=Math.round(state.composedH),sd=false;
   if(settings.maxPixels>0&&fW*fH>settings.maxPixels){const s=Math.sqrt(settings.maxPixels/(fW*fH));fW=Math.round(fW*s);fH=Math.round(fH*s);sd=true;}
   const mp=(fW*fH/1e6).toFixed(1),nat=state.previewNat,gi=nat?nat.numRows+'行×'+nat.numCols+'列':'';
@@ -3860,16 +3922,43 @@ $('btn-download').addEventListener('click',async()=>{
   let dlScale=1;
   if(settings.maxPixels>0&&nat.totalW*nat.totalH>settings.maxPixels) dlScale=Math.sqrt(settings.maxPixels/(nat.totalW*nat.totalH));
   const btn=$('btn-download'); btn.disabled=true; btn.textContent='⏳ 生成中…';
+
+  // フォルダ保存を使う場合は、時間のかかるcanvas生成より前に権限確認を済ませておく。
+  // requestPermission()はクリック直後のユーザー操作コンテキストが必要なため、
+  // 先に重い処理（renderAt）を挟むと権限確認が失敗する可能性があるための順序。
+  let useDirHandle=false;
+  if(saveDirHandle&&FS_ACCESS_SUPPORTED){
+    try{
+      let perm=await saveDirHandle.queryPermission({mode:'readwrite'});
+      if(perm!=='granted') perm=await saveDirHandle.requestPermission({mode:'readwrite'});
+      useDirHandle=(perm==='granted');
+    }catch(e){ console.warn('save dir permission check failed:',e); useDirHandle=false; }
+  }
+
   try{
     const canvas=await renderAt(dlScale,saveFormat); if(!canvas) throw new Error('Canvas null');
     const mime=saveFormat==='png'?'image/png':saveFormat==='webp'?'image/webp':'image/jpeg';
-    await new Promise((res,rej)=>{
-      canvas.toBlob(blob=>{if(!blob){rej();return;}
-        const url=URL.createObjectURL(blob),a=document.createElement('a');
-        a.href=url;a.download='namacollage_'+Date.now()+'.'+saveFormat;a.click();
-        setTimeout(()=>URL.revokeObjectURL(url),5000);res();
-      },mime,saveFormat==='png'?undefined:saveQuality/100);
+    const blob=await new Promise((res,rej)=>{
+      canvas.toBlob(b=>b?res(b):rej(new Error('toBlob failed')),mime,saveFormat==='png'?undefined:saveQuality/100);
     });
+    const filename='namacollage_'+Date.now()+'.'+saveFormat;
+
+    if(useDirHandle){
+      try{
+        const fileHandle=await saveDirHandle.getFileHandle(filename,{create:true});
+        const writable=await fileHandle.createWritable();
+        await writable.write(blob); await writable.close();
+        btn.textContent='✅ '+(saveDirHandle.name||'フォルダ')+'に保存しました';
+        setTimeout(()=>{btn.disabled=false;btn.innerHTML='⬇️ ダウンロード';},1800);
+        return;
+      }catch(e){
+        console.warn('directory write failed, falling back to download:',e);
+        // フォルダへの書き込みに失敗した場合は通常のダウンロードに自動フォールバック
+      }
+    }
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=filename;a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
   }catch(err){console.error(err);alert('ダウンロードに失敗しました。\n'+err.message);}
   btn.disabled=false;btn.innerHTML='⬇️ ダウンロード';
 });
