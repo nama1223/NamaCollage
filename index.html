@@ -3915,6 +3915,94 @@ function updateSaveTab(){
   estimateDownloadSize().then(bytes=>{const el=$('size-est');if(el)el.textContent=bytes!==null?'~'+formatBytes(bytes)+' (概算)':'不明';});
 }
 
+// ===== EXIF付加（DateTimeOriginal・保存の瞬間の日時）=====
+// 背景: 一部のAndroidアプリ（画像ピッカー等）は、EXIFのDateTimeOriginal（Exif SubIFD, tag 0x9003）が
+// 無い画像を「新しい画像」として一覧の先頭に表示しない場合がある。IFD0直下のDateTime(0x0132)では
+// 効果がないことを確認済みなので、必ずExif SubIFD配下のDateTimeOriginalとして付加する。
+// canvasのtoBlob()はEXIFを一切含まないため、JPEG/PNGについてはバイナリを直接組み立てて挿入する
+// （WebPは構造がより複雑になるため今回は対象外・そのまま出力）。
+function exifDateTimeString(d){
+  const p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+':'+p(d.getMonth()+1)+':'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
+}
+// DateTimeOriginalだけを持つ最小限のTIFF/EXIF構造（IFD0 → ExifIFDポインタ → DateTimeOriginal）を組み立てる
+function buildMinimalExifTiff(dtStr){
+  const strBytes=new TextEncoder().encode(dtStr+'\0'); // "YYYY:MM:DD HH:MM:SS"+NUL = 20バイト
+  const ifd0Off=8, exifIfdOff=ifd0Off+2+12+4, strOff=exifIfdOff+2+12+4;
+  const buf=new ArrayBuffer(strOff+strBytes.length);
+  const dv=new DataView(buf);
+  dv.setUint8(0,0x49);dv.setUint8(1,0x49); // "II" リトルエンディアン
+  dv.setUint16(2,42,true);
+  dv.setUint32(4,ifd0Off,true);
+  // IFD0: エントリ1つ（ExifIFDへのポインタ）
+  dv.setUint16(ifd0Off,1,true);
+  dv.setUint16(ifd0Off+2,0x8769,true); // tag: ExifIFD
+  dv.setUint16(ifd0Off+4,4,true);      // type: LONG
+  dv.setUint32(ifd0Off+6,1,true);      // count: 1
+  dv.setUint32(ifd0Off+10,exifIfdOff,true);
+  dv.setUint32(ifd0Off+14,0,true);     // 次のIFD無し
+  // Exif SubIFD: エントリ1つ（DateTimeOriginal）
+  dv.setUint16(exifIfdOff,1,true);
+  dv.setUint16(exifIfdOff+2,0x9003,true); // tag: DateTimeOriginal
+  dv.setUint16(exifIfdOff+4,2,true);      // type: ASCII
+  dv.setUint32(exifIfdOff+6,strBytes.length,true);
+  dv.setUint32(exifIfdOff+10,strOff,true); // 4バイトに収まらないためオフセット参照
+  dv.setUint32(exifIfdOff+14,0,true);
+  new Uint8Array(buf,strOff,strBytes.length).set(strBytes);
+  return new Uint8Array(buf);
+}
+async function injectExifIntoJpeg(blob){
+  const buf=new Uint8Array(await blob.arrayBuffer());
+  if(buf.length<2||buf[0]!==0xFF||buf[1]!==0xD8)return blob; // SOIでなければ何もしない
+  const tiff=buildMinimalExifTiff(exifDateTimeString(new Date()));
+  const hdr=new TextEncoder().encode('Exif\0\0');
+  const segLen=2+hdr.length+tiff.length; // 長さフィールド自身(2)を含む
+  const app1=new Uint8Array(2+segLen);
+  app1[0]=0xFF;app1[1]=0xE1;
+  app1[2]=(segLen>>8)&0xFF;app1[3]=segLen&0xFF;
+  app1.set(hdr,4);app1.set(tiff,4+hdr.length);
+  const out=new Uint8Array(buf.length+app1.length);
+  out.set(buf.subarray(0,2),0);       // SOI
+  out.set(app1,2);                     // 新規APP1(EXIF)
+  out.set(buf.subarray(2),2+app1.length);
+  return new Blob([out],{type:'image/jpeg'});
+}
+function _crc32(bytes){
+  if(!_crc32.table){
+    const t=new Uint32Array(256);
+    for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}
+    _crc32.table=t;
+  }
+  let crc=0xFFFFFFFF;
+  for(let i=0;i<bytes.length;i++)crc=_crc32.table[(crc^bytes[i])&0xFF]^(crc>>>8);
+  return(crc^0xFFFFFFFF)>>>0;
+}
+async function injectExifIntoPng(blob){
+  const buf=new Uint8Array(await blob.arrayBuffer());
+  const sig=[0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A];
+  for(let i=0;i<8;i++)if(buf[i]!==sig[i])return blob; // PNG署名不一致なら何もしない
+  const tiff=buildMinimalExifTiff(exifDateTimeString(new Date())); // PNGのeXIfチャンクは生TIFF（"Exif\0\0"無し）
+  const type=new TextEncoder().encode('eXIf');
+  const chunk=new Uint8Array(4+4+tiff.length+4);
+  const dv=new DataView(chunk.buffer);
+  dv.setUint32(0,tiff.length,false); // ビッグエンディアン
+  chunk.set(type,4);chunk.set(tiff,8);
+  dv.setUint32(8+tiff.length,_crc32(chunk.subarray(4,8+tiff.length)),false);
+  const insertAt=8+25; // PNG署名(8) + IHDRチャンク一式(len4+type4+data13+crc4=25) の直後
+  const out=new Uint8Array(buf.length+chunk.length);
+  out.set(buf.subarray(0,insertAt),0);
+  out.set(chunk,insertAt);
+  out.set(buf.subarray(insertAt),insertAt+chunk.length);
+  return new Blob([out],{type:'image/png'});
+}
+async function addExifDateTime(blob,format){
+  try{
+    if(format==='jpeg')return await injectExifIntoJpeg(blob);
+    if(format==='png')return await injectExifIntoPng(blob);
+  }catch(e){console.warn('EXIF付加に失敗、元の画像のまま保存します:',e);}
+  return blob; // webp等は対象外・そのまま
+}
+
 // ===== ダウンロード =====
 $('btn-download').addEventListener('click',async()=>{
   if(!state.composed){alert('先にプレビューを生成してください。');return;}
@@ -3938,9 +4026,10 @@ $('btn-download').addEventListener('click',async()=>{
   try{
     const canvas=await renderAt(dlScale,saveFormat); if(!canvas) throw new Error('Canvas null');
     const mime=saveFormat==='png'?'image/png':saveFormat==='webp'?'image/webp':'image/jpeg';
-    const blob=await new Promise((res,rej)=>{
+    let blob=await new Promise((res,rej)=>{
       canvas.toBlob(b=>b?res(b):rej(new Error('toBlob failed')),mime,saveFormat==='png'?undefined:saveQuality/100);
     });
+    blob=await addExifDateTime(blob,saveFormat); // DateTimeOriginalを保存の瞬間の日時で付加
     const filename='namacollage_'+Date.now()+'.'+saveFormat;
 
     if(useDirHandle){
