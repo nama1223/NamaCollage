@@ -486,6 +486,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
           <option value="line">— 直線</option>
           <option value="arrow">→ 矢印</option>
           <option value="draw-line">✏️ フリー</option>
+          <option value="burst">💥 集中線</option>
         </select>
         <select class="adj-select tp-cat-sel" id="tp-sel-shape" style="max-width:110px;flex:0 0 auto">
           <option value="">□ 図形</option>
@@ -1752,7 +1753,7 @@ $('btn-eyedrop').addEventListener('click',async()=>{
 
 // ===== トッピングタブ =====
 
-const TP_LABELS={text:'✍️ テキスト',line:'— 直線',arrow:'→ 矢印',rect:'□ 四角形',ellipse:'○ 楕円',poly:'⬟ 多角形','blur-rect':'🫧□ ぼかし','blur-ellipse':'🫧○ ぼかし','blur-poly':'🫧⬟ ぼかし','mosaic-rect':'⬛□ モザイク','mosaic-ellipse':'⬛○ モザイク','mosaic-poly':'⬛⬟ モザイク','draw-line':'✏️ 線描画','draw-blur':'🫧 ぼかし描画','draw-mosaic':'⬛ モザイク描画'};
+const TP_LABELS={text:'✍️ テキスト',line:'— 直線',arrow:'→ 矢印',rect:'□ 四角形',ellipse:'○ 楕円',poly:'⬟ 多角形','blur-rect':'🫧□ ぼかし','blur-ellipse':'🫧○ ぼかし','blur-poly':'🫧⬟ ぼかし','mosaic-rect':'⬛□ モザイク','mosaic-ellipse':'⬛○ モザイク','mosaic-poly':'⬛⬟ モザイク','draw-line':'✏️ 線描画','draw-blur':'🫧 ぼかし描画','draw-mosaic':'⬛ モザイク描画',burst:'💥 集中線'};
 
 function createToppingItem(type){
   const base={id:state.nextToppingId++,type,rotation:0,hidden:false,stroke2Enabled:false,stroke2Color:'#ffffff',stroke2Width:3,shadowEnabled:false,shadowColor:'#000000',shadowBlur:8,shadowX:3,shadowY:3};
@@ -1772,6 +1773,17 @@ function createToppingItem(type){
     case 'draw-line':   return{...base,strokes:[],color:'#ff4444',strokeWidth:8,opacity:100,eraseMode:false};
     case 'draw-blur':   return{...base,strokes:[],strokeWidth:50,intensity:15,opacity:100,eraseMode:false};
     case 'draw-mosaic': return{...base,strokes:[],strokeWidth:50,intensity:15,opacity:100,eraseMode:false};
+    case 'burst': return{...base,
+      x:50,y:50,          // 配置位置（中心）
+      bw:70,bh:70,         // 描画エリア全体の横幅・縦幅（%、個別指定）
+      innerRatio:20,       // 内側(空白)の直径比率（外側直径に対する%）
+      color:'#000000',
+      innerWidth:1,        // 内側(始点)の線の太さ
+      outerWidth:8,        // 外側(先端)の線の太さ
+      widthVariance:35,    // 太さのバラつき（0-100）
+      count:100,           // 本数
+      seed:Math.floor(Math.random()*1e9), // バラつきの乱数シード（再描画のたびに変わらないよう固定）
+      opacity:100};
     default:return base;
   }
 }
@@ -2197,8 +2209,69 @@ function applyToppings(ctx,W,H,scale,liveId,livePreviewStroke){
     else if(type==='draw-line')drawFreehandLine(ctx,item,W,H,scale);
     else if(type==='draw-blur'||type==='draw-mosaic')drawFreehandEffect(ctx,item,W,H,scale);
     else if(type.startsWith('blur')||type.startsWith('mosaic'))drawEffectItem(ctx,item,W,H,scale);
+    else if(type==='burst')drawBurstItem(ctx,item,W,H,scale);
     else drawShapeItem(ctx,item,W,H,scale);
   });
+}
+
+// シード固定の疑似乱数（再描画のたびにバラつきパターンが変わらないようにするため）
+function mulberry32(a){
+  return function(){
+    a|=0;a=a+0x6D2B79F5|0;
+    let t=Math.imul(a^a>>>15,1|a);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return((t^t>>>14)>>>0)/4294967296;
+  };
+}
+// 集中線: 中心から放射状に、内側→外側で太さが変化する三角形（帯）を敷き詰めて描く
+function drawBurstItem(ctx,t,W,H,scale){
+  const cx=t.x/100*W, cy=t.y/100*H;
+  const rx=Math.max(1,(t.bw!=null?t.bw:70)/100*W/2);
+  const ry=Math.max(1,(t.bh!=null?t.bh:70)/100*H/2);
+  const innerRatio=Math.max(0,Math.min(0.95,(t.innerRatio!=null?t.innerRatio:20)/100));
+  const count=Math.max(3,Math.round(t.count||100));
+  const iw=Math.max(0,(t.innerWidth!=null?t.innerWidth:1)*scale);
+  const ow=Math.max(0.2,(t.outerWidth!=null?t.outerWidth:8)*scale);
+  const variance=Math.max(0,Math.min(1,(t.widthVariance||0)/100));
+
+  // 太さのバラつき（乱数）を先に全本数分まとめて計算しておく。
+  // 縁取り・本体の2回描画で同じ乱数列を使い回すことで、輪郭がズレないようにする。
+  const jitters=[];
+  {
+    const rng=mulberry32((t.seed>>>0)||1);
+    for(let i=0;i<count;i++)jitters.push([1+(rng()*2-1)*variance,1+(rng()*2-1)*variance]);
+  }
+
+  const layer=document.createElement('canvas');layer.width=W;layer.height=H;
+  const lctx=layer.getContext('2d');
+  const drawLines=(fillColor,extraHalf)=>{
+    lctx.fillStyle=fillColor;
+    for(let i=0;i<count;i++){
+      const ang=(i/count)*Math.PI*2;
+      const dirX=Math.cos(ang),dirY=Math.sin(ang);
+      const ix=cx+dirX*rx*innerRatio, iy=cy+dirY*ry*innerRatio;
+      const ox=cx+dirX*rx, oy=cy+dirY*ry;
+      const ddx=ox-ix, ddy=oy-iy, len=Math.hypot(ddx,ddy)||1;
+      const nx=-ddy/len, ny=ddx/len;
+      const[jIn,jOut]=jitters[i];
+      const iwHalf=Math.max(0,iw*jIn/2)+extraHalf, owHalf=Math.max(0,ow*jOut/2)+extraHalf;
+      lctx.beginPath();
+      lctx.moveTo(ix+nx*iwHalf,iy+ny*iwHalf);
+      lctx.lineTo(ox+nx*owHalf,oy+ny*owHalf);
+      lctx.lineTo(ox-nx*owHalf,oy-ny*owHalf);
+      lctx.lineTo(ix-nx*iwHalf,iy-ny*iwHalf);
+      lctx.closePath();lctx.fill();
+    }
+  };
+  if(t.stroke2Enabled)drawLines(t.stroke2Color||'#ffffff',Math.max(0,(t.stroke2Width||3))*scale);
+  drawLines(t.color||'#000000',0);
+
+  ctx.save();
+  if(t.rotation){ctx.translate(cx,cy);ctx.rotate(t.rotation*Math.PI/180);ctx.translate(-cx,-cy);}
+  if(t.shadowEnabled){ctx.shadowColor=t.shadowColor||'#000';ctx.shadowBlur=(t.shadowBlur||8)*scale;ctx.shadowOffsetX=(t.shadowX||3)*scale;ctx.shadowOffsetY=(t.shadowY||3)*scale;}
+  ctx.globalAlpha=(t.opacity!=null?t.opacity:100)/100;
+  ctx.drawImage(layer,0,0);
+  ctx.restore();
 }
 
 // ===== フリーハンド描画 =====
@@ -2341,6 +2414,16 @@ function toppingMiniPreview(t){
     return '<svg width="40" height="20" style="flex-shrink:0"><path d="M4,16 C8,4 14,14 20,8 C26,2 32,14 36,6" stroke="rgba(100,140,220,0.45)" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M4,16 C8,4 14,14 20,8 C26,2 32,14 36,6" stroke="rgba(100,140,220,0.25)" stroke-width="14" fill="none" stroke-linecap="round"/></svg>';
   if(type==='draw-mosaic'){
     return '<svg width="40" height="20" style="flex-shrink:0"><rect x="0" y="0" width="40" height="20" fill="#ddd" rx="2"/><rect x="1" y="1" width="9" height="9" fill="#bbb"/><rect x="10" y="1" width="9" height="9" fill="#ccc"/><rect x="19" y="1" width="9" height="9" fill="#b8b8b8"/><rect x="28" y="1" width="11" height="9" fill="#c8c8c8"/><rect x="1" y="10" width="9" height="9" fill="#c4c4c4"/><rect x="10" y="10" width="9" height="9" fill="#b0b0b0"/><rect x="19" y="10" width="9" height="9" fill="#c0c0c0"/><rect x="28" y="10" width="11" height="9" fill="#bcbcbc"/><path d="M4,16 C8,4 14,14 20,8 C26,2 32,14 36,6" stroke="rgba(60,60,60,0.4)" stroke-width="7" fill="none" stroke-linecap="round"/></svg>';
+  }
+  if(type==='burst'){
+    let lines='';
+    for(let i=0;i<16;i++){
+      const ang=(i/16)*Math.PI*2;
+      const ix=20+Math.cos(ang)*4, iy=10+Math.sin(ang)*4;
+      const ox=20+Math.cos(ang)*9, oy=10+Math.sin(ang)*9;
+      lines+='<line x1="'+ix+'" y1="'+iy+'" x2="'+ox+'" y2="'+oy+'" stroke="'+col+'" stroke-width="1.6" stroke-linecap="round"/>';
+    }
+    return '<svg width="40" height="20" style="flex-shrink:0">'+lines+'</svg>';
   }
   const W=40,H=20,pad=2;
   const fo=t.fillEnabled?(t.fillOpacity!=null?t.fillOpacity:30)/100:0;
@@ -2502,6 +2585,19 @@ function renderToppingControlsHTML(t){
     return adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val',0.1)+
       sizeLockHTML(t)+colorLineHTML(t)+fillHTML(t)+strokeShadowHTML(t);
   }
+  if(type==='burst'){
+    return adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val',0.1)+
+      '<div class="adj-row"><span class="adj-label">横幅%</span><input type="range" class="adj-slider tp-bw" min="5" max="150" step="0.5" value="'+(t.bw!=null?t.bw:70)+'"><span class="adj-val tp-bw-val">'+fmtNum(t.bw!=null?t.bw:70)+'</span></div>'+
+      '<div class="adj-row"><span class="adj-label">縦幅%</span><input type="range" class="adj-slider tp-bh" min="5" max="150" step="0.5" value="'+(t.bh!=null?t.bh:70)+'"><span class="adj-val tp-bh-val">'+fmtNum(t.bh!=null?t.bh:70)+'</span></div>'+
+      '<div class="adj-row"><span class="adj-label">内側比率</span><input type="range" class="adj-slider tp-inner-ratio" min="0" max="95" value="'+(t.innerRatio!=null?t.innerRatio:20)+'"><span class="adj-val tp-inner-ratio-val">'+(t.innerRatio!=null?t.innerRatio:20)+'</span></div>'+
+      '<div class="adj-row"><span class="adj-label">色</span><input type="color" class="tp-color-inp tp-mainc" value="'+(t.color||'#000000')+'"></div>'+
+      '<div class="adj-row"><span class="adj-label">太さ(内)</span><input type="number" class="tp-iw tp-num-inp" min="0" max="100" value="'+(t.innerWidth!=null?t.innerWidth:1)+'"></div>'+
+      '<div class="adj-row"><span class="adj-label">太さ(外)</span><input type="number" class="tp-ow tp-num-inp" min="0.2" max="200" value="'+(t.outerWidth!=null?t.outerWidth:8)+'"></div>'+
+      '<div class="adj-row"><span class="adj-label">バラつき</span><input type="range" class="adj-slider tp-variance" min="0" max="100" value="'+(t.widthVariance!=null?t.widthVariance:35)+'"><span class="adj-val tp-variance-val">'+(t.widthVariance!=null?t.widthVariance:35)+'</span></div>'+
+      '<div class="adj-row"><span class="adj-label">本数</span><input type="range" class="adj-slider tp-count" min="8" max="400" value="'+(t.count||100)+'"><span class="adj-val tp-count-val">'+(t.count||100)+'</span></div>'+
+      '<div class="adj-row"><button type="button" class="tp-reshuffle adj-btn">🔀 バラつきを再抽選</button></div>'+
+      opacityHTML(t)+strokeShadowHTML(t);
+  }
   if(type==='poly'){
     let html=(t.points||[]).map((p,i)=>
       '<div class="adj-row"><span class="adj-label">頂点'+(i+1)+'</span>'
@@ -2618,6 +2714,25 @@ function bindToppingControls(container,t){
     const fc=container.querySelector('.tp-fillc');if(fc)fc.addEventListener('input',e=>{t.fillColor=e.target.value;upd();});
     const fo=container.querySelector('.tp-fillop');const fov=container.querySelector('.tp-fillop-val');
     if(fo)fo.addEventListener('input',()=>{t.fillOpacity=parseFloat(fo.value);if(fov)fov.textContent=fo.value;upd();});
+  }
+  if(type==='burst'){
+    const mc=container.querySelector('.tp-mainc');if(mc)mc.addEventListener('input',e=>{t.color=e.target.value;upd();});
+    const bwEl=container.querySelector('.tp-bw'),bwVl=container.querySelector('.tp-bw-val');
+    if(bwEl)bwEl.addEventListener('input',()=>{t.bw=parseFloat(bwEl.value);if(bwVl)bwVl.textContent=fmtNum(t.bw);upd();});
+    const bhEl=container.querySelector('.tp-bh'),bhVl=container.querySelector('.tp-bh-val');
+    if(bhEl)bhEl.addEventListener('input',()=>{t.bh=parseFloat(bhEl.value);if(bhVl)bhVl.textContent=fmtNum(t.bh);upd();});
+    const irEl=container.querySelector('.tp-inner-ratio'),irVl=container.querySelector('.tp-inner-ratio-val');
+    if(irEl)irEl.addEventListener('input',()=>{t.innerRatio=parseFloat(irEl.value);if(irVl)irVl.textContent=Math.round(t.innerRatio);upd();});
+    const iwEl=container.querySelector('.tp-iw');if(iwEl)iwEl.addEventListener('input',()=>{t.innerWidth=parseFloat(iwEl.value)||0;upd();});
+    const owEl=container.querySelector('.tp-ow');if(owEl)owEl.addEventListener('input',()=>{t.outerWidth=Math.max(0.2,parseFloat(owEl.value)||0.2);upd();});
+    const vaEl=container.querySelector('.tp-variance'),vaVl=container.querySelector('.tp-variance-val');
+    if(vaEl)vaEl.addEventListener('input',()=>{t.widthVariance=parseFloat(vaEl.value);if(vaVl)vaVl.textContent=Math.round(t.widthVariance);upd();});
+    const cnEl=container.querySelector('.tp-count'),cnVl=container.querySelector('.tp-count-val');
+    if(cnEl)cnEl.addEventListener('input',()=>{t.count=Math.round(parseFloat(cnEl.value))||8;if(cnVl)cnVl.textContent=t.count;upd();});
+    const reEl=container.querySelector('.tp-reshuffle');
+    if(reEl)reEl.addEventListener('click',()=>{t.seed=Math.floor(Math.random()*1e9);upd();});
+    const op=container.querySelector('.tp-opacity'),opv=container.querySelector('.tp-opacity-val');
+    if(op)op.addEventListener('input',()=>{t.opacity=parseFloat(op.value);if(opv)opv.textContent=Math.round(t.opacity);upd();});
   }
   // フリーハンド描画型
   if(type==='draw-line'){
@@ -3031,6 +3146,9 @@ function _hitTestItem(cx,cy,t,W,H){
     const mnx=Math.min(...xs)-HR,mxx=Math.max(...xs)+HR;
     const mny=Math.min(...ys)-HR,mxy=Math.max(...ys)+HR;
     return cx>=mnx&&cx<=mxx&&cy>=mny&&cy<=mxy;
+  }else if(type==='burst'){
+    const brx=Math.max(1,(t.bw!=null?t.bw:70)/100*W/2)+HR,bry=Math.max(1,(t.bh!=null?t.bh:70)/100*H/2)+HR;
+    return(cx-t.x/100*W)**2/brx**2+(cy-t.y/100*H)**2/bry**2<1;
   }
   return false;
 }
