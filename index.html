@@ -177,7 +177,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 
 /* 調整パネル */
 #adj-panel{background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;display:flex;flex-direction:column;gap:7px;}
-.adj-row{display:flex;align-items:center;gap:6px;}
+.adj-row{display:flex;align-items:center;gap:6px;padding:5px 0;}
 .adj-label{font-size:10.5px;font-weight:700;color:var(--muted);width:36px;flex-shrink:0;text-align:right;}
 .adj-btns{display:flex;gap:3px;flex-wrap:wrap;flex:1;}
 .adj-btn{padding:3px 8px;border:1px solid var(--border2);border-radius:6px;background:var(--surf2);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.12s;touch-action:manipulation;}
@@ -2233,27 +2233,44 @@ function drawBurstItem(ctx,t,W,H,scale){
   const iw=Math.max(0,(t.innerWidth!=null?t.innerWidth:1)*scale);
   const ow=Math.max(0.2,(t.outerWidth!=null?t.outerWidth:8)*scale);
   const variance=Math.max(0,Math.min(1,(t.widthVariance||0)/100));
+  const s2extra=t.stroke2Enabled?Math.max(0,(t.stroke2Width||3))*scale:0;
+  const angleStep=(Math.PI*2)/count;
 
-  // 太さのバラつき（乱数）を先に全本数分まとめて計算しておく。
+  // 太さ・内側位置・線の間隔のバラつき（乱数）を先に全本数分まとめて計算しておく。
   // 縁取り・本体の2回描画で同じ乱数列を使い回すことで、輪郭がズレないようにする。
   const jitters=[];
   {
     const rng=mulberry32((t.seed>>>0)||1);
-    for(let i=0;i<count;i++)jitters.push([1+(rng()*2-1)*variance,1+(rng()*2-1)*variance]);
+    for(let i=0;i<count;i++){
+      const jIn=1+(rng()*2-1)*variance;
+      const jOut=1+(rng()*2-1)*variance;
+      const jInnerR=1+(rng()*2-1)*variance*0.6;       // 内側位置のバラつき（振れ幅は少し抑えめ）
+      const angleJ=(rng()*2-1)*variance*angleStep*0.4; // 線と線の間隔のバラつき（少しだけ）
+      jitters.push([jIn,jOut,jInnerR,angleJ]);
+    }
   }
 
-  const layer=document.createElement('canvas');layer.width=W;layer.height=H;
+  // レイヤーは「バーストの位置に関わらず全体を確実に収める」サイズで作る。
+  // 出力キャンバスぴったりのサイズで描画すると、画像端に近い位置＋回転の組み合わせで
+  // 「回転前に切り捨てられた部分が、回転後も復活しない」バグになるため、
+  // ここでは一切クリップさせず、最後にctxへ回転込みで合成する段階でのみ自然にクリップさせる。
+  const maxHalf=Math.max(rx,ry)+Math.max(ow,iw)/2+s2extra+4;
+  const layerSize=Math.ceil(maxHalf*2);
+  const layer=document.createElement('canvas');layer.width=layerSize;layer.height=layerSize;
   const lctx=layer.getContext('2d');
+  const lcx=layerSize/2, lcy=layerSize/2; // レイヤー内でのバースト中心
+
   const drawLines=(fillColor,extraHalf)=>{
     lctx.fillStyle=fillColor;
     for(let i=0;i<count;i++){
-      const ang=(i/count)*Math.PI*2;
+      const[jIn,jOut,jInnerR,angleJ]=jitters[i];
+      const ang=i*angleStep+angleJ;
       const dirX=Math.cos(ang),dirY=Math.sin(ang);
-      const ix=cx+dirX*rx*innerRatio, iy=cy+dirY*ry*innerRatio;
-      const ox=cx+dirX*rx, oy=cy+dirY*ry;
+      const innerR=Math.max(0,Math.min(0.98,innerRatio*jInnerR));
+      const ix=lcx+dirX*rx*innerR, iy=lcy+dirY*ry*innerR;
+      const ox=lcx+dirX*rx, oy=lcy+dirY*ry;
       const ddx=ox-ix, ddy=oy-iy, len=Math.hypot(ddx,ddy)||1;
       const nx=-ddy/len, ny=ddx/len;
-      const[jIn,jOut]=jitters[i];
       const iwHalf=Math.max(0,iw*jIn/2)+extraHalf, owHalf=Math.max(0,ow*jOut/2)+extraHalf;
       lctx.beginPath();
       lctx.moveTo(ix+nx*iwHalf,iy+ny*iwHalf);
@@ -2263,14 +2280,14 @@ function drawBurstItem(ctx,t,W,H,scale){
       lctx.closePath();lctx.fill();
     }
   };
-  if(t.stroke2Enabled)drawLines(t.stroke2Color||'#ffffff',Math.max(0,(t.stroke2Width||3))*scale);
+  if(t.stroke2Enabled)drawLines(t.stroke2Color||'#ffffff',s2extra);
   drawLines(t.color||'#000000',0);
 
   ctx.save();
   if(t.rotation){ctx.translate(cx,cy);ctx.rotate(t.rotation*Math.PI/180);ctx.translate(-cx,-cy);}
   if(t.shadowEnabled){ctx.shadowColor=t.shadowColor||'#000';ctx.shadowBlur=(t.shadowBlur||8)*scale;ctx.shadowOffsetX=(t.shadowX||3)*scale;ctx.shadowOffsetY=(t.shadowY||3)*scale;}
   ctx.globalAlpha=(t.opacity!=null?t.opacity:100)/100;
-  ctx.drawImage(layer,0,0);
+  ctx.drawImage(layer,cx-lcx,cy-lcy); // レイヤーをバーストの実位置に合わせて配置（自然なクリップはここで発生）
   ctx.restore();
 }
 
@@ -2587,8 +2604,8 @@ function renderToppingControlsHTML(t){
   }
   if(type==='burst'){
     return adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val',0.1)+
-      '<div class="adj-row"><span class="adj-label">横幅%</span><input type="range" class="adj-slider tp-bw" min="5" max="150" step="0.5" value="'+(t.bw!=null?t.bw:70)+'"><span class="adj-val tp-bw-val">'+fmtNum(t.bw!=null?t.bw:70)+'</span></div>'+
-      '<div class="adj-row"><span class="adj-label">縦幅%</span><input type="range" class="adj-slider tp-bh" min="5" max="150" step="0.5" value="'+(t.bh!=null?t.bh:70)+'"><span class="adj-val tp-bh-val">'+fmtNum(t.bh!=null?t.bh:70)+'</span></div>'+
+      '<div class="adj-row"><span class="adj-label">横幅%</span><input type="range" class="adj-slider tp-bw" min="5" max="500" step="0.5" value="'+(t.bw!=null?t.bw:70)+'"><span class="adj-val tp-bw-val">'+fmtNum(t.bw!=null?t.bw:70)+'</span></div>'+
+      '<div class="adj-row"><span class="adj-label">縦幅%</span><input type="range" class="adj-slider tp-bh" min="5" max="500" step="0.5" value="'+(t.bh!=null?t.bh:70)+'"><span class="adj-val tp-bh-val">'+fmtNum(t.bh!=null?t.bh:70)+'</span></div>'+
       '<div class="adj-row"><span class="adj-label">内側比率</span><input type="range" class="adj-slider tp-inner-ratio" min="0" max="95" value="'+(t.innerRatio!=null?t.innerRatio:20)+'"><span class="adj-val tp-inner-ratio-val">'+(t.innerRatio!=null?t.innerRatio:20)+'</span></div>'+
       '<div class="adj-row"><span class="adj-label">色</span><input type="color" class="tp-color-inp tp-mainc" value="'+(t.color||'#000000')+'"></div>'+
       '<div class="adj-row"><span class="adj-label">太さ(内)</span><input type="number" class="tp-iw tp-num-inp" min="0" max="100" value="'+(t.innerWidth!=null?t.innerWidth:1)+'"></div>'+
