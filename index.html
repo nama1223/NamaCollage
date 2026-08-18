@@ -1428,9 +1428,18 @@ function drawWithTransform(ctx,img,sx,sy,sw,sh,dx,dy,dw,dh,r,fH,fV){
 async function updateImgThumb(img){
   const eff=getEffectiveDimensions(img);
   // 高DPR端末（スマホ等）ではCSS上のセル幅よりデバイスピクセル数の方が大きくなるため、
-  // 220px固定だと拡大表示時にボケる。devicePixelRatio分を見込んだ解像度で生成する。
+  // 固定pxだと拡大表示時にボケる。devicePixelRatio分を見込んだ解像度で生成する。
+  //
+  // グリッドのセルは「幅」がCELL_MAX_W(130px)を上限に決まり、高さはそこからアスペクト比で
+  // 算出される（renderGridView参照）。そのため、以前のように「幅・高さ両方をmaxSに収める」
+  // ロジックだと、ロングスクリーンショットのような縦横比が極端な画像では「高さをmaxSに収める」
+  // 制約の方が強く効いてしまい、本来必要な「幅」の解像度が足りずボケる原因になっていた。
+  // → セルの幅基準でスケールを決め、高さは比率どおりに追従させる（面積の上限だけメモリ保護用に設ける）。
   const dpr=Math.min(window.devicePixelRatio||1,3);
-  const maxS=220*dpr,s=Math.min(maxS/eff.w,maxS/eff.h,1);
+  const targetW=CELL_MAX_W*dpr;
+  let s=Math.min(1,targetW/eff.w);
+  const MAX_AREA=2400*2400; // メモリ保護用の上限（通常の写真では実質発動しない）
+  if(eff.w*eff.h*s*s>MAX_AREA) s=Math.sqrt(MAX_AREA/(eff.w*eff.h));
   const W=Math.max(1,Math.round(eff.w*s)),H=Math.max(1,Math.round(eff.h*s));
   const cv=document.createElement('canvas');cv.width=W;cv.height=H;
   const cctx=cv.getContext('2d');cctx.imageSmoothingEnabled=true;cctx.imageSmoothingQuality='high';
@@ -1439,7 +1448,7 @@ async function updateImgThumb(img){
     cv.toBlob(blob=>{
       if(img.thumbUrl)URL.revokeObjectURL(img.thumbUrl);
       img.thumbUrl=blob?URL.createObjectURL(blob):null;res();
-    },'image/jpeg',0.92);
+    },'image/jpeg',0.95);
   });
 }
 
@@ -1635,7 +1644,13 @@ async function doCompose(){
   $('preview-loading').classList.remove('hidden');
   await new Promise(r=>requestAnimationFrame(r));
   try{
-    const md=Math.max(nat.totalW,nat.totalH),ps=md>1400?1400/md:1;
+    // プレビューは設定を変える度に毎回再描画するため、負荷とのバランスで解像度に上限を設けている。
+    // 以前は画面のdevicePixelRatioを考慮しない固定1400pxだったため、高DPRのスマートフォンほど
+    // 実際の表示密度に対して解像度不足になり「機種によって画質が違う」原因になっていた。
+    // このcanvasはトッピングタブの表示にも使われるため、ここでの改善はそちらにも反映される。
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    const previewCap=1400*dpr;
+    const md=Math.max(nat.totalW,nat.totalH),ps=md>previewCap?previewCap/md:1;
     // プレビューは bgTransparent 時に常に透過モードで生成（保存形式に関わらず）
     const previewFmt=settings.bgTransparent?'png':saveFormat;
     const pC=await renderBaseAt(ps,previewFmt);
@@ -1670,16 +1685,33 @@ function updateZoomTransform(){
   img.style.transform='translate('+Z.tx+'px,'+Z.ty+'px) scale('+Z.scale+')';
 }
 function updateZoomInfo(){ $('zoom-info').textContent=Math.round(Z.scale*100)+'%'; }
-function openZoom(){
-  const pc=$('preview-canvas'); if(!pc.width) return;
-  const img=$('zoom-img');
-  img.src=pc.toDataURL();
-  img.style.width=pc.width+'px'; img.style.height=pc.height+'px';
-  // 初期: 原寸（1:1）、画面中央
-  Z.scale=1; Z.tx=Math.round((window.innerWidth-pc.width)/2); Z.ty=Math.round((window.innerHeight-pc.height)/2);
-  Z.ptrs.clear(); Z.panStart=null; Z.moved=false;
-  updateZoomTransform(); updateZoomInfo();
-  $('zoom-overlay').classList.add('open');
+let zoomImgUrl=null,zoomLoading=false;
+async function openZoom(){
+  const pc=$('preview-canvas'); if(!pc.width||zoomLoading) return;
+  // プレビュー用のcanvas(preview-canvas)は常時再描画のため解像度を抑えてある。
+  // それをそのまま拡大表示すると原寸に見えてもボケてしまうため、タップした時だけ
+  // ダウンロードと同じ解像度(scale=1、トッピング込み)で描き直してから表示する。
+  zoomLoading=true;
+  const prevCursor=pc.style.cursor; pc.style.cursor='wait';
+  try{
+    const previewFmt=settings.bgTransparent?'png':saveFormat;
+    const full=await renderAt(1,previewFmt);
+    if(!full) return;
+    const mime=previewFmt==='png'?'image/png':previewFmt==='webp'?'image/webp':'image/jpeg';
+    const blob=await new Promise(res=>full.toBlob(res,mime,previewFmt==='png'?undefined:saveQuality/100));
+    if(!blob) return;
+    if(zoomImgUrl) URL.revokeObjectURL(zoomImgUrl);
+    zoomImgUrl=URL.createObjectURL(blob);
+    const img=$('zoom-img');
+    img.src=zoomImgUrl;
+    img.style.width=full.width+'px'; img.style.height=full.height+'px';
+    // 初期: 原寸（1:1）、画面中央
+    Z.scale=1; Z.tx=Math.round((window.innerWidth-full.width)/2); Z.ty=Math.round((window.innerHeight-full.height)/2);
+    Z.ptrs.clear(); Z.panStart=null; Z.moved=false;
+    updateZoomTransform(); updateZoomInfo();
+    $('zoom-overlay').classList.add('open');
+  }catch(err){ console.error(err); alert('原寸表示の生成に失敗しました。\n'+err.message); }
+  finally{ zoomLoading=false; pc.style.cursor=prevCursor; }
 }
 function closeZoom(){ $('zoom-overlay').classList.remove('open'); blockUIBriefly(400); }
 $('preview-canvas').addEventListener('click',()=>{ if(state.composed&&!state.pickColorMode) openZoom(); });
@@ -3572,10 +3604,14 @@ function openCutoutModal(ri,ci,mode){
   }else CU.regions=[{start:0.3,end:0.6}];
   const maxW=Math.min(window.innerWidth-32,780),maxH=Math.floor(window.innerHeight*0.5);
   CU.scale=Math.min(1,maxW/CU.imgW,maxH/CU.imgH);
-  const dpr=Math.min(window.devicePixelRatio||1,3);
   const cssW=Math.round(CU.imgW*CU.scale),cssH=Math.round(CU.imgH*CU.scale);
   const cv=$('cutout-canvas');
-  cv.width=Math.min(CU.imgW,cssW*dpr);cv.height=Math.min(CU.imgH,cssH*dpr);
+  // 画面上のCSS表示サイズ(cssW/cssH)は画面に収まる大きさのまま、キャンバスの実解像度は
+  // 元画像と同じ(等倍)にする。以前は devicePixelRatio×CSSサイズ で頭打ちにしていたため、
+  // ロングスクリーンショットのような縦横比が極端な画像で、ピンチズームで拡大すると
+  // 解像度不足で文字が潰れて見えていた（addModalZoomはCSS transform拡大なので、
+  // 元となるキャンバスの実ピクセル数が足りないとどれだけズームしても粗いまま）。
+  cv.width=CU.imgW;cv.height=CU.imgH;
   cv.style.width=cssW+'px';cv.style.height=cssH+'px';
   $('cutout-title').textContent=(mode==='v'?'中抜き（縦方向）':'中抜き（横方向）')+' — '+img.name;
   history.pushState({modal:'cutout'},'');
@@ -3628,6 +3664,7 @@ function updateCutoutInfo(){
 let _cuBlinkRAF=null;
 function drawCutout(){
   const cv=$('cutout-canvas'),ctx=cv.getContext('2d');
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
   ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(CU.imgEl,0,0,cv.width,cv.height);
   // 選択中の領域は透明度を速めに往復させて点滅させる（0.30〜0.60の間）
   const blinkA=0.30+0.30*Math.abs(Math.sin(performance.now()/260));
@@ -3728,10 +3765,11 @@ function openTrimModal(ri,ci){
   else{T.cx=0;T.cy=0;T.cw=img.w;T.ch=img.h;}
   const mxW=Math.min(window.innerWidth-32,780),mxH=Math.floor(window.innerHeight*0.52);
   T.scale=Math.min(1,mxW/img.w,mxH/img.h);
-  const dpr=Math.min(window.devicePixelRatio||1,3);
   const cssW=Math.round(img.w*T.scale),cssH=Math.round(img.h*T.scale);
   const tc=$('trim-canvas');
-  tc.width=Math.min(img.w,cssW*dpr); tc.height=Math.min(img.h,cssH*dpr);
+  // cutout-canvasと同様、CSS表示サイズは画面に収まる大きさのまま、実解像度は元画像と等倍にする
+  // （以前はdevicePixelRatio×CSSサイズで頭打ちにしており、ピンチズーム時に文字が潰れていた）。
+  tc.width=img.w; tc.height=img.h;
   tc.style.width=cssW+'px'; tc.style.height=cssH+'px';
   $('trim-title').textContent='トリミング — '+img.name;
   history.pushState({modal:'trim'},'');
@@ -3739,8 +3777,9 @@ function openTrimModal(ri,ci){
 }
 function drawTrim(){
   const tc=$('trim-canvas'),ctx=tc.getContext('2d');
-  // scale は論理サイズ→実ピクセルのスケール（DPR 込み）
+  // scale は論理サイズ→実ピクセルのスケール（等倍が基本）
   const sx=tc.width/T.imgW, sy=tc.height/T.imgH;
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
   ctx.clearRect(0,0,tc.width,tc.height); ctx.drawImage(T.imgEl,0,0,tc.width,tc.height);
   const cx=T.cx*sx,cy=T.cy*sy,cw=T.cw*sx,ch=T.ch*sy;
   ctx.fillStyle='rgba(0,0,0,0.52)';
