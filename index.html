@@ -1045,7 +1045,12 @@ function showTab(name){
     // 初回スナップショット（まだ履歴がない場合）
     if(TH.stack.length===0)thSnapshot();
   }
-  if(name==='save') updateSaveTab();
+  if(name==='save'){
+    // 「先にプレビューを生成してください」と表示するだけだったが、プレビュータブを経由しなくても
+    // 保存タブを開いた時点で自動的に生成する（プレビュータブに切り替えた時と同じ挙動）。
+    if(flatImages().length&&(!state.composed||state.previewDirty)) doCompose().then(updateSaveTab);
+    else updateSaveTab();
+  }
 }
 $$('.nav-btn').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 
@@ -4045,6 +4050,10 @@ const colorZoom=addModalZoom($('color-canvas-wrap'),$('color-modal'));
 const cutoutZoom=addModalZoom($('cutout-canvas-wrap'),$('cutout-modal'),e=>{
   const cuCvs=$('cutout-canvas');
   const r=cuCvs.getBoundingClientRect();
+  // キャンバスの外側（レターボックスの余白）はハンドル判定の対象外にする。
+  // 以前はここで軸を1つしかチェックしておらず、切り抜き範囲の境界線の延長線上（＝画像の枠外）を
+  // 触るとハンドル近くと誤判定され、1本指パン(pan1)が無効化されて反応しなくなっていた。
+  if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) return false;
   const p=CU.mode==='v'?(e.clientY-r.top)/r.height:(e.clientX-r.left)/r.width;
   let minD=Infinity;
   CU.regions.forEach(rg=>{minD=Math.min(minD,Math.abs(p-rg.start),Math.abs(p-rg.end));});

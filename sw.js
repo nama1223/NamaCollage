@@ -163,14 +163,22 @@ async function handleShareTarget(request) {
 
   if (files.length) {
     try {
+      // 先にすべてのファイルを読み終えてから、IndexedDBへの書き込みをまとめて同期的に行う。
+      // （await file.arrayBuffer() の後で store.add() を呼ぶと、その待ち時間の間
+      //   トランザクションに保留中のリクエストが無い状態になり、ブラウザが
+      //   トランザクションを自動コミット/終了させてしまう。その状態で次のstore.add()を
+      //   呼ぶと「トランザクションが終了しています」という例外になり、下のcatchで
+      //   握りつぶされて「シェアした画像が無反応で読み込まれない」という症状になっていた）
+      const items = await Promise.all(files.map(async file => {
+        const buf = await file.arrayBuffer();
+        return { name: file.name, type: file.type, blob: new Blob([buf], { type: file.type }) };
+      }));
+
       const db = await openDB();
       const tx = db.transaction('pending_shares', 'readwrite');
       const store = tx.objectStore('pending_shares');
       store.clear();
-      for (const file of files) {
-        const buf = await file.arrayBuffer();
-        store.add({ name: file.name, type: file.type, blob: new Blob([buf], { type: file.type }) });
-      }
+      for (const item of items) store.add(item); // await を挟まず同期的に発行してトランザクションを維持する
       await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
       db.close();
 
