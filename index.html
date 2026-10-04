@@ -481,6 +481,8 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
       <div id="tp-canvas-wrap"><canvas id="topping-canvas"></canvas></div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:2px 0">
         <button type="button" class="tp-add-btn" data-tp="text">✍️ テキスト</button>
+        <button type="button" class="tp-add-btn" data-tp="image">🖼️ 画像</button>
+        <input type="file" id="tp-image-input" accept="image/*" style="display:none">
         <select class="adj-select tp-cat-sel" id="tp-sel-line" style="max-width:120px;flex:0 0 auto">
           <option value="">— 線・矢印</option>
           <option value="line">— 直線</option>
@@ -790,6 +792,7 @@ const maxCols = () => Math.max(0, ...state.grid.map(r => r.length));
 let composeTimer = null;
 let saveFormat = 'jpeg', saveQuality = 92, sizeEstTimer = null;
 let saveDirHandle = null; // File System Access API: 選択済みの保存先フォルダ（対応ブラウザのみ）
+const TPIMG = new Map(); // 画像トッピングの画像ストア: key → {key,name,blob,url,el,w,h}
 
 // ===== IndexedDB =====
 let idb = null;
@@ -863,6 +866,36 @@ const dbGetAll = s => idb ? new Promise(res=>{const r=idb.transaction(s,'readonl
 const dbGet    = (s,k) => idb ? new Promise(res=>{const r=idb.transaction(s,'readonly').objectStore(s).get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);}) : Promise.resolve(null);
 const dbTxW    = (s,fn) => { if(!idb) return Promise.resolve(); return new Promise((res,rej)=>{const tx=idb.transaction(s,'readwrite');fn(tx.objectStore(s));tx.oncomplete=res;tx.onerror=rej;}); };
 
+// ===== 画像トッピング用の画像ストア =====
+// トッピング本体(state.toppings)には imgKey（文字列）だけを持たせ、画像データはここで管理する。
+// （トッピングはJSON化してアンドゥ履歴・.namaco・IndexedDBに保存されるため、Blobを直接持たせない）
+async function tpImgRegister(key,name,blob){
+  const url=URL.createObjectURL(blob),el=new Image();
+  await new Promise(r=>{el.onload=r;el.onerror=r;el.src=url;});
+  const rec={key,name:name||'image',blob,url,el,w:el.naturalWidth,h:el.naturalHeight};
+  TPIMG.set(key,rec);
+  return rec;
+}
+async function tpImgLoadFromDB(key){
+  if(TPIMG.has(key))return;
+  const rec=await dbGet('meta','tpimg:'+key);
+  if(rec&&rec.blob)await tpImgRegister(key,rec.name,rec.blob);
+}
+// 使われていない画像をIndexedDBから削除（usedKeys: 現在使用中のkeyのSet）
+async function tpImgCleanupDB(usedKeys){
+  if(!idb)return;
+  try{
+    const keys=await new Promise(res=>{const r=idb.transaction('meta','readonly').objectStore('meta').getAllKeys();r.onsuccess=()=>res(r.result);r.onerror=()=>res([]);});
+    for(const k of keys){
+      if(typeof k==='string'&&k.startsWith('tpimg:')&&!usedKeys.has(k.slice(6))) await dbTxW('meta',s=>s.delete(k));
+    }
+  }catch(e){}
+}
+async function tpImgClearAll(){
+  for(const r of TPIMG.values())URL.revokeObjectURL(r.url);
+  TPIMG.clear();
+  await tpImgCleanupDB(new Set());
+}
 async function persistNewImages(imgs){
   try{ for(const img of imgs){ const blob=await fetch(img.url).then(r=>r.blob()); await dbTxW('imgs',s=>s.put({id:img.id,name:img.name,blob})); } }catch(e){}
 }
@@ -885,6 +918,10 @@ async function restoreFromDB(){
   if(meta?.toppings && meta.toppings.length){
     state.toppings=meta.toppings.map(t=>({...t,type:t.type||'text'}));
     state.nextToppingId=meta.nextToppingId||1;
+    // 画像トッピングの画像を復元（使われていない古い画像は掃除）
+    const tpKeys=[...new Set(state.toppings.map(t=>t.type==='image'?t.imgKey:null).filter(Boolean))];
+    await Promise.all(tpKeys.map(tpImgLoadFromDB));
+    tpImgCleanupDB(new Set(tpKeys));
     renderToppingList();
   }
   if(meta?.layout){
@@ -921,6 +958,8 @@ async function exportNamacoFile(){
   btn.disabled=true; btn.textContent='書き出し中…';
   try{
     const blobs=await Promise.all(imgs.map(img=>fetch(img.url).then(r=>r.blob())));
+    // 画像トッピングの画像（使用中のもののみ）。画像本体の後ろに続けて格納する
+    const tpKeys=[...new Set(state.toppings.map(t=>t.type==='image'?t.imgKey:null).filter(k=>k&&TPIMG.has(k)))];
     const metaImages=imgs.map((img,i)=>({
       id:img.id,name:img.name,mimeType:blobs[i].type||'image/png',
       cropData:img.cropData||null,transform:img.transform||null,
@@ -931,6 +970,7 @@ async function exportNamacoFile(){
       nextId:state.nextId,nextToppingId:state.nextToppingId,
       settings:{...settings},toppings:state.toppings,
       images:metaImages,
+      toppingImages:tpKeys.map(k=>({key:k,name:TPIMG.get(k).name,mimeType:TPIMG.get(k).blob.type||'image/png'})),
       grid:state.grid.map(row=>row.map(img=>img.id)),
     };
     const metaBytes=new TextEncoder().encode(JSON.stringify(meta));
@@ -939,6 +979,11 @@ async function exportNamacoFile(){
     parts.push(new Uint8Array(lenBuf),metaBytes);
     for(const blob of blobs){
       const buf=await blob.arrayBuffer();
+      const lb=new ArrayBuffer(4);new DataView(lb).setUint32(0,buf.byteLength,true);
+      parts.push(new Uint8Array(lb),new Uint8Array(buf));
+    }
+    for(const k of tpKeys){
+      const buf=await TPIMG.get(k).blob.arrayBuffer();
       const lb=new ArrayBuffer(4);new DataView(lb).setUint32(0,buf.byteLength,true);
       parts.push(new Uint8Array(lb),new Uint8Array(buf));
     }
@@ -970,6 +1015,13 @@ async function importNamacoFile(file){
     const bytes=new Uint8Array(buf,off,len); off+=len;
     blobMap.set(im.id,new Blob([bytes],{type:im.mimeType||'image/png'}));
   }
+  // 画像トッピングの画像（古い形式のファイルには無い）
+  const tpBlobs=[];
+  for(const ti of (meta.toppingImages||[])){
+    const len=dv.getUint32(off,true); off+=4;
+    const bytes=new Uint8Array(buf,off,len); off+=len;
+    tpBlobs.push({key:ti.key,name:ti.name,blob:new Blob([bytes],{type:ti.mimeType||'image/png'})});
+  }
   // 既存データを破棄して置き換え
   flatImages().forEach(img=>{URL.revokeObjectURL(img.url);if(img.thumbUrl)URL.revokeObjectURL(img.thumbUrl);});
   await dbTxW('imgs',s=>s.clear()).catch(()=>{});
@@ -990,6 +1042,11 @@ async function importNamacoFile(file){
   state.toppings=(meta.toppings||[]).map(t=>({...t,type:t.type||'text'}));
   state.nextToppingId=meta.nextToppingId||1;
   state.selectedToppingId=null;
+  await tpImgClearAll();
+  for(const tb of tpBlobs){
+    await tpImgRegister(tb.key,tb.name,tb.blob);
+    await dbTxW('meta',s=>s.put({name:tb.name,blob:tb.blob},'tpimg:'+tb.key)).catch(()=>{});
+  }
   if(meta.settings){
     Object.keys(settings).forEach(k=>{if(meta.settings[k]!==undefined)settings[k]=meta.settings[k];});
     syncAdjPanel();
@@ -1790,12 +1847,13 @@ $('btn-eyedrop').addEventListener('click',async()=>{
 
 // ===== トッピングタブ =====
 
-const TP_LABELS={text:'✍️ テキスト',line:'— 直線',arrow:'→ 矢印',rect:'□ 四角形',ellipse:'○ 楕円',poly:'⬟ 多角形','blur-rect':'🫧□ ぼかし','blur-ellipse':'🫧○ ぼかし','blur-poly':'🫧⬟ ぼかし','mosaic-rect':'⬛□ モザイク','mosaic-ellipse':'⬛○ モザイク','mosaic-poly':'⬛⬟ モザイク','draw-line':'✏️ 線描画','draw-blur':'🫧 ぼかし描画','draw-mosaic':'⬛ モザイク描画',burst:'💥 集中線'};
+const TP_LABELS={text:'✍️ テキスト',image:'🖼️ 画像',line:'— 直線',arrow:'→ 矢印',rect:'□ 四角形',ellipse:'○ 楕円',poly:'⬟ 多角形','blur-rect':'🫧□ ぼかし','blur-ellipse':'🫧○ ぼかし','blur-poly':'🫧⬟ ぼかし','mosaic-rect':'⬛□ モザイク','mosaic-ellipse':'⬛○ モザイク','mosaic-poly':'⬛⬟ モザイク','draw-line':'✏️ 線描画','draw-blur':'🫧 ぼかし描画','draw-mosaic':'⬛ モザイク描画',burst:'💥 集中線'};
 
 function createToppingItem(type){
   const base={id:state.nextToppingId++,type,rotation:0,hidden:false,stroke2Enabled:false,stroke2Color:'#ffffff',stroke2Width:3,shadowEnabled:false,shadowColor:'#000000',shadowBlur:8,shadowX:3,shadowY:3};
   switch(type){
     case 'text':  return{...base,text:'テキスト',x:50,y:50,fontSize:80,color:'#ffffff',textAlign:'center',strokeWidth:3,strokeColor:'#000000',shadowEnabled:true,shadowColor:'#000000',shadowBlur:6,shadowX:2,shadowY:2};
+    case 'image': return{...base,imgKey:'',name:'',x:30,y:30,w:40,h:40,color:'#ffffff',strokeWidth:0,opacity:100,lockAspect:true,_ar:1};
     case 'line':  return{...base,x:20,y:50,x2:80,y2:50,color:'#ff4444',strokeWidth:4};
     case 'arrow': return{...base,x:20,y:50,x2:80,y2:50,color:'#ff4444',strokeWidth:4,headSize:40,headAngle:30};
     case 'rect':  return{...base,x:30,y:30,w:25,h:25,color:'#ff4444',strokeWidth:4,fillEnabled:false,fillColor:'#ff4444',fillOpacity:30,lockAspect:false};
@@ -2058,7 +2116,40 @@ function addToppingItem(type){
   state.toppings.push(item); state.selectedToppingId=item.id;
   renderToppingList(); renderToppingCanvas(); tpSaveNow();
 }
-$$('.tp-add-btn').forEach(btn=>btn.addEventListener('click',()=>addToppingItem(btn.dataset.tp)));
+$$('.tp-add-btn').forEach(btn=>btn.addEventListener('click',()=>{
+  if(btn.dataset.tp==='image'){$('tp-image-input').value='';$('tp-image-input').click();return;}
+  addToppingItem(btn.dataset.tp);
+}));
+// 画像トッピング: ローカル画像を読み込んで、プレビュー画像の中央に収まる大きさで追加する
+async function addImageTopping(file){
+  if(!file||!(file.type||'').startsWith('image/'))throw new Error('画像ファイルを選んでください。');
+  const key='tp'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  const blob=file.slice(0,file.size,file.type);
+  const rec=await tpImgRegister(key,file.name,blob);
+  if(!rec.w||!rec.h){URL.revokeObjectURL(rec.url);TPIMG.delete(key);throw new Error('この画像は読み込めませんでした（非対応の形式の可能性があります）。');}
+  const item=createToppingItem('image');
+  item.imgKey=key;item.name=file.name;
+  // h は「画像幅基準の%」。元画像の縦横比を保ち、キャンバスの80%以内に収める
+  const ar=rec.h/rec.w;
+  const nat=state.previewNat;
+  const ratio=nat&&nat.totalW?(nat.totalH/nat.totalW):1; // キャンバスの 高さ/幅
+  let w=40;
+  if(w*ar>ratio*100*0.8)w=ratio*100*0.8/ar;
+  w=Math.max(2,Math.min(100,w));
+  const h=w*ar;
+  item._ar=ar;item.w=Math.round(w*10)/10;item.h=Math.round(h*10)/10;
+  item.x=Math.max(0,Math.round((100-item.w)/2*10)/10);
+  const hPctOfH=item.h/ratio;
+  item.y=Math.max(0,Math.round((100-hPctOfH)/2*10)/10);
+  await dbTxW('meta',s=>s.put({name:rec.name,blob},'tpimg:'+key)).catch(()=>{});
+  state.toppings.push(item);state.selectedToppingId=item.id;
+  renderToppingList();renderToppingCanvas();tpSaveNow();
+}
+$('tp-image-input').addEventListener('change',async e=>{
+  const file=e.target.files[0];if(!file)return;
+  try{await addImageTopping(file);}
+  catch(err){console.warn('image topping error:',err);alert('画像の追加に失敗しました:\n'+err.message);}
+});
 document.addEventListener('change',e=>{
   if(e.target.classList.contains('tp-cat-sel')&&e.target.value){
     addToppingItem(e.target.value); // フリー（draw-*）も通常アイテムとして即時追加
@@ -2085,6 +2176,33 @@ function drawTextItem(ctx,t,W,H,scale){
   ctx.restore();
 }
 
+// 画像トッピング: 位置・サイズは四角形と同じ（x,y=画像基準%、w,h=画像幅基準%）。
+// 画像と枠線を一旦小さなレイヤーにまとめてから、回転・影・透明度を一括で適用する。
+function drawImageTopping(ctx,t,W,H,scale){
+  const rec=TPIMG.get(t.imgKey);
+  if(!rec||!rec.w||!rec.h)return;
+  const gx=t.x/100*W,gy=t.y/100*H;
+  const gw=Math.max(1,t.w/100*W),gh=Math.max(1,t.h/100*W);
+  const swRaw=(t.strokeWidth==null)?0:t.strokeWidth;
+  const lw=swRaw>0?Math.max(0.5,swRaw*scale):0;
+  const m=Math.ceil(lw/2)+2;
+  const lwid=Math.max(1,Math.ceil(gw+m*2)),lhei=Math.max(1,Math.ceil(gh+m*2));
+  const layer=document.createElement('canvas');layer.width=lwid;layer.height=lhei;
+  const lctx=layer.getContext('2d');
+  lctx.imageSmoothingEnabled=true;lctx.imageSmoothingQuality='high';
+  lctx.drawImage(rec.el,m,m,gw,gh);
+  if(lw>0){lctx.strokeStyle=t.color||'#ffffff';lctx.lineWidth=lw;lctx.lineJoin='miter';lctx.strokeRect(m,m,gw,gh);}
+  ctx.save();
+  if(t.rotation){
+    const c=getRotationPivotPx(t,W,H);
+    ctx.translate(c.x,c.y);ctx.rotate(t.rotation*Math.PI/180);ctx.translate(-c.x,-c.y);
+  }
+  if(t.shadowEnabled){ctx.shadowColor=t.shadowColor||'#000';ctx.shadowBlur=(t.shadowBlur||8)*scale;ctx.shadowOffsetX=(t.shadowX||3)*scale;ctx.shadowOffsetY=(t.shadowY||3)*scale;}
+  ctx.globalAlpha=(t.opacity!=null?t.opacity:100)/100;
+  ctx.drawImage(layer,gx-m,gy-m);
+  ctx.restore();
+}
+
 function buildShapePath(ctx,s,px,py){
   if(s.type==='line'||s.type==='arrow'){ctx.beginPath();ctx.moveTo(px(s.x),py(s.y));ctx.lineTo(px(s.x2),py(s.y2));}
   else if(s.type==='rect'){ctx.beginPath();ctx.rect(px(s.x),py(s.y),px(s.w),px(s.h));}
@@ -2094,7 +2212,10 @@ function buildShapePath(ctx,s,px,py){
 
 function drawShapeItem(ctx,s,W,H,scale){
   const px=p=>p/100*W,py=p=>p/100*H;
-  const lw=Math.max(0.5,(s.strokeWidth||4)*scale);
+  // 四角形・楕円・多角形は太さ0（線なし）を許可する。線・矢印は従来どおり最小1扱い。
+  const swRaw=(s.strokeWidth==null)?4:s.strokeWidth;
+  const noStroke=(s.type==='rect'||s.type==='ellipse'||s.type==='poly')&&swRaw<=0;
+  const lw=noStroke?0:Math.max(0.5,(swRaw||4)*scale);
   ctx.save();
   if(s.rotation){
     const c=getRotationPivotPx(s,W,H);
@@ -2119,9 +2240,11 @@ function drawShapeItem(ctx,s,W,H,scale){
       buildShapePath(ctx,s,px,py);
       ctx.save();ctx.globalAlpha=(s.fillOpacity!=null?s.fillOpacity:30)/100;ctx.fillStyle=s.fillColor||'#ff4444';ctx.fill();ctx.restore();
     }
-    // メインストローク
-    buildShapePath(ctx,s,px,py);
-    ctx.strokeStyle=s.color||'#ff4444';ctx.lineWidth=lw;ctx.stroke();
+    // メインストローク（太さ0のときは描かない）
+    if(!noStroke){
+      buildShapePath(ctx,s,px,py);
+      ctx.strokeStyle=s.color||'#ff4444';ctx.lineWidth=lw;ctx.stroke();
+    }
   } else if(s.type==='arrow'){
     const[x1,y1,x2,y2]=[px(s.x),py(s.y),px(s.x2),py(s.y2)];
     const hl=(s.headSize||40)*scale,ha=(s.headAngle||30)*Math.PI/180,ang=Math.atan2(y2-y1,x2-x1);
@@ -2247,6 +2370,7 @@ function applyToppings(ctx,W,H,scale,liveId,livePreviewStroke){
     else if(type==='draw-blur'||type==='draw-mosaic')drawFreehandEffect(ctx,item,W,H,scale);
     else if(type.startsWith('blur')||type.startsWith('mosaic'))drawEffectItem(ctx,item,W,H,scale);
     else if(type==='burst')drawBurstItem(ctx,item,W,H,scale);
+    else if(type==='image')drawImageTopping(ctx,item,W,H,scale);
     else drawShapeItem(ctx,item,W,H,scale);
   });
 }
@@ -2459,7 +2583,13 @@ function drawFreehandEffect(ctx,t,W,H,scale){
 // ===== ミニプレビュー =====
 function toppingMiniPreview(t){
   const type=t.type||'text',col=t.color||'#ff4444';
-  const sw=Math.max(0.8,(t.strokeWidth||4)*0.35);
+  const swRaw=(t.strokeWidth==null)?4:t.strokeWidth;
+  const sw=Math.max(0.8,(swRaw||4)*0.35);
+  const scol=(swRaw<=0&&(type==='rect'||type==='ellipse'||type==='poly'))?'none':col; // 太さ0は線なし
+  if(type==='image'){
+    const rec=TPIMG.get(t.imgKey);
+    return rec?'<img src="'+rec.url+'" alt="" style="width:40px;height:20px;object-fit:contain;flex-shrink:0;border-radius:2px">':'';
+  }
   if(type==='text') return '<span class="tp-mini-text">'+escHtml((t.text||'').replace(/\n/g,' ').substring(0,22))+'</span>';
   // フリーハンド型
   if(type==='draw-line')
@@ -2501,14 +2631,14 @@ function toppingMiniPreview(t){
   let rw,rh;
   if(wR/hR>avW/avH){rw=avW;rh=avW*hR/wR;}else{rh=avH;rw=avH*wR/hR;}
   const rx=(W-rw)/2,ry=(H-rh)/2;
-  if(type==='rect') return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><rect x="'+rx+'" y="'+ry+'" width="'+rw+'" height="'+rh+'" stroke="'+col+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
-  if(type==='ellipse') return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><ellipse cx="'+(rx+rw/2)+'" cy="'+(ry+rh/2)+'" rx="'+(rw/2)+'" ry="'+(rh/2)+'" stroke="'+col+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
+  if(type==='rect') return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><rect x="'+rx+'" y="'+ry+'" width="'+rw+'" height="'+rh+'" stroke="'+scol+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
+  if(type==='ellipse') return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><ellipse cx="'+(rx+rw/2)+'" cy="'+(ry+rh/2)+'" rx="'+(rw/2)+'" ry="'+(rh/2)+'" stroke="'+scol+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
   if(type==='poly'&&t.points){
     const xs=t.points.map(p=>p.x),ys=t.points.map(p=>p.y);
     const mnx=Math.min(...xs),mny=Math.min(...ys),mxx=Math.max(...xs),mxy=Math.max(...ys);
     const scx=(W-pad*2)/(mxx-mnx||1),scy=(H-pad*2)/(mxy-mny||1);
     const pstr=t.points.map(p=>((p.x-mnx)*scx+pad)+','+((p.y-mny)*scy+pad)).join(' ');
-    return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><polygon points="'+pstr+'" stroke="'+col+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
+    return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><polygon points="'+pstr+'" stroke="'+scol+'" stroke-width="'+sw+'" fill="'+fc+'" fill-opacity="'+fo+'"/></svg>';
   }
   // blur/mosaic mini preview
   if(type.startsWith('blur')||type.startsWith('mosaic')){
@@ -2549,20 +2679,25 @@ function adjRowHTML(lbl,cls,mn,mx,val,valCls,step){
     '<input type="range" class="adj-slider '+cls+'" min="'+mn+'" max="'+mx+'" step="'+step+'" value="'+v+'">'+
     '<span class="adj-val '+valCls+'">'+fmtNum(v)+'</span></div>';
 }
-function strokeShadowHTML(s){
-  return '<div class="adj-row"><span class="adj-label">縁取り</span>'+
+function strokeShadowHTML(s,shadowOnly){
+  const stroke2Row=shadowOnly?'':'<div class="adj-row"><span class="adj-label">縁取り</span>'+
     '<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="tp-stroke2-en"'+(s.stroke2Enabled?' checked':'')+'> オン</label>'+
     '<input type="color" class="tp-stroke2c tp-color-inp" value="'+(s.stroke2Color||'#ffffff')+'">'+
-    '<input type="number" class="tp-stroke2w tp-num-inp" min="0" max="30" value="'+(s.stroke2Width||3)+'"></div>'+
+    '<input type="number" class="tp-stroke2w tp-num-inp" min="0" max="30" value="'+(s.stroke2Width||3)+'"></div>';
+  return stroke2Row+
     '<div class="adj-row"><span class="adj-label">影</span>'+
     '<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="tp-sha"'+(s.shadowEnabled?' checked':'')+'> オン</label>'+
     '<input type="color" class="tp-shc tp-color-inp" value="'+(s.shadowColor||'#000000')+'">'+
     '<span style="font-size:10px">ぼかし</span><input type="number" class="tp-shb tp-num-inp" min="0" max="50" value="'+(s.shadowBlur||8)+'"></div>';
 }
-function colorLineHTML(s){
-  return '<div class="adj-row"><span class="adj-label">色</span><input type="color" class="tp-color-inp tp-mainc" value="'+s.color+'">'+
+// opt.label: 色ラベル名 / opt.allowZero: 太さ0（線なし）を許可
+function colorLineHTML(s,opt){
+  opt=opt||{};
+  const lbl=opt.label||'色',az=!!opt.allowZero;
+  const swv=az?(s.strokeWidth!=null?s.strokeWidth:4):(s.strokeWidth||4);
+  return '<div class="adj-row"><span class="adj-label">'+lbl+'</span><input type="color" class="tp-color-inp tp-mainc" value="'+s.color+'">'+
     '<span class="adj-label" style="margin-left:auto">太さ</span>'+
-    '<input type="number" class="tp-sw tp-num-inp" min="1" max="50" value="'+(s.strokeWidth||4)+'"></div>';
+    '<input type="number" class="tp-sw tp-num-inp" min="'+(az?0:1)+'" max="50" value="'+swv+'"></div>';
 }
 function fillHTML(s){
   return '<div class="adj-row"><span class="adj-label">塗り</span>'+
@@ -2581,7 +2716,14 @@ function eraserHTML(s){
   return '<div class="adj-row"><span class="adj-label">消しゴム</span>'+
     '<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" class="tp-erase-mode"'+(s.eraseMode?' checked':'')+'> このアイテムに消しゴムで描く</label></div>';
 }
-function sizeLockHTML(s){
+// 画像トッピングの高さ(%)の上限（画像幅基準%。縦長キャンバスでは100を超えられるようにする）
+function tpMaxH(t){
+  if(t.type!=='image')return 100;
+  const nat=state.previewNat,r=nat&&nat.totalW?nat.totalH/nat.totalW:1;
+  return Math.max(100,Math.ceil(r*100));
+}
+function sizeLockHTML(s,hMax){
+  hMax=hMax||100;
   const locked=s.lockAspect;
   return '<div class="tp-size-grid">'+
     '<span class="adj-label">幅%</span>'+
@@ -2589,7 +2731,7 @@ function sizeLockHTML(s){
     '<span class="adj-val tp-w-val">'+Math.round(s.w||40)+'</span>'+
     '<button type="button" class="tp-lock-btn'+(locked?' locked':'')+'">'+( locked?'🔒':'🔓')+'</button>'+
     '<span class="adj-label" title="幅と同じ単位（画像幅の%）">高%</span>'+
-    '<input type="range" class="adj-slider tp-h" min="1" max="100" value="'+Math.round(s.h||40)+'">'+
+    '<input type="range" class="adj-slider tp-h" min="1" max="'+hMax+'" value="'+Math.round(s.h||40)+'">'+
     '<span class="adj-val tp-h-val">'+Math.round(s.h||40)+'</span>'+
     '</div>';
 }
@@ -2635,9 +2777,14 @@ function renderToppingControlsHTML(t){
       '<span style="font-size:11px;margin-left:6px">角度</span><input type="number" class="tp-headangle tp-num-inp" min="5" max="80" value="'+(t.headAngle||30)+'">°</div>'+
       strokeShadowHTML(t);
   }
+  if(type==='image'){
+    // 四角形から「塗り」「縁取り」を除いたもの（枠線色・太さ・透明度・影・回転は残す）
+    return adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val',0.1)+
+      sizeLockHTML(t,tpMaxH(t))+colorLineHTML(t,{label:'枠線色',allowZero:true})+opacityHTML(t)+strokeShadowHTML(t,true);
+  }
   if(type==='rect'||type==='ellipse'){
     return adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val',0.1)+
-      sizeLockHTML(t)+colorLineHTML(t)+fillHTML(t)+strokeShadowHTML(t);
+      sizeLockHTML(t)+colorLineHTML(t,{label:'枠線色',allowZero:true})+fillHTML(t)+strokeShadowHTML(t);
   }
   if(type==='burst'){
     return adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val',0.1)+
@@ -2663,7 +2810,7 @@ function renderToppingControlsHTML(t){
     html+='<div class="adj-row">'
       +'<button type="button" class="tp-poly-add adj-btn">＋ 頂点追加</button>'
       +((t.points||[]).length>3?'<button type="button" class="tp-poly-del adj-btn" style="margin-left:4px">－ 末尾削除</button>':'')+'</div>';
-    return html+colorLineHTML(t)+fillHTML(t)+strokeShadowHTML(t);
+    return html+colorLineHTML(t,{label:'枠線色',allowZero:true})+fillHTML(t)+strokeShadowHTML(t);
   }
   if(type.startsWith('blur')||type.startsWith('mosaic')){
     const isBlur=type.startsWith('blur'),sh=type.split('-')[1];
@@ -2754,16 +2901,38 @@ function bindToppingControls(container,t){
     if(hEl)hEl.addEventListener('input',()=>{t.h=parseFloat(hEl.value);if(hVl)hVl.textContent=Math.round(t.h);if(t.lockAspect&&t._ar){t.w=Math.max(1,Math.min(100,Math.round(t.h/t._ar)));if(wEl)wEl.value=t.w;if(wVl)wVl.textContent=t.w;}upd();});
     if(lockBtn)lockBtn.addEventListener('click',()=>{t.lockAspect=!t.lockAspect;if(t.lockAspect)t._ar=(t.h||1)/(t.w||1);lockBtn.textContent=t.lockAspect?'🔒':'🔓';lockBtn.classList.toggle('locked',t.lockAspect);});
     const mc=container.querySelector('.tp-mainc');if(mc)mc.addEventListener('input',e=>{t.color=e.target.value;upd();});
-    const sw=container.querySelector('.tp-sw');if(sw)sw.addEventListener('input',e=>{t.strokeWidth=parseFloat(e.target.value)||2;upd();});
+    const sw=container.querySelector('.tp-sw');if(sw)sw.addEventListener('input',e=>{const n=parseFloat(e.target.value);if(isNaN(n))return;t.strokeWidth=Math.max(0,n);upd();}); // 0=線なし
     const fe=container.querySelector('.tp-fill');if(fe)fe.addEventListener('change',e=>{t.fillEnabled=e.target.checked;upd();});
     const fc=container.querySelector('.tp-fillc');if(fc)fc.addEventListener('input',e=>{t.fillColor=e.target.value;upd();});
     const fo=container.querySelector('.tp-fillop');const fov=container.querySelector('.tp-fillop-val');
     if(fo)fo.addEventListener('input',()=>{t.fillOpacity=parseFloat(fo.value);if(fov)fov.textContent=fo.value;upd();});
   }
+  if(type==='image'){
+    const hMax=tpMaxH(t);
+    const clampW=v=>Math.max(1,Math.min(100,v)),clampH=v=>Math.max(1,Math.min(hMax,v));
+    const wEl=container.querySelector('.tp-w'),hEl=container.querySelector('.tp-h');
+    const wVl=container.querySelector('.tp-w-val'),hVl=container.querySelector('.tp-h-val');
+    const lockBtn=container.querySelector('.tp-lock-btn');
+    if(wEl)wEl.addEventListener('input',()=>{
+      t.w=parseFloat(wEl.value);if(wVl)wVl.textContent=Math.round(t.w);
+      if(t.lockAspect&&t._ar){t.h=clampH(t.w*t._ar);if(hEl)hEl.value=t.h;if(hVl)hVl.textContent=Math.round(t.h);}
+      upd();
+    });
+    if(hEl)hEl.addEventListener('input',()=>{
+      t.h=parseFloat(hEl.value);if(hVl)hVl.textContent=Math.round(t.h);
+      if(t.lockAspect&&t._ar){t.w=clampW(t.h/t._ar);if(wEl)wEl.value=t.w;if(wVl)wVl.textContent=Math.round(t.w);}
+      upd();
+    });
+    if(lockBtn)lockBtn.addEventListener('click',()=>{t.lockAspect=!t.lockAspect;if(t.lockAspect)t._ar=(t.h||1)/(t.w||1);lockBtn.textContent=t.lockAspect?'🔒':'🔓';lockBtn.classList.toggle('locked',t.lockAspect);});
+    const mc=container.querySelector('.tp-mainc');if(mc)mc.addEventListener('input',e=>{t.color=e.target.value;upd();});
+    const sw=container.querySelector('.tp-sw');if(sw)sw.addEventListener('input',e=>{const n=parseFloat(e.target.value);if(isNaN(n))return;t.strokeWidth=Math.max(0,n);upd();}); // 0=線なし
+    const op=container.querySelector('.tp-opacity'),opv=container.querySelector('.tp-opacity-val');
+    if(op)op.addEventListener('input',()=>{t.opacity=parseFloat(op.value);if(opv)opv.textContent=Math.round(t.opacity);upd();});
+  }
   if(type==='poly'){
     _bindPolyControls(container,t,upd);
     const mc=container.querySelector('.tp-mainc');if(mc)mc.addEventListener('input',e=>{t.color=e.target.value;upd();});
-    const sw=container.querySelector('.tp-sw');if(sw)sw.addEventListener('input',e=>{t.strokeWidth=parseFloat(e.target.value)||2;upd();});
+    const sw=container.querySelector('.tp-sw');if(sw)sw.addEventListener('input',e=>{const n=parseFloat(e.target.value);if(isNaN(n))return;t.strokeWidth=Math.max(0,n);upd();}); // 0=線なし
     const fe=container.querySelector('.tp-fill');if(fe)fe.addEventListener('change',e=>{t.fillEnabled=e.target.checked;upd();});
     const fc=container.querySelector('.tp-fillc');if(fc)fc.addEventListener('input',e=>{t.fillColor=e.target.value;upd();});
     const fo=container.querySelector('.tp-fillop');const fov=container.querySelector('.tp-fillop-val');
@@ -2870,7 +3039,7 @@ function renderToppingCanvas(){
     const sel=state.toppings.find(t=>t.id===state.selectedToppingId);
     if(sel){
       const type=sel.type||'text';
-      const sh=type.includes('-')?type.split('-')[1]:type;
+      const sh=shapeKind(type);
       let sx,sy;
       if(type==='line'||type==='arrow'){
         sx=(sel.x+sel.x2)/2/100*tc.width; sy=(sel.y+sel.y2)/2/100*tc.height;
@@ -2888,7 +3057,7 @@ function renderToppingCanvas(){
     // エフェクト・図形・テキスト選択中: 輪郭 + ハンドル
     if(sel){
       const type=sel.type||'text';
-      const sh=type.includes('-')?type.split('-')[1]:type;
+      const sh=shapeKind(type);
       const isEffect=type.startsWith('blur')||type.startsWith('mosaic');
       const isShape=(type==='rect'||type==='ellipse')||isEffect&&(sh==='rect'||sh==='ellipse');
       const isText=type==='text';
@@ -2899,7 +3068,7 @@ function renderToppingCanvas(){
         const g0=isText?getTextGeomCanvas(sel,tc.width,tc.height):getShapeGeomCanvas(sel,tc.width,tc.height);
         ctx.translate(g0.cx,g0.cy);ctx.rotate(sel.rotation*Math.PI/180);ctx.translate(-g0.cx,-g0.cy);
       }
-      if(isEffect||type==='rect'||type==='ellipse'){
+      if(isEffect||type==='rect'||type==='ellipse'||type==='image'){
         ctx.setLineDash([5/TZ.scale,4/TZ.scale]);
         ctx.beginPath();
         if(sh==='rect'){
@@ -3168,6 +3337,11 @@ function getTextGeomCanvas(t,W,H){
   if(align==='left')bx=x;else if(align==='right')bx=x-maxW;else bx=x-maxW/2;
   return{x:bx-10,y:y-totalH/2,w:maxW+20,h:totalH,cx:x,cy:y};
 }
+// 形状の種類（rect/ellipse/poly等）。画像トッピングは四角形と同じ扱い（ハンドル・当たり判定を共用）
+function shapeKind(type){
+  if(type==='image')return'rect';
+  return type.includes('-')?type.split('-')[1]:type;
+}
 function getShapeGeomCanvas(t,W,H){
   const x=t.x/100*W, y=t.y/100*H;
   const w=t.w/100*W, h=t.h/100*W;  // h は W 基準
@@ -3178,13 +3352,17 @@ function getShapeGeomCanvas(t,W,H){
 function _hitTestItem(cx,cy,t,W,H){
   const type=t.type||'text';
   if(type.startsWith('draw-'))return false; // フリーハンド描画型はキャンバス上でのヒットテスト対象外
-  const sh=type.includes('-')?type.split('-')[1]:type;
+  const sh=shapeKind(type);
   const HR=30/TZ.scale;
   if(t.rotation){
     const piv=getRotationPivotPx(t,W,H);
     const p=_unrotatePt(cx,cy,piv.x,piv.y,t.rotation);cx=p.x;cy=p.y;
   }
   if(type==='text'){
+    // 以前は「＋」（文字の基準点）の周囲の円だけが判定エリアで、長いテキストだと大半が掴めなかった。
+    // 文字全体を囲む枠（＋余白）も判定エリアに含める。「＋」周りの円は従来どおり残す。
+    const g=getTextGeomCanvas(t,W,H),pad=HR*0.5;
+    if(cx>=g.x-pad&&cx<=g.x+g.w+pad&&cy>=g.y-pad&&cy<=g.y+g.h+pad)return true;
     return Math.hypot(cx-t.x/100*W,cy-t.y/100*H)<HR*2.5;
   }else if(type==='line'||type==='arrow'){
     return _segDist(cx,cy,t.x/100*W,t.y/100*H,t.x2/100*W,t.y2/100*H)<HR;
@@ -3231,7 +3409,7 @@ function _hitTestHandle(cx,cy,t){
   const tc=$('topping-canvas');if(!tc?.width)return null;
   const W=tc.width,H=tc.height,HR=18/TZ.scale;
   const type=t.type||'text';
-  const sh=type.includes('-')?type.split('-')[1]:type;
+  const sh=shapeKind(type);
   const isText=type==='text';
   if(sh!=='rect'&&sh!=='ellipse'&&!isText)return null;
   const g=isText?getTextGeomCanvas(t,W,H):getShapeGeomCanvas(t,W,H);
