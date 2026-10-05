@@ -2250,10 +2250,15 @@ function drawShapeItem(ctx,s,W,H,scale){
     const hl=(s.headSize||40)*scale,ha=(s.headAngle||30)*Math.PI/180,ang=Math.atan2(y2-y1,x2-x1);
     // 矢印: オフスクリーンキャンバスで全部描いてから影を統合適用
     // こうすることでシャフト/矢じり接合・縁取り/本体の二重影を防ぐ
+    const both=!!s.headBoth; // 両端に矢じりを付ける
     const shaftEnd=[x2-hl*0.7*Math.cos(ang),y2-hl*0.7*Math.sin(ang)];
     const hp1=[x2-hl*Math.cos(ang-ha),y2-hl*Math.sin(ang-ha)];
     const hp2=[x2-hl*Math.cos(ang+ha),y2-hl*Math.sin(ang+ha)];
-    const pts=[[x1,y1],[x2,y2],shaftEnd,hp1,hp2];
+    // 始点側の矢じり（終点側を反転した向き）。両端でないときは始点のまま（従来どおり）
+    const shaftStart=both?[x1+hl*0.7*Math.cos(ang),y1+hl*0.7*Math.sin(ang)]:[x1,y1];
+    const hq1=[x1+hl*Math.cos(ang-ha),y1+hl*Math.sin(ang-ha)];
+    const hq2=[x1+hl*Math.cos(ang+ha),y1+hl*Math.sin(ang+ha)];
+    const pts=[[x1,y1],[x2,y2],shaftEnd,hp1,hp2].concat(both?[shaftStart,hq1,hq2]:[]);
     const lw2b=(s.stroke2Width||3)*scale*2; // 縁取り幅のみ（矢じり用）
     const lw2s=s.stroke2Enabled?lw+lw2b:lw; // シャフト用（本体+縁取り）
     const shadMg=s.shadowEnabled?Math.max((s.shadowBlur||8)*scale+Math.abs((s.shadowX||3)*scale)+Math.abs((s.shadowY||3)*scale),8):4;
@@ -2268,16 +2273,24 @@ function drawShapeItem(ctx,s,W,H,scale){
     if(s.stroke2Enabled){
       // シャフト縁取り: 本体線幅 + 縁取り幅
       octx.strokeStyle=s.stroke2Color||'#fff';octx.lineWidth=lw2s;
-      octx.beginPath();octx.moveTo(x1,y1);octx.lineTo(shaftEnd[0],shaftEnd[1]);octx.stroke();
+      octx.beginPath();octx.moveTo(shaftStart[0],shaftStart[1]);octx.lineTo(shaftEnd[0],shaftEnd[1]);octx.stroke();
       // 矢じり縁取り: 縁取り幅のみ（シャフト幅を足さない）
       octx.lineWidth=lw2b;
       octx.beginPath();octx.moveTo(x2,y2);octx.lineTo(hp1[0],hp1[1]);octx.lineTo(hp2[0],hp2[1]);octx.closePath();
       octx.fillStyle=s.stroke2Color||'#fff';octx.fill();octx.stroke();
+      if(both){
+        octx.beginPath();octx.moveTo(x1,y1);octx.lineTo(hq1[0],hq1[1]);octx.lineTo(hq2[0],hq2[1]);octx.closePath();
+        octx.fill();octx.stroke();
+      }
     }
     octx.strokeStyle=s.color||'#ff4444';octx.lineWidth=lw;
-    octx.beginPath();octx.moveTo(x1,y1);octx.lineTo(shaftEnd[0],shaftEnd[1]);octx.stroke();
+    octx.beginPath();octx.moveTo(shaftStart[0],shaftStart[1]);octx.lineTo(shaftEnd[0],shaftEnd[1]);octx.stroke();
     octx.beginPath();octx.moveTo(x2,y2);octx.lineTo(hp1[0],hp1[1]);octx.lineTo(hp2[0],hp2[1]);octx.closePath();
     octx.fillStyle=s.color||'#ff4444';octx.fill();
+    if(both){
+      octx.beginPath();octx.moveTo(x1,y1);octx.lineTo(hq1[0],hq1[1]);octx.lineTo(hq2[0],hq2[1]);octx.closePath();
+      octx.fill();
+    }
     // 影はctxに既設定。drawImageで全体を一括影描画
     ctx.drawImage(offC,bx,by);
   }
@@ -2620,9 +2633,11 @@ function toppingMiniPreview(t){
     const x1=cx-nx*half,y1=cy-ny*half,x2=cx+nx*half,y2=cy+ny*half;
     if(type==='line') return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0"><line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="round"/></svg>';
     const ang=Math.atan2(y2-y1,x2-x1),hl=7,ha=30*Math.PI/180;
+    const bt=!!t.headBoth,k=bt?0.7:0;
     return '<svg width="'+W+'" height="'+H+'" style="flex-shrink:0">'+
-      '<line x1="'+x1+'" y1="'+y1+'" x2="'+(x2-hl*0.7*Math.cos(ang))+'" y2="'+(y2-hl*0.7*Math.sin(ang))+'" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="round"/>'+
+      '<line x1="'+(x1+hl*k*Math.cos(ang))+'" y1="'+(y1+hl*k*Math.sin(ang))+'" x2="'+(x2-hl*0.7*Math.cos(ang))+'" y2="'+(y2-hl*0.7*Math.sin(ang))+'" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="round"/>'+
       '<polygon points="'+x2+','+y2+' '+(x2-hl*Math.cos(ang-ha))+','+(y2-hl*Math.sin(ang-ha))+' '+(x2-hl*Math.cos(ang+ha))+','+(y2-hl*Math.sin(ang+ha))+'" fill="'+col+'"/>'+
+      (bt?'<polygon points="'+x1+','+y1+' '+(x1+hl*Math.cos(ang-ha))+','+(y1+hl*Math.sin(ang-ha))+' '+(x1+hl*Math.cos(ang+ha))+','+(y1+hl*Math.sin(ang+ha))+'" fill="'+col+'"/>':'')+
       '</svg>';
   }
   // rect/ellipse: 縦横比を再現
@@ -2707,6 +2722,13 @@ function fillHTML(s){
     '<input type="range" class="adj-slider tp-fillop" min="0" max="100" value="'+(s.fillOpacity!=null?s.fillOpacity:30)+'">'+
     '<span class="adj-val tp-fillop-val">'+(s.fillOpacity!=null?s.fillOpacity:30)+'</span></div>';
 }
+// 線・矢印の整形メニュー（コンパクトな1行）
+function lineOpsHTML(){
+  const b=(op,label,title)=>'<button type="button" class="adj-btn tp-line-op" data-op="'+op+'" title="'+title+'">'+label+'</button>';
+  return '<div class="adj-row"><span class="adj-label">整形</span><div class="adj-btns">'+
+    b('h','─','水平にする')+b('v','│','垂直にする')+b('snap','45°','45°刻みの最寄りの角度にする')+b('swap','⇄','始点と終点を入れ替える')+
+    '</div></div>';
+}
 function opacityHTML(s){
   return '<div class="adj-row"><span class="adj-label">透明度</span>'+
     '<input type="range" class="adj-slider tp-opacity" min="0" max="100" value="'+(s.opacity!=null?s.opacity:100)+'">'+
@@ -2764,17 +2786,19 @@ function renderToppingControlsHTML(t){
       '<span style="font-size:10px;margin-left:4px">ぼかし</span><input type="number" class="tp-shb tp-num-inp" min="0" max="50" value="'+t.shadowBlur+'"></div>';
   }
   if(type==='line'){
-    return adjRowHTML('始X','tp-x',0,100,t.x,'tp-x-val')+adjRowHTML('始Y','tp-y',0,100,t.y,'tp-y-val')+
-      adjRowHTML('終X','tp-x2',0,100,t.x2,'tp-x2-val')+adjRowHTML('終Y','tp-y2',0,100,t.y2,'tp-y2-val')+
+    return lineOpsHTML()+adjRowHTML('始X','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('始Y','tp-y',0,100,t.y,'tp-y-val',0.1)+
+      adjRowHTML('終X','tp-x2',0,100,t.x2,'tp-x2-val',0.1)+adjRowHTML('終Y','tp-y2',0,100,t.y2,'tp-y2-val',0.1)+
       colorLineHTML(t)+strokeShadowHTML(t);
   }
   if(type==='arrow'){
-    return adjRowHTML('始X','tp-x',0,100,t.x,'tp-x-val')+adjRowHTML('始Y','tp-y',0,100,t.y,'tp-y-val')+
-      adjRowHTML('終X','tp-x2',0,100,t.x2,'tp-x2-val')+adjRowHTML('終Y','tp-y2',0,100,t.y2,'tp-y2-val')+
+    return lineOpsHTML()+adjRowHTML('始X','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('始Y','tp-y',0,100,t.y,'tp-y-val',0.1)+
+      adjRowHTML('終X','tp-x2',0,100,t.x2,'tp-x2-val',0.1)+adjRowHTML('終Y','tp-y2',0,100,t.y2,'tp-y2-val',0.1)+
       colorLineHTML(t)+
       '<div class="adj-row"><span class="adj-label">矢じり</span>'+
       '<span style="font-size:11px">大きさ</span><input type="number" class="tp-headsize tp-num-inp" min="5" max="600" value="'+(t.headSize||40)+'">'+
       '<span style="font-size:11px;margin-left:6px">角度</span><input type="number" class="tp-headangle tp-num-inp" min="5" max="80" value="'+(t.headAngle||30)+'">°</div>'+
+      '<div class="adj-row"><span class="adj-label">両端</span>'+
+      '<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="tp-headboth"'+(t.headBoth?' checked':'')+'> 始点にも矢じりを付ける</label></div>'+
       strokeShadowHTML(t);
   }
   if(type==='image'){
@@ -2886,11 +2910,13 @@ function bindToppingControls(container,t){
   }
   if(type==='line'||type==='arrow'){
     bs('tp-x2','x2','tp-x2-val');bs('tp-y2','y2','tp-y2-val');
+    container.querySelectorAll('.tp-line-op').forEach(btn=>btn.addEventListener('click',()=>applyLineOp(t,btn.dataset.op)));
     const mc=container.querySelector('.tp-mainc');if(mc)mc.addEventListener('input',e=>{t.color=e.target.value;upd();});
     const sw=container.querySelector('.tp-sw');if(sw)sw.addEventListener('input',e=>{t.strokeWidth=parseFloat(e.target.value)||2;upd();});
     if(type==='arrow'){
       const hs=container.querySelector('.tp-headsize');if(hs)hs.addEventListener('input',e=>{t.headSize=parseFloat(e.target.value)||40;upd();});
       const ha=container.querySelector('.tp-headangle');if(ha)ha.addEventListener('input',e=>{t.headAngle=parseFloat(e.target.value)||30;upd();});
+      const hb=container.querySelector('.tp-headboth');if(hb)hb.addEventListener('change',e=>{t.headBoth=e.target.checked;upd();});
     }
   }
   if(type==='rect'||type==='ellipse'){
@@ -3053,6 +3079,16 @@ function renderToppingCanvas(){
       ctx.beginPath();ctx.moveTo(sx-14/TZ.scale,sy);ctx.lineTo(sx+14/TZ.scale,sy);ctx.stroke();
       ctx.beginPath();ctx.moveTo(sx,sy-14/TZ.scale);ctx.lineTo(sx,sy+14/TZ.scale);ctx.stroke();
       ctx.restore();
+      // 線・矢印: 両端のつまみ（始点=塗り、終点=白抜き）。短い線ではつまみも小さくして中央を空ける
+      if(type==='line'||type==='arrow'){
+        const{a,b}=_lineWorldEnds(sel,tc.width,tc.height);
+        const lenPx=Math.hypot(b.x-a.x,b.y-a.y)*TZ.scale;
+        const HRl=Math.max(3,Math.min(7,lenPx/6))/TZ.scale;
+        ctx.save();ctx.setLineDash([]);ctx.lineWidth=1.5/TZ.scale;
+        ctx.beginPath();ctx.arc(a.x,a.y,HRl,0,Math.PI*2);ctx.fillStyle='#5548D6';ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();
+        ctx.beginPath();ctx.arc(b.x,b.y,HRl,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#5548D6';ctx.stroke();
+        ctx.restore();
+      }
     }
     // エフェクト・図形・テキスト選択中: 輪郭 + ハンドル
     if(sel){
@@ -3402,6 +3438,71 @@ function _unrotatePt(px,py,ccx,ccy,rotDeg){
   return{x:ccx+dx*Math.cos(rad)-dy*Math.sin(rad),y:ccy+dx*Math.sin(rad)+dy*Math.cos(rad)};
 }
 function normDeg(a){a=a%360;if(a<0)a+=360;return a;}
+
+// ===== 線・矢印の端点ハンドル =====
+// 回転(rotation)は「線の中心」を軸に描画される。中心は回転しても動かないので、
+// 見た目どおりの端点（ワールド座標・px）は 中心 ± 回転した半ベクトル で求められる。
+function _lineWorldEnds(t,W,H){
+  let a={x:t.x/100*W,y:t.y/100*H},b={x:t.x2/100*W,y:t.y2/100*H};
+  if(t.rotation){
+    const c={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    a=_unrotatePt(a.x,a.y,c.x,c.y,-t.rotation);
+    b=_unrotatePt(b.x,b.y,c.x,c.y,-t.rotation);
+  }
+  return{a,b};
+}
+// ワールド座標(px)の端点を、%座標としてアイテムに書き戻す
+function _setLineEnds(t,a,b,W,H){
+  const cl=v=>Math.max(0,Math.min(100,Math.round(v*10)/10));
+  t.x=cl(a.x/W*100);t.y=cl(a.y/H*100);t.x2=cl(b.x/W*100);t.y2=cl(b.y/H*100);
+}
+// 端点ドラッグ: 掴んだ端点をpw(ワールドpx)へ、反対側の端点はow(ワールドpx・固定)のまま動かす。
+// 回転中でも見た目の位置がずれないよう、新しい中心を軸に回転を戻した座標を保存する。
+function _dragLineEnd(t,mode,pw,ow,W,H){
+  const c={x:(pw.x+ow.x)/2,y:(pw.y+ow.y)/2};
+  let l1=pw,l2=ow;
+  if(t.rotation){l1=_unrotatePt(pw.x,pw.y,c.x,c.y,t.rotation);l2=_unrotatePt(ow.x,ow.y,c.x,c.y,t.rotation);}
+  if(mode==='p1')_setLineEnds(t,l1,l2,W,H);else _setLineEnds(t,l2,l1,W,H);
+}
+// 端点ハンドルの当たり判定。線が短いときは両端の判定を「長さの1/3」までに絞り、
+// 中央部分は必ず「全体移動」のために空けておく（拡大すれば判定も相対的に大きくなる）。
+function _hitTestLineEnd(cx,cy,t){
+  const tc=$('topping-canvas');if(!tc?.width)return null;
+  const{a,b}=_lineWorldEnds(t,tc.width,tc.height);
+  const len=Math.hypot(b.x-a.x,b.y-a.y);
+  const r=Math.min(18/TZ.scale,len/3);
+  const da=Math.hypot(cx-a.x,cy-a.y),db=Math.hypot(cx-b.x,cy-b.y);
+  if(da<r&&da<=db)return'p1';
+  if(db<r)return'p2';
+  return null;
+}
+// ワンタップ整形（水平 / 垂直 / 45°刻み / 始終入替）。中心と長さはそのまま、向きだけを整える。
+// 回転は見た目を変えずに座標へ焼き込み、rotation は0に戻す。
+function applyLineOp(t,op){
+  const tc=$('topping-canvas');if(!tc?.width)return;
+  const W=tc.width,H=tc.height;
+  let{a,b}=_lineWorldEnds(t,W,H);
+  t.rotation=0;
+  if(op==='swap'){const tmp=a;a=b;b=tmp;}
+  else{
+    const c={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);
+    if(len>0){
+      let ang=Math.atan2(dy,dx);
+      if(op==='h')ang=Math.cos(ang)>=0?0:Math.PI;           // 向き（始→終の左右）は維持
+      else if(op==='v')ang=Math.sin(ang)>=0?Math.PI/2:-Math.PI/2;
+      else ang=Math.round(ang/(Math.PI/4))*(Math.PI/4);       // 45°刻みで最寄りへ
+      const ux=Math.cos(ang)*len/2,uy=Math.sin(ang)*len/2;
+      a={x:c.x-ux,y:c.y-uy};b={x:c.x+ux,y:c.y+uy};
+      // 画像からはみ出す場合は、形を保ったまま全体をずらして収める
+      const mnx=Math.min(a.x,b.x),mxx=Math.max(a.x,b.x),mny=Math.min(a.y,b.y),mxy=Math.max(a.y,b.y);
+      const sx=mnx<0?-mnx:(mxx>W?W-mxx:0),sy=mny<0?-mny:(mxy>H?H-mxy:0);
+      a={x:a.x+sx,y:a.y+sy};b={x:b.x+sx,y:b.y+sy};
+    }
+  }
+  _setLineEnds(t,a,b,W,H);
+  renderSelectedPanel();renderToppingList();renderToppingCanvas();tpSaveNow();
+}
 // ハンドルヒットテスト（選択中の図形のみ）
 // 戻り値: 'rotate' | 'center' | 'tl'|'tr'|'bl'|'br' | 't'|'b'|'l'|'r' | null
 function _hitTestHandle(cx,cy,t){
@@ -3411,6 +3512,7 @@ function _hitTestHandle(cx,cy,t){
   const type=t.type||'text';
   const sh=shapeKind(type);
   const isText=type==='text';
+  if(type==='line'||type==='arrow')return _hitTestLineEnd(cx,cy,t); // 線・矢印は端点ハンドル
   if(sh!=='rect'&&sh!=='ellipse'&&!isText)return null;
   const g=isText?getTextGeomCanvas(t,W,H):getShapeGeomCanvas(t,W,H);
   if(t.rotation){const p=_unrotatePt(cx,cy,g.cx,g.cy,t.rotation);cx=p.x;cy=p.y;}
@@ -3479,7 +3581,15 @@ tpWrap.addEventListener('pointerdown',e=>{
         if(handleMode){
           TZ.tpDrag=true;TZ.isPan=false;TZ.dragMode=handleMode;
           TZ.dPCX=cx;TZ.dPCY=cy;TZ.dStartCX=cx;TZ.dStartCY=cy;
-          TZ.oc=(selT.type==='text')?getTextGeomCanvas(selT,$('topping-canvas').width,$('topping-canvas').height):getShapeGeomCanvas(selT,$('topping-canvas').width,$('topping-canvas').height);
+          if(handleMode==='p1'||handleMode==='p2'){
+            // 線・矢印の端点: 反対側の端点(見た目の位置)を固定し、掴んだ位置とのズレも記録して指に追従させる
+            const tcL=$('topping-canvas'),e2=_lineWorldEnds(selT,tcL.width,tcL.height);
+            const grab=handleMode==='p1'?e2.a:e2.b;
+            TZ.lo=handleMode==='p1'?e2.b:e2.a;
+            TZ.lOff={x:grab.x-cx,y:grab.y-cy};
+          }else{
+            TZ.oc=(selT.type==='text')?getTextGeomCanvas(selT,$('topping-canvas').width,$('topping-canvas').height):getShapeGeomCanvas(selT,$('topping-canvas').width,$('topping-canvas').height);
+          }
           tpWrap.classList.add('tp-grabbing');
         }else{
           const tcNow=$('topping-canvas');
@@ -3562,6 +3672,16 @@ tpWrap.addEventListener('pointermove',e=>{
         const vxv=sp.querySelector('.tp-vxv-'+i),vyv=sp.querySelector('.tp-vyv-'+i);
         if(vx)vx.value=t.points[i].x;if(vy)vy.value=t.points[i].y;
         if(vxv)vxv.textContent=fmtNum(t.points[i].x);if(vyv)vyv.textContent=fmtNum(t.points[i].y);
+      }
+      renderToppingCanvas();return;
+    }
+    // 線・矢印の端点ドラッグ
+    if((TZ.dragMode==='p1'||TZ.dragMode==='p2')&&(type==='line'||type==='arrow')&&TZ.lo){
+      _dragLineEnd(t,TZ.dragMode,{x:cx+TZ.lOff.x,y:cy+TZ.lOff.y},TZ.lo,W,H);
+      const sp=$('tp-selected-panel');
+      if(sp){
+        const up=(cls,val,vcls)=>{const el=sp.querySelector('.'+cls),ve=sp.querySelector('.'+vcls);if(el)el.value=val;if(ve)ve.textContent=fmtNum(val);};
+        up('tp-x',t.x,'tp-x-val');up('tp-y',t.y,'tp-y-val');up('tp-x2',t.x2,'tp-x2-val');up('tp-y2',t.y2,'tp-y2-val');
       }
       renderToppingCanvas();return;
     }
