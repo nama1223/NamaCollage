@@ -1334,6 +1334,11 @@ function attachLongPress(el,cb){
   el.addEventListener('contextmenu',e=>{e.preventDefault();cb(e);});
 }
 
+// 「原寸」＝画像の1ピクセルを画面の物理1ピクセルで表示すること。
+// CSSのpxは物理ピクセルより大きい（スマホは約2〜3倍）ため、そのまま画像のピクセル数をCSSのpxとして
+// 指定すると、スクリーンショットが画面の2〜3倍の大きさで表示されてしまう。devicePixelRatioで割って補正する。
+function physicalPxScale(){return 1/(window.devicePixelRatio||1);}
+
 // ===== 画像タブ: 原寸表示ビューア（トリミング等の加工を適用した状態で原寸表示・ドラッグでパン） =====
 const IV={scale:1,tx:0,ty:0,ptrs:new Map(),lastPinchDist:0,panStart:null,moved:false};
 let ivBlockUntil=0; // ズーム/原寸ビューアを閉じた直後、下のボタン誤反応を防ぐ共有ガード（画像タブ・プレビュータブ共通）
@@ -1351,15 +1356,17 @@ function openImageViewer(ri,ci){
   const eff=getEffectiveDimensions(img);
   const cv=$('img-viewer-canvas');
   cv.width=Math.max(1,Math.round(eff.w));cv.height=Math.max(1,Math.round(eff.h));
-  cv.style.width=cv.width+'px';cv.style.height=cv.height+'px';
+  // 表示サイズ(CSS px)は物理ピクセル等倍になるよう補正する（scale=1 が本当の原寸）
+  const ps=physicalPxScale(),cssW=cv.width*ps,cssH=cv.height*ps;
+  cv.style.width=cssW+'px';cv.style.height=cssH+'px';
   const ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
   drawImgOnCanvas(ctx,img,0,0,cv.width,cv.height);
   const modal=$('img-viewer-modal');
   modal.classList.add('open');
-  // 初期: 原寸（1:1）、画面中央（プレビューの拡大表示と同じ挙動）
+  // 初期: 原寸（物理ピクセル1:1）、画面中央（プレビューの拡大表示と同じ挙動）
   IV.scale=1;
-  IV.tx=Math.round((modal.clientWidth-cv.width)/2);
-  IV.ty=Math.round((modal.clientHeight-cv.height)/2);
+  IV.tx=Math.round((modal.clientWidth-cssW)/2);
+  IV.ty=Math.round((modal.clientHeight-cssH)/2);
   IV.ptrs.clear();IV.panStart=null;IV.moved=false;
   ivApply();
 }
@@ -1766,9 +1773,11 @@ async function openZoom(){
     zoomImgUrl=URL.createObjectURL(blob);
     const img=$('zoom-img');
     img.src=zoomImgUrl;
-    img.style.width=full.width+'px'; img.style.height=full.height+'px';
-    // 初期: 原寸（1:1）、画面中央
-    Z.scale=1; Z.tx=Math.round((window.innerWidth-full.width)/2); Z.ty=Math.round((window.innerHeight-full.height)/2);
+    // 表示サイズ(CSS px)は物理ピクセル等倍になるよう補正する（scale=1 / 100% が本当の原寸）
+    const ps=physicalPxScale(),cssW=full.width*ps,cssH=full.height*ps;
+    img.style.width=cssW+'px'; img.style.height=cssH+'px';
+    // 初期: 原寸（物理ピクセル1:1）、画面中央
+    Z.scale=1; Z.tx=Math.round((window.innerWidth-cssW)/2); Z.ty=Math.round((window.innerHeight-cssH)/2);
     Z.ptrs.clear(); Z.panStart=null; Z.moved=false;
     updateZoomTransform(); updateZoomInfo();
     $('zoom-overlay').classList.add('open');
