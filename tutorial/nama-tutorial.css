@@ -1,0 +1,80 @@
+/* NamaTutorial キット v1 — 共通スタイル（アプリ側CSSに依存しない） */
+#nt-btn {
+  position: fixed; right: 14px; bottom: 14px; z-index: 900;
+  width: 62px; height: 62px; padding: 0; border: none; border-radius: 50%;
+  background: transparent; cursor: pointer;
+  box-shadow: none;
+  touch-action: none; /* ドラッグ移動のため */
+  overflow: visible;
+}
+/* ボタン画像は円で切り抜かない。原画の円がそのままボタンの円になり、「？」や足などの
+   原画で円からはみ出している部分は、ボタンの外へそのままはみ出して見える */
+#nt-btn img {
+  width: 110%; height: 110%; display: block; border-radius: 0;
+  margin: -5% 0 0 -5%;
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35));
+  pointer-events: none;
+}
+#nt-btn .nt-badge {
+  position: absolute; top: -4px; left: -4px; right: auto; min-width: 20px; height: 20px;
+  border-radius: 10px; background: #e53e3e; color: #fff;
+  font-size: 11px; font-weight: 700; line-height: 20px; text-align: center;
+  padding: 0 5px; box-sizing: border-box; border: 2px solid #fff;
+}
+#nt-root { position: fixed; inset: 0; z-index: 1000; display: none; pointer-events: none; }
+#nt-root.nt-open { display: block; }
+#nt-shield { position: absolute; inset: 0; background: transparent; pointer-events: auto; }
+#nt-root.nt-dim #nt-shield { background: rgba(10, 16, 22, 0.55); } /* 穴あき表示でない場面（パネル・対象なしステップ等）の時だけシールド側で暗くする */
+#nt-bubble, #nt-panel { pointer-events: auto; }
+#nt-root.nt-passthrough #nt-shield { display: none; }
+#nt-hl { position: fixed; inset: 0; display: none; pointer-events: none; }
+.nt-hlbox {
+  position: fixed; pointer-events: none;
+  border: 3px solid #ffd94d; border-radius: 10px;
+  transition: top 0.18s, left 0.18s, width 0.18s, height 0.18s;
+}
+#nt-dimsvg { position: fixed; inset: 0; width: 100%; height: 100%; display: none; pointer-events: none; }
+#nt-bubble {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  width: min(94vw, 430px); box-sizing: border-box;
+  background: #ffffff; color: #1c2530; border-radius: 16px;
+  box-shadow: 0 10px 34px rgba(0,0,0,0.4);
+  padding: 14px 14px 12px; display: none;
+}
+#nt-bubble .nt-row { display: flex; gap: 12px; align-items: flex-start; }
+#nt-char { width: 84px; height: 84px; flex-shrink: 0; image-rendering: auto; }
+#nt-text { flex: 1; font-size: 14.5px; line-height: 1.65; white-space: pre-wrap; padding-top: 2px; }
+#nt-meta { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+#nt-chapter-name { font-size: 12px; color: #66707d; font-weight: 700; }
+#nt-counter { font-size: 12px; color: #66707d; margin-left: auto; font-weight: 700; }
+#nt-actions { display: flex; gap: 8px; margin-top: 10px; }
+.nt-tbtn {
+  flex: 1; padding: 10px 4px; border-radius: 10px; border: 1.5px solid #dfe4ea;
+  background: #f4f6f9; color: #1c2530; font-size: 13.5px; font-weight: 700; cursor: pointer;
+}
+.nt-tbtn.nt-primary { background: #2f7d51; border-color: #2f7d51; color: #fff; }
+.nt-tbtn.nt-quiet { flex: 0 0 auto; padding: 10px 10px; color: #66707d; }
+#nt-panel {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(94vw, 440px); max-height: 86vh; overflow-y: auto; box-sizing: border-box;
+  background: #ffffff; color: #1c2530; border-radius: 16px;
+  box-shadow: 0 10px 34px rgba(0,0,0,0.4); padding: 16px; display: none;
+}
+#nt-panel h2 { margin: 0 0 4px; font-size: 17px; }
+#nt-panel .nt-sub { font-size: 12.5px; color: #66707d; margin-bottom: 12px; line-height: 1.5; }
+.nt-chapter {
+  display: flex; gap: 12px; align-items: center; width: 100%; text-align: left;
+  padding: 10px; margin-bottom: 8px; box-sizing: border-box;
+  background: #f7f9fb; border: 1.5px solid #dfe4ea; border-radius: 12px; cursor: pointer;
+}
+.nt-chapter img { width: 52px; height: 52px; flex-shrink: 0; }
+.nt-chapter .nt-ch-main { flex: 1; min-width: 0; }
+.nt-chapter .nt-ch-title { font-size: 15px; font-weight: 700; color: #1c2530; }
+.nt-chapter .nt-ch-desc { font-size: 12px; color: #66707d; line-height: 1.45; margin-top: 2px; }
+.nt-chip {
+  flex-shrink: 0; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 999px;
+  background: #eef1f5; color: #66707d;
+}
+.nt-chip.nt-done { background: #e7f4ec; color: #1f5e3a; }
+.nt-chip.nt-new { background: #fff3bf; color: #8a6d00; }
+#nt-close-row { display: flex; margin-top: 4px; }

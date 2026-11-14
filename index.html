@@ -4688,7 +4688,23 @@ window.addEventListener('pageshow',()=>{sessionStorage.removeItem('nc_reloading'
   }
   if(new URLSearchParams(location.search).get('share_pending')) history.replaceState({},'','./');
 })();
+// ===== チュートリアル橋渡し（NamaTutorial キット用） =====
+// アプリは localStorage を使わず、状態はメモリと IndexedDB に持つ。
+// チュートリアルの実習ステップは永続データを書き換えない範囲に限るため、
+// スナップショット復元対象のキーは無し（空配列）を返す。
+window.NamaCollageTutorialBridge = {
+  navigate: function(id){ showTab(id); },
+  currentPage: function(){
+    var b = document.querySelector('.nav-btn.active');
+    return b ? b.getAttribute('data-tab') : 'images';
+  },
+  snapshotKeys: function(){ return []; }
+};
 </script>
 
+<link rel="stylesheet" href="tutorial/nama-tutorial.css?v=18">
+<style>body #nt-btn{bottom:66px}/* チュートリアル呼び出しボタンの初期位置を、下部ナビ（約50px）の上へ逃がす。ドラッグ・保存位置が優先される */</style>
+<script src="tutorial/config.js?v=18"></script>
+<script src="tutorial/nama-tutorial.js?v=18"></script>
 </body>
 </html>
