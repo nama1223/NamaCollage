@@ -1482,18 +1482,24 @@ function rowSpanRestricted(ri){
   return false;
 }
 function spanGuardNotify(){ showModal('操作できません','縦またぎがある行では、この操作はできません。先に結合を解除してください。'); }
-// 結合可否: 1回で+1行（最大3行・残り行数まで）。新たに覆う行で、その列が「行の末尾ちょうど」か「既存の null」の時だけ可
+// 結合可否: 1回で+1行（最大3行・残り行数まで）。新たに覆う行で、その列が「行の末尾ちょうど」か「既存の null」の時はそのまま、
+// 実画像がある時は、その行に null が無く・その列以降にまたぎ画像が無ければ、null を差し込んで右へずらす形で可（左端の画像もまたげるようにするため）
 function canExtendSpan(img,ri,ci){
   const k=img.rowSpan||1;
   if(k>=SPAN_MAX) return false;
   const tr=ri+k; if(tr>=state.grid.length) return false;
   const row=state.grid[tr];
-  return row.length===ci||(row.length>ci&&row[ci]===null);
+  if(row.length<ci) return false; // 間に空きができる形は不可
+  if(row.length===ci||row[ci]===null) return true;
+  if(row.some(c=>c===null)) return false;
+  for(let c=ci;c<row.length;c++){ if((row[c].rowSpan||1)>1) return false; }
+  return true;
 }
 function extendSpan(ri,ci){
   const img=state.grid[ri]?.[ci]; if(!img||!canExtendSpan(img,ri,ci)) return;
   const tr=ri+(img.rowSpan||1), row=state.grid[tr];
   if(row.length===ci) row.push(null); // 覆う位置にプレースホルダを置く
+  else if(row[ci]!==null) row.splice(ci,0,null); // 実画像を右へずらして差し込む
   img.rowSpan=(img.rowSpan||1)+1;
   state.previewDirty=true; renderGridView(); persistLayout();
 }
