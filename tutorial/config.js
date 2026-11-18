@@ -25,7 +25,7 @@ window.NAMA_TUTORIAL_CONFIG = {
         { page: 'images', target: '#btn-add-more', pose: 'point', text: '追加はここからナマ。何枚でも足せナマ。' },
         { page: 'images', target: '#grid-view', pose: 'point', text: '集めた画像は、行と列の表で並びナマ。各画像の矢印ボタンで上下左右へ動かせて、並びの「＋」を押すと、その場所へ画像を差し込めナマ。行の境目の「＋ 行を追加」では、新しい行から始められナマ。' },
         { page: 'images', target: '.gv-cell', pose: 'point', text: '画像を押すと原寸で大きく見られて、長押し（右クリック）すると加工メニューが出ナマ。トリミング、中抜き、回転、反転、カラー調整、それと「画像の変更」と「編集をリセット」が使えナマ。' },
-        { page: 'images', target: '#btn-clear', pose: 'point', text: '「全削除」は、集めた画像を全部消すボタンナマ。押すと確認が出ナマ。' },
+        { page: 'images', target: '#btn-clear', pose: 'point', text: '「全削除」は、集めた画像を全部消すボタンナマ。押すと確認が出ナマ。その中に「トッピングも全削除する」のチェックがありナマ。最初は外れていて、付けるとトッピングも一緒に消えナマ。' },
         { page: 'images', target: '#btn-load-namaco', pose: 'point', text: '下のボタンからは、「保存」の章で案内する「.namaco」形式のファイルを読み戻せナマ。保存しておいた編集の続きから始められナマ。読み込むと今の内容は破棄されるので、確認が出ナマ。' }
       ]
     },
@@ -54,14 +54,16 @@ window.NAMA_TUTORIAL_CONFIG = {
         { page: 'topping', target: '#tp-selected-panel', pose: 'point', text: '選んだトッピングの設定は、ここに出ナマ。文字の内容やフォント、色、大きさ、位置、回転などを細かく決められナマ。' },
         { page: 'topping', target: '#topping-list', pose: 'point', text: '重ねたものの一覧はここナマ。左端の⠿をドラッグすると重なる順番が変わって、👁で表示と非表示、⧉で複製、✕で削除ナマ。' },
         { page: 'topping', target: ['#tp-undo', '#tp-redo'], pose: 'point', text: '操作は「元に戻す」で戻せて、「やり直し」もできナマ。間違えても慌てなくて大丈夫ナマ。' },
+        { page: 'topping', target: '#tp-storage-btn', pose: 'point', text: '「💾 保管」は、トッピングだけの保管場所ナマ。ファイル（.namatop）への保存と読み込みのほか、名前を付けてアプリの中に保管しておくこともできナマ。読み込む時は、現在のトッピングへの上書き確認と、内容のプレビューが出ナマ。' },
         { page: 'topping', target: '#tp-clear-all-btn', pose: 'point', text: '一番下には「トッピングを全て消去」もありナマ。確認が出て、消した後でも「元に戻す」で復活できナマ。' }
       ]
     },
     {
       id: 'save', page: 'save', title: '保存', desc: '編集データの保存と、完成品の書き出し', icon: 'thumbs_up', since: 1,
       steps: [
-        { page: 'save', pose: 'wave', text: '「保存」の章ナマ。保存には2種類あって、編集を続けるための保存と、完成品の書き出しナマ。' },
+        { page: 'save', pose: 'wave', text: '「保存」の章ナマ。保存には3種類あって、編集全部の保存と、トッピングだけの保存と、完成品の書き出しナマ。' },
         { page: 'save', target: '#btn-save-namaco', pose: 'point', text: '「.namaco形式で保存」は、画像も編集内容も全部入った独自形式ナマ。後から「画像」タブで読み戻すと、続きを編集できナマ。' },
+        { page: 'save', target: '#btn-save-namatop', pose: 'point', text: '「🏷️ .namatop形式で保存」は、トッピングだけを保存するボタンナマ。別の画像に同じトッピングを載せたい時に、「トッピング」タブの「💾 保管」から読み戻せナマ。' },
         { page: 'save', target: '.format-pills', mode: 'free', pose: 'point', text: '完成品の形式は、JPEG・PNG・WebPから選べナマ。押して切り替えられナマ。' },
         { page: 'save', target: '#save-quality', mode: 'free', pose: 'point', text: '「品質」は、JPEGとWebPの圧縮の強さナマ。数字が大きいほど綺麗で、ファイルも大きくなりナマ。試しに動かしてみるナマ。' },
         { page: 'save', target: '#s-max-pixels', pose: 'point', text: '「最大ピクセル数」は、仕上がりの大きさの上限ナマ。超えた場合は、自動で縮小して保存されナマ。' },
