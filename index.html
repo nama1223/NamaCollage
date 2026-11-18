@@ -151,6 +151,9 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 .gv-del{position:absolute;top:4px;right:4px;width:20px;height:20px;border:none;border-radius:50%;background:rgba(200,40,40,0.82);color:#fff;font-size:12px;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;}
 .gv-del:hover{background:var(--danger);}
 .gv-crop-badge{position:absolute;top:4px;left:4px;background:rgba(255,105,64,0.88);color:#fff;font-size:10px;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:5;}
+.gv-covered{border:1.5px dashed var(--border2);background:transparent;display:flex;align-items:center;justify-content:center;}
+.gv-covered-label{font-size:11px;font-weight:700;color:var(--muted);}
+.gv-span-badge{position:absolute;top:4px;right:4px;background:var(--violet);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;z-index:5;}
 
 /* Alerts */
 .alert{padding:10px 13px;border-radius:9px;font-size:12.5px;line-height:1.55;display:flex;gap:8px;align-items:flex-start;}
@@ -641,6 +644,9 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
   <button type="button" class="ctx-item" id="ctx-color">🎨 カラー調整</button>
   <div class="ctx-sep"></div>
   <button type="button" class="ctx-item ctx-item-danger" id="ctx-reset-img">↺ 編集をリセット</button>
+  <div class="ctx-sep" id="ctx-span-sep"></div>
+  <button type="button" class="ctx-item" id="ctx-span-extend">⤵ 下の行と結合（縦またぎ）</button>
+  <button type="button" class="ctx-item" id="ctx-span-release">⤴ 縦またぎを解除</button>
 </div>
 
 <!-- トリミングモーダル -->
@@ -850,7 +856,7 @@ const settings = {
 const $ = id => document.getElementById(id);
 const $$ = s => document.querySelectorAll(s);
 const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-const flatImages = () => state.grid.flat();
+const flatImages = () => state.grid.flat().filter(Boolean); // 縦またぎで覆われたセルは null（位置合わせ用）なので除外
 const maxCols = () => Math.max(0, ...state.grid.map(r => r.length));
 
 // 変数宣言（TDZ防止のため冒頭）
@@ -967,7 +973,7 @@ async function persistNewImages(imgs){
 }
 async function persistLayout(){
   try{ await dbTxW('meta',s=>s.put({
-    layout:state.grid.map(row=>row.map(img=>({id:img.id,cropData:img.cropData||null,transform:img.transform||null,colorAdjust:img.colorAdjust||null,cutoutData:img.cutoutData||null}))),
+    layout:state.grid.map(row=>row.map(img=>img?{id:img.id,rowSpan:img.rowSpan||1,cropData:img.cropData||null,transform:img.transform||null,colorAdjust:img.colorAdjust||null,cutoutData:img.cutoutData||null}:null)),
     nextId:state.nextId, toppings:state.toppings, nextToppingId:state.nextToppingId,
   },'grid_layout')); }catch(e){}
 }
@@ -992,9 +998,11 @@ async function restoreFromDB(){
   }
   if(meta?.layout){
     state.grid=meta.layout.map(row=>row.map(item=>{
+      if(item==null) return null; // 縦またぎで覆われたセル: 位置を保持する
       const img=map.get(typeof item==='number'?item:item.id); if(!img) return null;
+      if(item?.rowSpan)img.rowSpan=item.rowSpan;
       if(item?.cropData)img.cropData=item.cropData;if(item?.transform)img.transform=item.transform;if(item?.colorAdjust)img.colorAdjust=item.colorAdjust;if(item?.cutoutData)img.cutoutData=item.cutoutData;return img;
-    }).filter(Boolean)).filter(r=>r.length>0);
+    })).filter(r=>r.length>0);
   } else state.grid=[Array.from(map.values())];
   state.previewDirty=true; renderGridView(); updateCountBadge();
 }
@@ -1037,7 +1045,7 @@ async function exportNamacoFile(){
       settings:{...settings},toppings:state.toppings,
       images:metaImages,
       toppingImages:tpKeys.map(k=>({key:k,name:TPIMG.get(k).name,mimeType:TPIMG.get(k).blob.type||'image/png'})),
-      grid:state.grid.map(row=>row.map(img=>img.id)),
+      grid:state.grid.map(row=>row.map(img=>img?{id:img.id,rowSpan:img.rowSpan||1}:null)),
     };
     const metaBytes=new TextEncoder().encode(JSON.stringify(meta));
     const parts=[new TextEncoder().encode(NAMACO_MAGIC)];
@@ -1102,7 +1110,13 @@ async function importNamacoFile(file){
       colorAdjust:im.colorAdjust||null,cutoutData:im.cutoutData||null,thumbUrl:null,
     });
   }));
-  state.grid=(meta.grid||[]).map(row=>row.map(id=>imgMap.get(id)).filter(Boolean)).filter(r=>r.length>0);
+  state.grid=(meta.grid||[]).map(row=>row.map(cell=>{
+    if(cell==null) return null; // 縦またぎで覆われたセル: 位置を保持する
+    const img=imgMap.get(typeof cell==='object'?cell.id:cell); // 旧形式は id の数値のみ
+    if(!img) return null;
+    if(typeof cell==='object'&&cell.rowSpan) img.rowSpan=cell.rowSpan;
+    return img;
+  })).filter(r=>r.length>0);
   if(!state.grid.length&&imgMap.size) state.grid=[Array.from(imgMap.values())];
   state.nextId=meta.nextId||(Math.max(0,...Array.from(imgMap.keys()))+1);
   state.toppings=(meta.toppings||[]).map(t=>({...t,type:t.type||'text'}));
@@ -1441,6 +1455,7 @@ async function loadImageFile(file){
 }
 async function insertFilesAt(pa,files){
   if(!files.length) return;
+  if(gvInsertBlocked(pa)){ spanGuardNotify(); return; } // 縦またぎの位置がずれる挿入は不可
   try{
     const loaded=await Promise.all(files.map(loadImageFile));
     if(!state.grid.length)            state.grid=[loaded];
@@ -1454,14 +1469,70 @@ async function insertFilesAt(pa,files){
 
 // ===== グリッド操作 =====
 function updateCountBadge(){ const n=flatImages().length,b=$('count-badge'); if(n>0){b.textContent=n+'枚';b.style.display='inline-block';}else b.style.display='none'; }
+// ===== 縦またぎ（rowSpan） =====
+const SPAN_MAX=3;
+function spanOfImg(img,ri){ return Math.max(1,Math.min(img.rowSpan||1,state.grid.length-ri)); }
+// 行 ri が「セルの位置がずれる操作」禁止かどうか: null を含む行、またぎ範囲（開始行〜終了行）内の行
+function rowSpanRestricted(ri){
+  const row=state.grid[ri]; if(!row) return false;
+  if(row.some(c=>c===null)) return true;
+  for(let r=0;r<=ri&&r<state.grid.length;r++){
+    for(const c of state.grid[r]){ if(c&&(c.rowSpan||1)>1&&ri<r+spanOfImg(c,r)) return true; }
+  }
+  return false;
+}
+function spanGuardNotify(){ showModal('操作できません','縦またぎがある行では、この操作はできません。先に結合を解除してください。'); }
+// 結合可否: 1回で+1行（最大3行・残り行数まで）。新たに覆う行で、その列が「行の末尾ちょうど」か「既存の null」の時だけ可
+function canExtendSpan(img,ri,ci){
+  const k=img.rowSpan||1;
+  if(k>=SPAN_MAX) return false;
+  const tr=ri+k; if(tr>=state.grid.length) return false;
+  const row=state.grid[tr];
+  return row.length===ci||(row.length>ci&&row[ci]===null);
+}
+function extendSpan(ri,ci){
+  const img=state.grid[ri]?.[ci]; if(!img||!canExtendSpan(img,ri,ci)) return;
+  const tr=ri+(img.rowSpan||1), row=state.grid[tr];
+  if(row.length===ci) row.push(null); // 覆う位置にプレースホルダを置く
+  img.rowSpan=(img.rowSpan||1)+1;
+  state.previewDirty=true; renderGridView(); persistLayout();
+}
+function unspanImage(ri,ci){
+  const img=state.grid[ri]?.[ci]; if(!img||(img.rowSpan||1)<=1) return;
+  const k=img.rowSpan;
+  for(let r=ri+1;r<ri+k;r++){ const row=state.grid[r]; if(row&&row[ci]===null) row.splice(ci,1); }
+  img.rowSpan=1;
+}
+// 「＋」挿入のガード判定（列挿入: 対象行が制限行なら不可／行挿入: またぎ範囲の途中なら不可）
+function gvInsertBlocked(pa){
+  if(!pa) return false;
+  if(pa.type==='col') return rowSpanRestricted(pa.rowIdx);
+  if(pa.type==='row'){
+    let blocked=false;
+    state.grid.forEach((row,r)=>{row.forEach(img=>{if(img&&(img.rowSpan||1)>1){const k=spanOfImg(img,r);if(pa.rowIdx>r&&pa.rowIdx<r+k)blocked=true;}});});
+    return blocked;
+  }
+  return false;
+}
 function deleteCell(ri,ci){
-  const img=state.grid[ri][ci]; URL.revokeObjectURL(img.url);
+  const img=state.grid[ri][ci]; if(!img) return;
+  if((img.rowSpan||1)>1) unspanImage(ri,ci); // またぎ画像自身は、先に解除してから削除する
+  else if(rowSpanRestricted(ri)){ spanGuardNotify(); return; }
+  URL.revokeObjectURL(img.url);
   state.grid[ri].splice(ci,1); if(!state.grid[ri].length) state.grid.splice(ri,1);
   state.previewDirty=true; renderGridView(); updateCountBadge();
   dbTxW('imgs',s=>s.delete(img.id)).then(()=>persistLayout());
 }
-function moveCellH(ri,ci,dir){ const ni=ci+dir; if(ni<0||ni>=state.grid[ri].length)return; const r=state.grid[ri]; [r[ci],r[ni]]=[r[ni],r[ci]]; state.previewDirty=true; renderGridView(); persistLayout(); }
+function moveCellH(ri,ci,dir){
+  const ni=ci+dir; if(ni<0||ni>=state.grid[ri].length)return;
+  if(rowSpanRestricted(ri)){ spanGuardNotify(); return; }
+  const r=state.grid[ri]; [r[ci],r[ni]]=[r[ni],r[ci]]; state.previewDirty=true; renderGridView(); persistLayout();
+}
 function moveCellV(ri,ci,dir){
+  if(!state.grid[ri]?.[ci]) return;
+  if(rowSpanRestricted(ri)){ spanGuardNotify(); return; }
+  const tr=ri+dir;
+  if(tr>=0&&tr<state.grid.length&&rowSpanRestricted(tr)){ spanGuardNotify(); return; } // 移動先がまたぎ範囲内になる場合も不可
   const[img]=state.grid[ri].splice(ci,1); let dr=ri+dir;
   if(!state.grid[ri].length){state.grid.splice(ri,1);if(dir>0)dr--;}
   if(dr<0)state.grid.unshift([img]); else if(dr>=state.grid.length)state.grid.push([img]);
@@ -1513,32 +1584,49 @@ function renderGridView(){
   const cW=(gv.parentElement?.offsetWidth||360)-28;
   const cdW=Math.min(CELL_MAX_W,Math.max(CELL_MIN_W,Math.floor((cW-(cols+1)*28-8)/cols)));
   gv.innerHTML=''; gv.appendChild(makeGvAddRow(0));
+  let imgNo=0;
   state.grid.forEach((row,ri)=>{
     const rowDiv=document.createElement('div'); rowDiv.className='gv-row';
     row.forEach((img,ci)=>{
       rowDiv.appendChild(makeGvAddCol(ri,ci));
+      const rDW=cols*cdW+(cols-1)*2;
+      if(!img){
+        // 縦またぎで覆われたセル: 点線枠のプレースホルダ
+        const nCW=nat?.colWidths?.[ci]??cdW;
+        const nTW=nat?(nat.colWidths.reduce((s,w)=>s+w,0)+(cols-1)*settings.gap):cdW;
+        let pW=Math.max(CELL_MIN_W,Math.round(nCW/(nTW||1)*rDW)); if(!Number.isFinite(pW))pW=cdW;
+        const ph=document.createElement('div'); ph.className='gv-cell gv-covered';
+        ph.style.cssText='width:'+pW+'px;height:68px;';
+        ph.innerHTML='<div class="gv-covered-label">結合中</div>';
+        rowDiv.appendChild(ph);
+        return;
+      }
+      imgNo++;
+      const spanning=(img.rowSpan||1)>1;
       const ne=nat?.rowData?.[ri]?.[ci]??null;
       const nCW=nat?.colWidths?.[ci]??ne?.sw??img.w;
       const nTW=nat?(nat.colWidths.reduce((s,w)=>s+w,0)+(cols-1)*settings.gap):img.w;
-      const rDW=cols*cdW+(cols-1)*2;
       let dW=ne?.isSized?Math.max(CELL_MIN_W,Math.round(ne.sw/(nTW||1)*rDW)):Math.max(CELL_MIN_W,Math.round(nCW/(nTW||1)*rDW));
       const ew=img.cropData?img.cropData.cw:img.w,eh=img.cropData?img.cropData.ch:img.h;
       if(!Number.isFinite(dW))dW=cdW; // 異常値防止（多重防御）
-      let dH=ne?Math.max(30,Math.round(ne.sh/(ne.sw||1)*dW)):Math.round(eh/ew*dW);
+      // またぎ画像の表示高さは画像本来のアスペクト比で計算する（合成後の大きな sh は編集画面に使わない）
+      let dH=spanning?Math.max(30,Math.round(dW*(eh/(ew||1)))):(ne?Math.max(30,Math.round(ne.sh/(ne.sw||1)*dW)):Math.round(eh/ew*dW));
       if(!Number.isFinite(dH)||dH<=0)dH=Math.round(dW*(eh&&ew?eh/ew:1))||dW;
-      const gn=state.grid.slice(0,ri).reduce((s,r)=>s+r.length,0)+ci+1;
+      const gn=imgNo;
       const sx=ne?ne.sw/(ew||1):1;
       const ss=Math.abs(sx-1)<0.005?'等倍':(sx>1?'×'+sx.toFixed(2)+' 拡大':'×'+sx.toFixed(2)+' 縮小');
       const nm=img.name.length>14?img.name.substring(0,12)+'…':img.name;
+      const mvDis=spanning?' disabled':''; // またぎ画像は移動ボタン無効
       const cell=document.createElement('div'); cell.className='gv-cell'; cell.style.cssText='width:'+dW+'px;height:'+dH+'px;';
       const thumbSrc=img.thumbUrl||img.url;
       cell.innerHTML=(img.cropData||img.cutoutData||img.transform||img.colorAdjust?'<div class="gv-crop-badge" title="編集済み">✏️</div>':'')+
+        (spanning?'<div class="gv-span-badge">縦またぎ×'+(img.rowSpan||1)+'</div>':'')+
         '<img src="'+thumbSrc+'" alt="" draggable="false">'+
         '<div class="gv-overlay"><div class="gv-num">#'+gn+'</div><div>'+escHtml(nm)+'</div>'+
         '<div>'+(img.cropData?img.cropData.cw+'×'+img.cropData.ch+' ✂':img.w+'×'+img.h)+' '+ss+'</div>'+
         '<div class="gv-moves">'+
-        '<button class="gv-move-btn" data-mv="u">↑</button><button class="gv-move-btn" data-mv="l"'+(ci===0?' disabled':'')+'>←</button>'+
-        '<button class="gv-move-btn" data-mv="r"'+(ci===row.length-1?' disabled':'')+'>→</button><button class="gv-move-btn" data-mv="d">↓</button>'+
+        '<button class="gv-move-btn" data-mv="u"'+mvDis+'>↑</button><button class="gv-move-btn" data-mv="l"'+(ci===0?' disabled':mvDis)+'>←</button>'+
+        '<button class="gv-move-btn" data-mv="r"'+(ci===row.length-1?' disabled':mvDis)+'>→</button><button class="gv-move-btn" data-mv="d"'+mvDis+'>↓</button>'+
         '</div></div><button class="gv-del" title="削除">×</button>';
       cell.querySelector('.gv-del').onclick=e=>{e.stopPropagation();if(ivIsBlocking())return;deleteCell(ri,ci);};
       cell.querySelectorAll('.gv-move-btn').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();if(ivIsBlocking())return;
@@ -1583,7 +1671,7 @@ function fixupGridOverlaps(){
 function makeGvAddRow(idx){
   const d=document.createElement('div'); d.className='gv-add-row';
   d.innerHTML='<div class="gv-line"></div><div class="gv-row-label">＋ 行を追加</div><div class="gv-line"></div>';
-  const pa={type:'row',rowIdx:idx}; d.onclick=()=>{if(ivIsBlocking())return;state.pendingAdd=pa;$('file-input').click();};
+  const pa={type:'row',rowIdx:idx}; d.onclick=()=>{if(ivIsBlocking())return;if(gvInsertBlocked(pa)){spanGuardNotify();return;}state.pendingAdd=pa;$('file-input').click();};
   d.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();d.classList.add('drag-target');});
   d.addEventListener('dragleave',()=>d.classList.remove('drag-target'));
   d.addEventListener('drop',async e=>{e.preventDefault();e.stopPropagation();d.classList.remove('drag-target');await insertFilesAt(pa,Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/')));});
@@ -1591,7 +1679,7 @@ function makeGvAddRow(idx){
 }
 function makeGvAddCol(ri,ci){
   const d=document.createElement('div'); d.className='gv-add-col'; d.textContent='＋'; d.title='ここに追加';
-  const pa={type:'col',rowIdx:ri,colIdx:ci}; d.onclick=()=>{if(ivIsBlocking())return;state.pendingAdd=pa;$('file-input').click();};
+  const pa={type:'col',rowIdx:ri,colIdx:ci}; d.onclick=()=>{if(ivIsBlocking())return;if(gvInsertBlocked(pa)){spanGuardNotify();return;}state.pendingAdd=pa;$('file-input').click();};
   d.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();d.classList.add('drag-target');});
   d.addEventListener('dragleave',()=>d.classList.remove('drag-target'));
   d.addEventListener('drop',async e=>{e.preventDefault();e.stopPropagation();d.classList.remove('drag-target');await insertFilesAt(pa,Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/')));});
@@ -1797,6 +1885,15 @@ async function updateImgThumb(img){
 let ctxTarget={ri:-1,ci:-1};
 function showCtxMenu(e,ri,ci){
   const m=$('ctx-menu'); ctxTarget={ri,ci};
+  // 縦またぎ項目の出し分け（結合できる時だけ結合を、またぎ中だけ解除を出す）
+  const img=state.grid[ri]?.[ci];
+  const ext=$('ctx-span-extend'),rel=$('ctx-span-release'),sep=$('ctx-span-sep');
+  const canExt=!!img&&canExtendSpan(img,ri,ci);
+  const canRel=!!img&&(img.rowSpan||1)>1;
+  ext.style.display=canExt?'':'none';
+  rel.style.display=canRel?'':'none';
+  sep.style.display=(canExt||canRel)?'':'none';
+  if(canExt) ext.textContent=(img.rowSpan||1)<=1?'⤵ 下の行と結合（縦またぎ）':'⤵ 縦またぎを伸ばす';
   m.style.left='0px'; m.style.top='-9999px';
   m.classList.remove('hidden');
   const mW=m.offsetWidth||180, mH=m.offsetHeight||320;
@@ -1858,6 +1955,8 @@ $('ctx-reset-img').addEventListener('click',()=>{
   if(img.thumbUrl){URL.revokeObjectURL(img.thumbUrl);img.thumbUrl=null;}
   state.previewDirty=true;renderGridView();persistLayout();
 });
+$('ctx-span-extend').addEventListener('click',()=>{ ctxHide(); extendSpan(ctxTarget.ri,ctxTarget.ci); });
+$('ctx-span-release').addEventListener('click',()=>{ ctxHide(); unspanImage(ctxTarget.ri,ctxTarget.ci); state.previewDirty=true; renderGridView(); persistLayout(); });
 
 // ===== ファイル入力 =====
 $('file-input').addEventListener('change',async e=>{
@@ -1892,19 +1991,39 @@ function calcNaturalDimensions(){
   const sizeOf=new Map();
   flat.forEach((img,i)=>{const{w,h}=eff(img);const s=normalization!=='none'?target/(dims[i]||1):1;sizeOf.set(img.id,{sw:w*s,sh:h*s,cropData:img.cropData||null});});
   const numCols=maxCols(),numRows=state.grid.length;
+  // 実効スパン（縦またぎ）: グリッドの残り行数で頭打ちにする
+  const spanOf=(img,ri)=>Math.max(1,Math.min(img.rowSpan||1,numRows-ri));
   const colWidths=Array(numCols).fill(0);
-  state.grid.forEach(row=>row.forEach((img,ci)=>{const{sw}=sizeOf.get(img.id);colWidths[ci]=Math.max(colWidths[ci],sw);}));
-  const totalRowW=colWidths.reduce((s,w)=>s+w,0)+Math.max(0,numCols-1)*gap;
-  const rowData=state.grid.map(row=>{
-    const n=row.length;
-    let entries=row.map((img,ci)=>{const{sw,sh}=sizeOf.get(img.id);return{imgEl:img.imgEl,_img:img,origW:img.w,origH:img.h,sw,sh,colW:colWidths[ci]??sw,colSpan:1,isSized:false};});
-    if(n<numCols){
-      if(lastRowFill==='distribute'){const dW=(totalRowW-Math.max(0,n-1)*gap)/n;entries.forEach(e=>{const s=dW/(e.sw||1);e.sw=dW;e.sh*=s;e.colW=dW;e.isSized=true;});}
-      else if(lastRowFill==='span'&&n>0){const usedW=colWidths.slice(0,n-1).reduce((s,w)=>s+w,0)+Math.max(0,n-1)*gap;const spanW=totalRowW-usedW,last=entries[n-1],s=spanW/(last.sw||1);last.sw=spanW;last.sh*=s;last.colW=spanW;last.colSpan=numCols-(n-1);last.isSized=true;}
+  state.grid.forEach(row=>row.forEach((img,ci)=>{if(!img)return;const{sw}=sizeOf.get(img.id);colWidths[ci]=Math.max(colWidths[ci],sw);}));
+  const totalRowW0=colWidths.reduce((s,w)=>s+w,0)+Math.max(0,numCols-1)*gap;
+  const rowData=state.grid.map((row,ri)=>{
+    let entries=row.map((img,ci)=>{
+      if(!img) return null; // 縦またぎで覆われたセル（グリッドのインデックスと揃える）
+      const{sw,sh}=sizeOf.get(img.id);
+      return{imgEl:img.imgEl,_img:img,origW:img.w,origH:img.h,sw,sh,colW:colWidths[ci]??sw,colSpan:1,rowSpan:spanOf(img,ri),isSized:false};
+    });
+    // 最終行の扱い（均等配置・最後を拡大）は k==1 のエントリだけに適用する（またぎエントリは対象外）
+    const targets=entries.filter(e=>e&&e.rowSpan<=1);
+    if(row.length<numCols&&targets.length){
+      const n=targets.length;
+      if(lastRowFill==='distribute'){const dW=(totalRowW0-Math.max(0,n-1)*gap)/n;targets.forEach(e=>{const s=dW/(e.sw||1);e.sw=dW;e.sh*=s;e.colW=dW;e.isSized=true;});}
+      else if(lastRowFill==='span'){const usedW=colWidths.slice(0,n-1).reduce((s,w)=>s+w,0)+Math.max(0,n-1)*gap;const spanW=totalRowW0-usedW,last=targets[n-1],s=spanW/(last.sw||1);last.sw=spanW;last.sh*=s;last.colW=spanW;last.colSpan=numCols-(n-1);last.isSized=true;}
     }
     return entries;
   });
-  const rowHeights=rowData.map(row=>Math.max(...row.map(e=>e.sh)));
+  // 行高は k==1 のエントリだけで決める（またぎ画像は行高に寄与しない）
+  const rowHeights=rowData.map(row=>{let h=0;row.forEach(e=>{if(e&&e.rowSpan<=1)h=Math.max(h,e.sh);});return h;});
+  // またぎ画像の最終サイズ: 目標高さ＝またぐ行の高さ合計＋間隔。幅も同じ倍率で拡縮する
+  rowData.forEach((row,ri)=>{row.forEach((e,ci)=>{
+    if(!e||e.rowSpan<=1)return;
+    const k=e.rowSpan;
+    let targetH=gap*(k-1); for(let r=ri;r<ri+k;r++) targetH+=rowHeights[r];
+    if(targetH>0){const s=targetH/(e.sh||1);e.sw*=s;e.sh=targetH;}
+    else{const fillH=Math.max(0,(e.sh-gap*(k-1))/k);for(let r=ri;r<ri+k;r++)rowHeights[r]=fillH;} // またぐ行が全て高さ0なら素の高さを行へ等分する
+    if(e.sw>colWidths[ci])colWidths[ci]=e.sw; // 列幅は最終幅で決める
+  });});
+  rowData.forEach(row=>row.forEach((e,ci)=>{if(e&&!e.isSized)e.colW=colWidths[ci]??e.sw;}));
+  const totalRowW=colWidths.reduce((s,w)=>s+w,0)+Math.max(0,numCols-1)*gap;
   const contentW=totalRowW,contentH=rowHeights.reduce((s,h)=>s+h,0)+Math.max(0,numRows-1)*gap;
   const totalW=contentW+padding*2+outerBorder*2,totalH=contentH+padding*2+outerBorder*2;
   return{rowData,rowHeights,colWidths,contentW,contentH,totalW,totalH,numCols,numRows,gap};
@@ -1939,16 +2058,18 @@ async function renderBaseAt(scale,fmt){
   let curY=oy;
   nat.rowData.forEach((rowEntries,ri)=>{
     const rowH=Math.round(nat.rowHeights[ri]*scale); let curX=ox;
-    rowEntries.forEach(e=>{
+    rowEntries.forEach((e,ci)=>{
+      if(!e){ curX+=Math.round((nat.colWidths[ci]||0)*scale)+sGap; return; } // 覆われたセル: 描かず列幅分だけ進める
       const sw=Math.round(e.sw*scale),sh=Math.round(e.sh*scale),cW=Math.round(e.colW*scale);
       let imgX;
       if(e.isSized) imgX=Math.round(curX);
       else if(alignment==='center') imgX=Math.round(curX+(cW-sw)/2);
       else if(alignment==='start')  imgX=Math.round(curX);
       else                          imgX=Math.round(curX+cW-sw);
-      const imgY=Math.round(curY+(rowH-sh)/2);
+      const spanning=(e.rowSpan||1)>1;
+      const imgY=spanning?Math.round(curY):Math.round(curY+(rowH-sh)/2); // またぎは開始行の上端から描く
       drawImgOnCanvas(ctx,e._img,imgX,imgY,sw,sh);
-      if(innerBorder>0){const sIB=Math.max(0.5,innerBorder*scale);ctx.save();ctx.strokeStyle=innerBorderColor;ctx.lineWidth=sIB;ctx.strokeRect(Math.round(curX)+sIB/2,curY+sIB/2,cW-sIB,rowH-sIB);ctx.restore();}
+      if(innerBorder>0){const sIB=Math.max(0.5,innerBorder*scale);ctx.save();ctx.strokeStyle=innerBorderColor;ctx.lineWidth=sIB;ctx.strokeRect(Math.round(curX)+sIB/2,curY+sIB/2,cW-sIB,(spanning?sh:rowH)-sIB);ctx.restore();}
       curX+=cW+sGap;
     });
     curY+=rowH; if(ri<nat.rowData.length-1) curY+=sGap;
