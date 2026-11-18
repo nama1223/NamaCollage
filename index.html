@@ -336,6 +336,16 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 .ctx-item{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border:none;background:none;text-align:left;font-size:14px;cursor:pointer;border-radius:7px;color:var(--text);}
 .ctx-item:hover{background:var(--surf2);}
 #ctx-menu{position:fixed;background:var(--surf);border:1px solid var(--border2);border-radius:11px;box-shadow:0 4px 20px rgba(0,0,0,0.15);padding:6px;z-index:500;min-width:160px;}
+/* トッピング保管 */
+.tp-store-open{padding:5px 10px;border:1px solid var(--border2);border-radius:7px;background:var(--surf2);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;}
+.tp-store-open:hover{border-color:var(--prime);color:var(--prime);}
+.tp-store-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:9px;background:var(--surf2);}
+.tp-store-name{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tp-store-meta{font-size:11px;color:var(--muted);white-space:nowrap;}
+.tp-store-btn{padding:6px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surf);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;flex-shrink:0;}
+.tp-store-btn.danger{color:var(--danger);border-color:var(--danger);}
+#tp-load-preview{max-width:100%;height:auto;display:block;margin:0 auto;border:1px solid var(--border);border-radius:8px;background:repeating-conic-gradient(#e8e8e8 0% 25%, #ffffff 0% 50%) 0 0/16px 16px;}
+.modal-scroll{max-height:82vh;overflow-y:auto;}
 </style>
 </head>
 <body>
@@ -476,6 +486,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
     <div id="topping-empty" class="empty-state hidden">
       <div class="empty-icon">✍️</div>
       <div class="empty-text">先に「プレビュー」タブで<br>画像を生成してください</div>
+      <button type="button" id="tp-storage-btn2" class="tp-store-open">💾 トッピングの保管・読み込み</button>
     </div>
     <div id="topping-content" class="hidden">
       <div id="tp-canvas-wrap"><canvas id="topping-canvas"></canvas></div>
@@ -513,6 +524,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
         </select>
         <button type="button" id="tp-undo" class="tp-ud-btn" disabled title="元に戻す">↩<span class="tp-ud-badge" id="tp-undo-badge"></span></button>
         <button type="button" id="tp-redo" class="tp-ud-btn" disabled title="やり直し">↪<span class="tp-ud-badge" id="tp-redo-badge"></span></button>
+        <button type="button" id="tp-storage-btn" class="tp-store-open" title="トッピングの保管・読み込み">💾 保管</button>
       </div>
       <div id="tp-selected-panel"></div>
       <div id="topping-list"></div>
@@ -529,6 +541,13 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
       <div class="card-body" style="gap:8px">
         <div style="font-size:12.5px;color:var(--muted);line-height:1.6">画像そのもの・トリミングやトッピングなどの編集内容・配置を全て含んだ、あとで再編集できる独自形式（.namaco）で保存します。</div>
         <button type="button" class="btn btn-full" style="background:var(--violet);color:#fff" id="btn-save-namaco">📦 .namaco形式で保存</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">🏷️ トッピングのみ保存</div>
+      <div class="card-body" style="gap:8px">
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6">テキスト・図形・画像などのトッピングだけを独自形式（.namatop）で保存します。別の画像に同じトッピングを載せたい時に使えます。読み込みは「トッピング」タブの「💾 保管」から行います。</div>
+        <button type="button" class="btn btn-full" style="background:var(--violet);color:#fff" id="btn-save-namatop">🏷️ .namatop形式で保存</button>
       </div>
     </div>
     <div id="save-empty" class="empty-state hidden"><div class="empty-icon">💾</div><div class="empty-text">先に「プレビュー」タブで<br>画像を生成してください</div></div>
@@ -719,6 +738,56 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
   </div>
 </div>
 
+<!-- 全削除 確認モーダル -->
+<div id="clear-all-modal" style="display:none;position:fixed;inset:0;background:rgba(0,20,60,0.45);z-index:999;align-items:center;justify-content:center;padding:20px;">
+  <div class="modal-box">
+    <div class="modal-title">全ての画像を削除しますか？</div>
+    <div class="modal-body" id="clear-all-body"></div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13.5px;font-weight:600;color:var(--text);cursor:pointer">
+      <input type="checkbox" id="clear-also-toppings" style="width:17px;height:17px;accent-color:#e53935"> トッピングも全削除する
+    </label>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.6">トッピングは通常、画像を消しても残ります。チェックした場合のみ一緒に消去します（「💾 保管」に保存したセットは消えません）。</div>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button type="button" id="clear-all-cancel" style="flex:1;padding:12px;border-radius:9px;border:1px solid var(--border2);background:var(--surf2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;">キャンセル</button>
+      <button type="button" id="clear-all-confirm" style="flex:1;padding:12px;border-radius:9px;border:none;background:#e53935;color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">全削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- トッピング保管モーダル -->
+<div id="tp-storage-modal" style="display:none;position:fixed;inset:0;background:rgba(0,20,60,0.45);z-index:999;align-items:center;justify-content:center;padding:20px;">
+  <div class="modal-box modal-scroll">
+    <div class="modal-title">💾 トッピングの保管</div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin:4px 0 8px;">ファイル（.namatop）</div>
+    <div style="display:flex;gap:8px;">
+      <button type="button" id="tp-store-export" class="tp-store-btn" style="flex:1;padding:10px;">📤 ファイルに保存</button>
+      <button type="button" id="tp-store-import" class="tp-store-btn" style="flex:1;padding:10px;">📥 ファイルから読み込み</button>
+    </div>
+    <input type="file" id="namatop-file-input" accept=".namatop" style="display:none">
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin:18px 0 8px;">アプリ内保管</div>
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="tp-set-name" placeholder="セット名（例: 実況用テロップ）" style="flex:1;min-width:0;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;background:var(--surf2);color:var(--text);font-size:13px;-webkit-user-select:text;user-select:text">
+      <button type="button" id="tp-set-save" class="tp-store-btn" style="background:var(--violet);color:#fff;border:none;padding:9px 12px;">現在のトッピングを保管</button>
+    </div>
+    <div id="tp-set-list" style="display:flex;flex-direction:column;gap:6px;margin-top:10px;"></div>
+    <button type="button" class="modal-close" id="tp-storage-close" style="background:var(--surf2);color:var(--text);border:1px solid var(--border2);">閉じる</button>
+  </div>
+</div>
+
+<!-- トッピング読み込み確認モーダル -->
+<div id="tp-load-modal" style="display:none;position:fixed;inset:0;background:rgba(0,20,60,0.45);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+  <div class="modal-box modal-scroll">
+    <div class="modal-title">トッピングを読み込みますか？</div>
+    <div class="modal-body" id="tp-load-summary"></div>
+    <div style="margin-top:12px;"><canvas id="tp-load-preview" width="16" height="16"></canvas></div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.6">※ プレビューは現在の画像に重ねたイメージです（画像がない場合は仮の背景で表示）。現在のトッピングは上書きされますが、読み込み後に「↩ 元に戻す」で戻せます。</div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button type="button" id="tp-load-cancel" style="flex:1;padding:12px;border-radius:9px;border:1px solid var(--border2);background:var(--surf2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;">キャンセル</button>
+      <button type="button" id="tp-load-confirm" style="flex:1;padding:12px;border-radius:9px;border:none;background:var(--violet);color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">上書きして読み込む</button>
+    </div>
+  </div>
+</div>
+
 <!-- カラー調整モーダル -->
 <div id="color-modal" class="hidden">
   <div id="color-header">
@@ -764,7 +833,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 </div>
 <script>
 'use strict';
-// ===== NamaCollage v5.1 =====
+// ===== NamaCollage v5.2 =====
 
 const state = {
   grid:[], nextId:1, pendingAdd:null,
@@ -799,12 +868,13 @@ let idb = null;
 (async function initDB(){
   try{
     idb = await new Promise((res,rej)=>{
-      const r = indexedDB.open('NamaCollage_v1',2);
+      const r = indexedDB.open('NamaCollage_v1',3);
       r.onupgradeneeded = ()=>{
         const db=r.result;
         if(!db.objectStoreNames.contains('imgs'))           db.createObjectStore('imgs',{keyPath:'id'});
         if(!db.objectStoreNames.contains('meta'))           db.createObjectStore('meta');
         if(!db.objectStoreNames.contains('pending_shares')) db.createObjectStore('pending_shares',{autoIncrement:true});
+        if(!db.objectStoreNames.contains('tpsets'))         db.createObjectStore('tpsets',{keyPath:'id'});
       };
       r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
     });
@@ -1078,6 +1148,189 @@ $('namaco-file-input').addEventListener('change',async e=>{
   catch(err){ console.warn('namaco import error:',err); alert('読み込みに失敗しました:\n'+err.message); }
 });
 
+// ===== トッピングのみ保存 .namatop / 保管 =====
+// 形式: JSONテキスト {format:'namatop',version:1,app,savedAt,nextToppingId,toppings,
+//       toppingImages:[{key,name,mimeType,data(base64)}]}
+// 画像トッピングの実体は base64 で同梱する（.namaco と同じく、読み込み側で実体ごと復元できるように）。
+function blobToBase64(blob){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(String(r.result).split(',')[1]||'');
+    r.onerror=()=>rej(r.error||new Error('読み取りに失敗しました'));
+    r.readAsDataURL(blob);
+  });
+}
+function base64ToBlob(b64,mime){
+  const bin=atob(b64); const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+  return new Blob([bytes],{type:mime||'application/octet-stream'});
+}
+// 現在のトッピングを .namatop / 保管セット共通のデータ形にまとめる（画像トッピングの実体込み）
+async function buildTpPayload(){
+  const tpKeys=[...new Set(state.toppings.map(t=>t.type==='image'?t.imgKey:null).filter(k=>k&&TPIMG.has(k)))];
+  const toppingImages=[];
+  for(const k of tpKeys){
+    const rec=TPIMG.get(k);
+    toppingImages.push({key:k,name:rec.name,mimeType:rec.blob.type||'image/png',data:await blobToBase64(rec.blob)});
+  }
+  return {
+    format:'namatop',version:1,app:'NamaCollage',savedAt:new Date().toISOString(),
+    nextToppingId:state.nextToppingId,
+    toppings:JSON.parse(JSON.stringify(state.toppings)),
+    toppingImages,
+  };
+}
+async function exportNamatopFile(){
+  if(!state.toppings.length){ showModal('トッピングなし','保存できるトッピングがありません。'); return; }
+  try{
+    const payload=await buildTpPayload();
+    const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download='namacollage_toppings_'+Date.now()+'.namatop';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),8000);
+  }catch(e){ console.warn('namatop export error:',e); showModal('保存に失敗しました',escHtml(String(e.message||e))); }
+}
+// .namatop / 保管セットの共通データを、適用可能な形（toppingImages は Blob 化）へ変換する
+function parseTpPayload(obj){
+  if(!obj||obj.format!=='namatop'||!Array.isArray(obj.toppings)) throw new Error('.namatopファイルとして認識できませんでした（形式不正）。');
+  return {
+    toppings:obj.toppings.map(t=>({...t,type:t.type||'text'})),
+    nextToppingId:obj.nextToppingId||1,
+    toppingImages:(obj.toppingImages||[]).map(ti=>({key:ti.key,name:ti.name||'image',blob:base64ToBlob(ti.data,ti.mimeType)})),
+  };
+}
+// ---- 読み込み確認（プレビュー付き） ----
+let _tpPending=null; // {data, label, addedKeys:[]}
+async function buildTpPreview(data){
+  const cv=$('tp-load-preview');
+  // 候補に含まれる画像トッピングの実体を一時登録（未登録のものだけ。キャンセル時は掃除する）
+  const added=[];
+  for(const ti of data.toppingImages){
+    if(!TPIMG.has(ti.key)){ await tpImgRegister(ti.key,ti.name,ti.blob); added.push(ti.key); }
+  }
+  if(_tpPending) _tpPending.addedKeys=added;
+  let base=null;
+  if(flatImages().length&&state.previewNat){
+    const scale=Math.min(1,520/Math.max(1,state.previewNat.totalW));
+    base=await renderBaseAt(scale,'png');
+  }
+  if(!base){
+    base=document.createElement('canvas'); base.width=800; base.height=600;
+    const bctx=base.getContext('2d'); bctx.fillStyle='#f2f2f2'; bctx.fillRect(0,0,800,600);
+  }
+  const saved=state.toppings;
+  state.toppings=data.toppings;
+  try{ applyToppings(base.getContext('2d'),base.width,base.height,base.width/(state.previewNat?state.previewNat.totalW:1000)); }
+  finally{ state.toppings=saved; }
+  cv.width=base.width; cv.height=base.height;
+  cv.getContext('2d').drawImage(base,0,0);
+}
+function tpSummaryText(data){
+  const counts={};
+  data.toppings.forEach(t=>{const lb=TP_LABELS[t.type||'text']||(t.type||'text'); counts[lb]=(counts[lb]||0)+1;});
+  const parts=Object.entries(counts).map(([k,v])=>k+' '+v+'件');
+  return '全'+data.toppings.length+'件'+(parts.length?'（'+parts.join('、')+'）':'');
+}
+async function openTpLoadConfirm(data,label){
+  _tpPending={data,label,addedKeys:[]};
+  $('tp-load-summary').innerHTML='<b>'+escHtml(label)+'</b><br>'+escHtml(tpSummaryText(data))+'<br>現在のトッピング（'+state.toppings.length+'件）は上書きされます。';
+  $('tp-storage-modal').style.display='none';
+  $('tp-load-modal').style.display='flex';
+  try{ await buildTpPreview(data); }catch(e){ console.warn('tp preview error:',e); }
+}
+function cleanupTpPreviewTemps(){
+  if(!_tpPending) return;
+  const used=new Set(state.toppings.map(t=>t.type==='image'?t.imgKey:null).filter(Boolean));
+  for(const k of (_tpPending.addedKeys||[])){
+    if(!used.has(k)){ const rec=TPIMG.get(k); if(rec)URL.revokeObjectURL(rec.url); TPIMG.delete(k); }
+  }
+  _tpPending.addedKeys=[];
+}
+async function applyTpData(data){
+  // 画像実体を確定登録＋IndexedDBへ保存
+  for(const ti of data.toppingImages){
+    if(!TPIMG.has(ti.key)) await tpImgRegister(ti.key,ti.name,ti.blob);
+    await dbTxW('meta',s=>s.put({name:ti.name,blob:ti.blob},'tpimg:'+ti.key)).catch(()=>{});
+  }
+  state.toppings=JSON.parse(JSON.stringify(data.toppings));
+  const maxId=state.toppings.reduce((m,t)=>Math.max(m,t.id||0),0);
+  state.nextToppingId=Math.max(data.nextToppingId||1,maxId+1);
+  state.selectedToppingId=null;
+  renderToppingList(); renderToppingCanvas(); renderSelectedPanel();
+  tpSaveNow(); // アンドゥ履歴に積む（読み込み前の状態へ戻せる）
+  const used=new Set(state.toppings.map(t=>t.type==='image'?t.imgKey:null).filter(Boolean));
+  tpImgCleanupDB(used);
+}
+$('tp-load-cancel').addEventListener('click',()=>{ cleanupTpPreviewTemps(); _tpPending=null; $('tp-load-modal').style.display='none'; });
+$('tp-load-modal').addEventListener('click',e=>{ if(e.target===$('tp-load-modal')){ cleanupTpPreviewTemps(); _tpPending=null; $('tp-load-modal').style.display='none'; } });
+$('tp-load-confirm').addEventListener('click',async()=>{
+  if(!_tpPending) return;
+  const data=_tpPending.data; _tpPending=null;
+  $('tp-load-modal').style.display='none';
+  await applyTpData(data);
+  showModal('読み込みました','トッピングを上書きしました。元に戻す時は「↩ 元に戻す」ボタンが使えます。');
+});
+// ---- 保管モーダル ----
+function openTpStorage(){ renderTpSetList(); $('tp-storage-modal').style.display='flex'; }
+function closeTpStorage(){ $('tp-storage-modal').style.display='none'; }
+$('tp-storage-btn')?.addEventListener('click',openTpStorage);
+$('tp-storage-btn2')?.addEventListener('click',openTpStorage);
+$('tp-storage-close').addEventListener('click',closeTpStorage);
+$('tp-storage-modal').addEventListener('click',e=>{ if(e.target===$('tp-storage-modal')) closeTpStorage(); });
+$('btn-save-namatop').addEventListener('click',exportNamatopFile);
+$('tp-store-export').addEventListener('click',exportNamatopFile);
+$('tp-store-import').addEventListener('click',()=>{ $('namatop-file-input').value=''; $('namatop-file-input').click(); });
+$('namatop-file-input').addEventListener('change',async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  try{
+    const obj=JSON.parse(await file.text());
+    const data=parseTpPayload(obj);
+    await openTpLoadConfirm(data,'ファイル「'+file.name+'」');
+  }catch(err){ console.warn('namatop import error:',err); showModal('読み込みに失敗しました',escHtml(String(err.message||err))); }
+});
+// ---- アプリ内保管セット（IndexedDB 'tpsets' ストア） ----
+async function renderTpSetList(){
+  const list=$('tp-set-list'); if(!list) return;
+  let sets=[];
+  try{ sets=(await dbGetAll('tpsets')).sort((a,b)=>(b.savedAt||0)-(a.savedAt||0)); }catch(e){ sets=[]; }
+  if(!sets.length){ list.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:6px;">保管されたセットはまだありません</div>'; return; }
+  list.innerHTML='';
+  sets.forEach(set=>{
+    const row=document.createElement('div'); row.className='tp-store-row';
+    const d=set.savedAt?new Date(set.savedAt):null;
+    const dstr=d?(d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')):'';
+    row.innerHTML='<span class="tp-store-name">'+escHtml(set.name||'無題')+'</span><span class="tp-store-meta">'+dstr+' ・ '+((set.toppings||[]).length)+'件</span>';
+    const loadBtn=document.createElement('button'); loadBtn.type='button'; loadBtn.className='tp-store-btn'; loadBtn.textContent='読み込み';
+    loadBtn.addEventListener('click',async()=>{
+      try{
+        const data=parseTpPayload({format:'namatop',toppings:set.toppings,nextToppingId:set.nextToppingId,toppingImages:set.toppingImages||[]});
+        await openTpLoadConfirm(data,'保管セット「'+(set.name||'無題')+'」');
+      }catch(err){ showModal('読み込みに失敗しました',escHtml(String(err.message||err))); }
+    });
+    const delBtn=document.createElement('button'); delBtn.type='button'; delBtn.className='tp-store-btn danger'; delBtn.textContent='削除';
+    delBtn.addEventListener('click',async()=>{
+      if(delBtn.dataset.armed){ await dbTxW('tpsets',s=>s.delete(set.id)); renderTpSetList(); }
+      else{ delBtn.dataset.armed='1'; delBtn.textContent='本当に削除？'; setTimeout(()=>{ if(delBtn.isConnected){ delete delBtn.dataset.armed; delBtn.textContent='削除'; } },3000); }
+    });
+    row.appendChild(loadBtn); row.appendChild(delBtn);
+    list.appendChild(row);
+  });
+}
+$('tp-set-save').addEventListener('click',async()=>{
+  if(!state.toppings.length){ showModal('トッピングなし','保管できるトッピングがありません。'); return; }
+  const name=$('tp-set-name').value.trim()||('トッピング '+new Date().toLocaleString('ja-JP'));
+  try{
+    const payload=await buildTpPayload();
+    const rec={ id:'set'+Date.now().toString(36)+Math.random().toString(36).slice(2,7), name, savedAt:Date.now(),
+      toppings:payload.toppings, nextToppingId:payload.nextToppingId, toppingImages:payload.toppingImages };
+    await dbTxW('tpsets',s=>s.put(rec));
+    $('tp-set-name').value='';
+    renderTpSetList();
+  }catch(e){ console.warn('tpset save error:',e); showModal('保管に失敗しました',escHtml(String(e.message||e))); }
+});
+
 // メッセージ処理は init 内に統合
 document.addEventListener('paste',async e=>{
   const files=Array.from(e.clipboardData?.items||[]).filter(it=>it.type.startsWith('image/')).map(it=>it.getAsFile()).filter(Boolean);
@@ -1219,15 +1472,36 @@ function moveCellV(ri,ci,dir){
 }
 function clearAll(){
   if(!flatImages().length) return;
-  if(!confirm(flatImages().length+'枚をすべて削除しますか?')) return;
-  flatImages().forEach(img=>URL.revokeObjectURL(img.url));
-  state.grid=[]; state.composed=null; state.previewDirty=true;
+  $('clear-all-body').textContent=flatImages().length+'枚の画像をすべて削除します。';
+  $('clear-also-toppings').checked=false; // 初期状態はオフ（モーダルを開くたびにリセット）
+  $('clear-all-modal').style.display='flex';
+}
+async function executeClearAll(){
+  const alsoTp=$('clear-also-toppings').checked;
+  $('clear-all-modal').style.display='none';
+  flatImages().forEach(img=>{URL.revokeObjectURL(img.url);if(img.thumbUrl)URL.revokeObjectURL(img.thumbUrl);});
+  state.grid=[]; state.composed=null; state.composedW=0; state.composedH=0; state.previewNat=null; state.previewDirty=true;
+  if(alsoTp){
+    state.toppings=[]; state.selectedToppingId=null;
+    TH.stack=[{toppings:[],selId:null}]; TH.idx=0; _thUpdateBtns();
+    renderToppingList(); renderSelectedPanel();
+    await tpImgClearAll();
+  }
   renderGridView(); updateCountBadge();
   $('preview-empty').classList.remove('hidden'); $('preview-content').classList.add('hidden');
   $('topping-empty').classList.remove('hidden'); $('topping-content').classList.add('hidden');
   $('save-empty').classList.remove('hidden'); $('save-content').classList.add('hidden');
-  dbTxW('imgs',s=>s.clear()).then(()=>dbTxW('meta',s=>s.clear()));
+  await dbTxW('imgs',s=>s.clear());
+  await persistLayout();
+  if(!alsoTp){
+    // トッピングを残した場合は、その画像実体の掃除だけ行う（保存先フォルダ設定や保管セットは消さない）
+    const used=new Set(state.toppings.map(t=>t.type==='image'?t.imgKey:null).filter(Boolean));
+    tpImgCleanupDB(used);
+  }
 }
+$('clear-all-cancel').addEventListener('click',()=>{$('clear-all-modal').style.display='none';});
+$('clear-all-modal').addEventListener('click',e=>{if(e.target===$('clear-all-modal'))$('clear-all-modal').style.display='none';});
+$('clear-all-confirm').addEventListener('click',executeClearAll);
 
 // ===== グリッドビュー描画 =====
 const CELL_MAX_W=130,CELL_MIN_W=50;
