@@ -539,15 +539,11 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
     <div class="card">
       <div class="card-head">📦 編集データごと保存</div>
       <div class="card-body" style="gap:8px">
-        <div style="font-size:12.5px;color:var(--muted);line-height:1.6">画像そのもの・トリミングやトッピングなどの編集内容・配置を全て含んだ、あとで再編集できる独自形式（.namaco）で保存します。</div>
-        <button type="button" class="btn btn-full" style="background:var(--violet);color:#fff" id="btn-save-namaco">📦 .namaco形式で保存</button>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-head">🏷️ トッピングのみ保存</div>
-      <div class="card-body" style="gap:8px">
-        <div style="font-size:12.5px;color:var(--muted);line-height:1.6">テキスト・図形・画像などのトッピングだけを独自形式（.namatop）で保存します。別の画像に同じトッピングを載せたい時に使えます。読み込みは「トッピング」タブの「💾 保管」から行います。</div>
-        <button type="button" class="btn btn-full" style="background:var(--violet);color:#fff" id="btn-save-namatop">🏷️ .namatop形式で保存</button>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6">画像そのもの・トリミングやトッピングなどの編集内容・配置を全て含んだ、あとで再編集できる独自形式（.namaco）で保存します。トッピングだけの .namatop は、別の画像に同じトッピングを載せたい時に使えます（読み込みは「トッピング」タブの「💾 保管」から）。</div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn" style="flex:1;background:var(--violet);color:#fff;font-size:13px;padding-left:4px;padding-right:4px" id="btn-save-namaco">📦 .namaco形式で保存</button>
+          <button type="button" class="btn" style="flex:1;background:var(--violet);color:#fff;font-size:13px;padding-left:4px;padding-right:4px" id="btn-save-namatop">🏷️ .namatop形式で保存</button>
+        </div>
       </div>
     </div>
     <div id="save-empty" class="empty-state hidden"><div class="empty-icon">💾</div><div class="empty-text">先に「プレビュー」タブで<br>画像を生成してください</div></div>
@@ -4978,9 +4974,9 @@ window.NamaCollageTutorialBridge = {
 };
 </script>
 
-<link rel="stylesheet" href="tutorial/nama-tutorial.css?v=19">
+<link rel="stylesheet" href="tutorial/nama-tutorial.css?v=20">
 <style>body #nt-btn{bottom:66px}/* チュートリアル呼び出しボタンの初期位置を、下部ナビ（約50px）の上へ逃がす。ドラッグ・保存位置が優先される */</style>
-<script src="tutorial/config.js?v=19"></script>
-<script src="tutorial/nama-tutorial.js?v=19"></script>
+<script src="tutorial/config.js?v=20"></script>
+<script src="tutorial/nama-tutorial.js?v=20"></script>
 </body>
 </html>
