@@ -20,7 +20,7 @@
   var rec = loadRec();
   if (!rec.chapters) rec.chapters = {};
 
-  var ASSET_V = '19'; // 素材・キットの版。更新のたびに上げると端末側の古いキャッシュを確実に回避できる
+  var ASSET_V = '20'; // 素材・キットの版。更新のたびに上げると端末側の古いキャッシュを確実に回避できる
   function poseSrc(pose) { return IMG + 'N_' + pose + '.webp?v=' + ASSET_V; }
   function chapterById(id) { for (var i = 0; i < cfg.chapters.length; i++) if (cfg.chapters[i].id === id) return cfg.chapters[i]; return null; }
   function isDone(ch) { var r = rec.chapters[ch.id]; return !!(r && r.done && r.version >= (ch.since || 1)); }
@@ -215,10 +215,10 @@
     panelMode = 'intro';
     panel.innerHTML =
       '<h2>' + esc(cfg.introTitle || '使い方のご案内') + '</h2>' +
-      '<div class="nt-sub">' + esc(cfg.introText || 'このアプリの使い方を、画面を触りながら案内します。') + '</div>' +
+      '<div class="nt-sub">' + esc(dynText(cfg.introText || 'このアプリの使い方を、画面を触りながら案内します。')) + '</div>' +
       '<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">' +
       '<img src="' + poseSrc('wave') + '" style="width:72px;height:72px;" alt="">' +
-      '<div style="font-size:13px;line-height:1.6;">あとからでも、画面右下の「生」アイコンからいつでも見られナマ。</div></div>' +
+      '<div style="font-size:13px;line-height:1.6;">' + esc(dynText('あとからでも、画面{{btnPos}}の「生」アイコンからいつでも見られナマ。')) + '</div></div>' +
       '<div style="display:flex;gap:8px;">' +
       '<button type="button" class="nt-tbtn nt-primary" id="nt-intro-start">チュートリアルをはじめる</button>' +
       '<button type="button" class="nt-tbtn" id="nt-intro-later">あとで見る</button></div>';
@@ -268,6 +268,8 @@
   }
   function restoreSnapshot() {
     if (!snapshot) return;
+    // keepChanges の章（設定章など）は、案内中に利用者が変えた内容をそのまま残す
+    if (player.ch && player.ch.keepChanges) { snapshot = null; return; }
     Object.keys(snapshot).forEach(function (k) {
       if (snapshot[k] === null) localStorage.removeItem(k);
       else localStorage.setItem(k, snapshot[k]);
@@ -368,6 +370,8 @@
     detachTap();
 
     var go = function () {
+      // ステップ表示前のアプリ側の事前処理（任意）: config の prepare に橋渡し側の関数名を書く
+      if (step.prepare && bridge()[step.prepare]) { try { bridge()[step.prepare](); } catch (e) {} }
       resolveTargets(step, function (targets) {
         if (!player.active || rid !== player.runId) return;
         if (step.target && !targets.length) {
@@ -405,6 +409,22 @@
     var bh = bubble.offsetHeight || 190;
     bubble.style.top = Math.max(12, (window.innerHeight - bh) / 2) + 'px';
   }
+
+  function btnPosLabel() {
+    if (!btn) return '右下';
+    var rect = btn.getBoundingClientRect();
+    if (!rect.width) return '右下';
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
+    var third = window.innerWidth / 3;
+    var h = cx < third ? '左' : (cx > third * 2 ? '右' : '');
+    var vthird = window.innerHeight / 3;
+    var v = cy < vthird ? '上' : (cy > vthird * 2 ? '下' : '');
+    if (v === '上') return h ? h + '上' : '上';
+    if (v === '下') return h ? h + '下' : '下';
+    return h || '真ん中';
+  }
+  function dynText(s) { return String(s).split('{{btnPos}}').join(btnPosLabel()); }
 
   function pointPose(rect, bubbleBelow) {
     var cx = rect.left + rect.width / 2;
@@ -469,7 +489,7 @@
     };
     player._place = place;
     charImg.src = poseSrc(step.pose === 'point' ? 'up' : (step.pose || 'wave'));
-    textEl.textContent = step.text || '';
+    textEl.textContent = dynText(step.text || '');
     chapNameEl.textContent = player.ch.title;
     counterEl.textContent = (player.idx + 1) + ' / ' + player.ch.steps.length;
     renderActions(step);

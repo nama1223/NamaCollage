@@ -37,13 +37,17 @@
 #nt-bubble {
   position: fixed; left: 50%; transform: translateX(-50%);
   width: min(94vw, 430px); box-sizing: border-box;
+  max-height: calc(100vh - 24px); overflow-y: auto;
   background: #ffffff; color: #1c2530; border-radius: 16px;
   box-shadow: 0 10px 34px rgba(0,0,0,0.4);
   padding: 14px 14px 12px; display: none;
 }
 #nt-bubble .nt-row { display: flex; gap: 12px; align-items: flex-start; }
 #nt-char { width: 84px; height: 84px; flex-shrink: 0; image-rendering: auto; }
-#nt-text { flex: 1; font-size: 14.5px; line-height: 1.65; white-space: pre-wrap; padding-top: 2px; }
+/* min-width:0 が無いと flex アイテムは中身の最小幅（URL等の折り返せない語）より
+   縮まず、テキスト列ごと吹き出しの右へ溢れる。overflow-wrap:anywhere で
+   長い語も列幅に合わせて折り返す */
+#nt-text { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 14.5px; line-height: 1.65; white-space: pre-wrap; padding-top: 2px; }
 #nt-meta { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 #nt-chapter-name { font-size: 12px; color: #66707d; font-weight: 700; }
 #nt-counter { font-size: 12px; color: #66707d; margin-left: auto; font-weight: 700; }
