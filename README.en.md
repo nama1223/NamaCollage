@@ -66,6 +66,11 @@ An in-app tutorial is included — you can learn by actually using the app, foll
 
 A web app that runs in your browser (PWA supported). 
 
+## License & Redistribution
+
+For the policy on modification and redistribution, see "Modification & Redistribution" in the About section of the Nama Studio top page (that page is the latest version of the policy).
+https://nama1223.com/
+
 ## Author
 
 Nama Studio
