@@ -43,6 +43,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 #btn-install:active{opacity:0.8;}
 #btn-install.installed{background:var(--surf2);color:var(--muted);cursor:default;}
 #btn-install.installed:active{opacity:1;}
+#lang-switch{display:flex;margin-left:10px;border:1px solid var(--border2);border-radius:999px;overflow:hidden;flex-shrink:0;align-self:center}
+#lang-switch button{border:none;background:var(--surf2);color:var(--muted);font-size:11px;font-weight:700;padding:5px 9px;cursor:pointer;touch-action:manipulation}
+#lang-switch button.active{background:var(--prime);color:#fff}
 #count-badge{background:var(--prime);color:#fff;font-size:11px;font-weight:700;
   padding:3px 8px;border-radius:20px;display:none;flex-shrink:0;}
 
@@ -357,7 +360,8 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 <div id="header">
   <div id="logo"><img src="./NamaCollageLogo192.png" alt="NamaCollage"></div>
   <div><div id="app-name">NamaCollage</div><div id="sub-name">ナマコ — 画像結合ツール</div></div>
-  <button type="button" id="btn-install" title="アプリとしてインストール">📲 インストール</button>
+  <div id="lang-switch" role="group" aria-label="Language"><button type="button" id="lang-ja">JP</button><button type="button" id="lang-en">EN</button></div>
+  <button type="button" id="btn-install" data-i18n-title="installTitle" title="アプリとしてインストール">📲 インストール</button>
   <span id="count-badge"></span>
 </div>
 
@@ -367,20 +371,20 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
   <section class="tab active" id="tab-images">
     <div id="gv-empty">
       <div class="dz-icon">🖼️</div>
-      <div class="dz-title">画像を追加してください</div>
-      <div class="dz-sub">ドラッグ＆ドロップ、またはタップで追加<br>長押しで各画像のメニューを表示</div>
-      <button type="button" class="btn btn-primary" id="btn-add-first">＋ 画像を選択</button>
+      <div class="dz-title" data-i18n="dzTitle">画像を追加してください</div>
+      <div class="dz-sub" data-i18n-html="dzSub">ドラッグ＆ドロップ、またはタップで追加<br>長押しで各画像のメニューを表示</div>
+      <button type="button" class="btn btn-primary" id="btn-add-first" data-i18n="btnAddFirst">＋ 画像を選択</button>
     </div>
     <div id="gv-toolbar" style="display:none">
       <span id="gv-count-info"></span>
-      <button type="button" class="btn btn-ghost" style="padding:7px 12px;font-size:13px" id="btn-add-more">＋ 追加</button>
-      <button type="button" class="btn btn-danger" style="padding:7px 12px;font-size:13px" id="btn-clear">🗑 全削除</button>
+      <button type="button" class="btn btn-ghost" style="padding:7px 12px;font-size:13px" id="btn-add-more" data-i18n="btnAddMore">＋ 追加</button>
+      <button type="button" class="btn btn-danger" style="padding:7px 12px;font-size:13px" id="btn-clear" data-i18n="btnClear">🗑 全削除</button>
     </div>
     <div id="grid-view" style="display:none"></div>
     <input type="file" id="file-input" accept="image/*" multiple style="display:none">
-    <div id="gv-guide" style="display:none;text-align:center;font-size:11.5px;color:var(--muted2);padding:8px 0 2px;letter-spacing:0.3px">💡 画像を長押し（または右クリック）で加工メニュー</div>
+    <div id="gv-guide" data-i18n="gvGuide" style="display:none;text-align:center;font-size:11.5px;color:var(--muted2);padding:8px 0 2px;letter-spacing:0.3px">💡 画像を長押し（または右クリック）で加工メニュー</div>
     <div style="margin-top:22px;padding-top:14px;border-top:1px solid var(--border);text-align:center;">
-      <button type="button" id="btn-load-namaco" style="background:none;border:1px solid var(--border2);color:var(--muted);font-size:12px;border-radius:8px;padding:8px 14px;cursor:pointer;touch-action:manipulation;">📦 オリジナル保存形式(.namaco)読み込み</button>
+      <button type="button" id="btn-load-namaco" data-i18n="btnLoadNamaco" style="background:none;border:1px solid var(--border2);color:var(--muted);font-size:12px;border-radius:8px;padding:8px 14px;cursor:pointer;touch-action:manipulation;">📦 オリジナル保存形式(.namaco)読み込み</button>
     </div>
     <input type="file" id="namaco-file-input" accept=".namaco" style="display:none">
   </section>
@@ -389,7 +393,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
   <section class="tab" id="tab-preview">
     <div id="preview-empty" class="empty-state hidden">
       <div class="empty-icon">🖼️</div>
-      <div class="empty-text">「画像」タブで画像を追加してから<br>下のボタンでプレビューを生成してください</div>
+      <div class="empty-text" data-i18n-html="previewEmpty">「画像」タブで画像を追加してから<br>下のボタンでプレビューを生成してください</div>
     </div>
     <div id="preview-content" class="hidden">
       <div class="preview-meta">
@@ -398,8 +402,8 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
         <span id="preview-mem-chip" class="meta-chip"></span>
       </div>
       <div class="preview-bg">
-        <canvas id="preview-canvas" title="タップで拡大表示"></canvas>
-        <div id="preview-loading" class="hidden"><div class="spinner"></div><div class="loading-text">合成中...</div></div>
+        <canvas id="preview-canvas" data-i18n-title="canvasTitle" title="タップで拡大表示"></canvas>
+        <div id="preview-loading" class="hidden"><div class="spinner"></div><div class="loading-text" data-i18n="loading">合成中...</div></div>
       </div>
       <div class="preview-meta" style="margin-top:6px">
         <span id="preview-imgs-info"></span>
@@ -408,7 +412,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
       <!-- 調整パネル（レイアウト・背景・枠線） -->
       <div id="adj-panel">
         <div class="adj-row">
-          <span class="adj-label">統一</span>
+          <span class="adj-label" data-i18n="adj_normalization">統一</span>
           <div class="adj-btns">
             <button type="button" class="adj-btn" data-s="normalization" data-v="width">横幅</button>
             <button type="button" class="adj-btn" data-s="normalization" data-v="height">高さ</button>
@@ -418,7 +422,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
           </div>
         </div>
         <div class="adj-row">
-          <span class="adj-label">基準</span>
+          <span class="adj-label" data-i18n="adj_reference">基準</span>
           <div class="adj-btns">
             <button type="button" class="adj-btn" data-s="reference" data-v="max">最大</button>
             <button type="button" class="adj-btn" data-s="reference" data-v="min">最小</button>
@@ -428,111 +432,111 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
           <input type="number" id="adj-custom-size" value="1000" min="100" max="20000" step="100" class="hidden" style="width:68px;margin-left:4px;-webkit-user-select:text;user-select:text">
         </div>
         <div class="adj-row">
-          <span class="adj-label">最終行</span>
+          <span class="adj-label" data-i18n="adjLastRow">最終行</span>
           <select class="adj-select" id="adj-last-row">
-            <option value="distribute">均等配置</option>
-            <option value="span">最後を拡大</option>
-            <option value="empty">空白のまま</option>
+            <option value="distribute" data-i18n="opt_distribute">均等配置</option>
+            <option value="span" data-i18n="opt_span">最後を拡大</option>
+            <option value="empty" data-i18n="opt_empty">空白のまま</option>
           </select>
         </div>
         <div class="adj-row">
-          <span class="adj-label">配置</span>
+          <span class="adj-label" data-i18n="adjAlign">配置</span>
           <select class="adj-select" id="adj-alignment">
-            <option value="center">中央揃え</option>
-            <option value="start">左揃え</option>
-            <option value="end">右揃え</option>
+            <option value="center" data-i18n="opt_center">中央揃え</option>
+            <option value="start" data-i18n="opt_start">左揃え</option>
+            <option value="end" data-i18n="opt_end">右揃え</option>
           </select>
         </div>
         <div class="adj-divider"></div>
         <div class="adj-row">
-          <span class="adj-label">間隔</span>
+          <span class="adj-label" data-i18n="adjGap">間隔</span>
           <input type="range" class="adj-slider" id="adj-gap" min="0" max="120" value="0">
           <span class="adj-val" id="adj-gap-val">0</span>
         </div>
         <div class="adj-row">
-          <span class="adj-label">余白</span>
+          <span class="adj-label" data-i18n="adjPad">余白</span>
           <input type="range" class="adj-slider" id="adj-padding" min="0" max="200" value="0">
           <span class="adj-val" id="adj-padding-val">0</span>
         </div>
         <div class="adj-divider"></div>
         <div class="adj-row">
-          <span class="adj-label">背景色</span>
+          <span class="adj-label" data-i18n="adjBg">背景色</span>
           <input type="color" id="adj-bg-color" value="#ffffff">
           <label style="display:flex;align-items:center;gap:4px;margin-left:8px;font-size:11px;color:var(--muted);cursor:pointer">
-            <input type="checkbox" id="adj-bg-transparent" style="width:15px;height:15px"> 透明
+            <input type="checkbox" id="adj-bg-transparent" style="width:15px;height:15px"> <span data-i18n="adjTransparent">透明</span>
           </label>
         </div>
         <div class="adj-divider"></div>
         <div class="adj-row">
-          <span class="adj-label">外枠</span>
+          <span class="adj-label" data-i18n="adjOuter">外枠</span>
           <input type="number" id="s-outer-border" min="0" max="100" value="0" style="width:52px;-webkit-user-select:text;user-select:text">
           <span style="font-size:11px;color:var(--muted)">px</span>
           <input type="color" id="s-outer-border-color" value="#000000">
         </div>
         <div class="adj-row">
-          <span class="adj-label">セル枠</span>
+          <span class="adj-label" data-i18n="adjCell">セル枠</span>
           <input type="number" id="s-inner-border" min="0" max="50" value="0" style="width:52px;-webkit-user-select:text;user-select:text">
           <span style="font-size:11px;color:var(--muted)">px</span>
           <input type="color" id="s-inner-border-color" value="#888888">
         </div>
       </div>
       <div id="color-pick-bar">
-        <button type="button" class="btn btn-pick" id="btn-pick-canvas">🎨 画像から背景色を取得</button>
-        <button type="button" class="btn btn-pick" id="btn-eyedrop">💉 スクリーンスポイト</button>
+        <button type="button" class="btn btn-pick" id="btn-pick-canvas" data-i18n="btnPickCanvas">🎨 画像から背景色を取得</button>
+        <button type="button" class="btn btn-pick" id="btn-eyedrop" data-i18n="btnEyedrop">💉 スクリーンスポイト</button>
       </div>
     </div>
-    <button type="button" class="btn btn-primary btn-full btn-lg" id="btn-compose">🔄 プレビューを生成／更新</button>
+    <button type="button" class="btn btn-primary btn-full btn-lg" id="btn-compose" data-i18n="btnCompose">🔄 プレビューを生成／更新</button>
   </section>
 
   <!-- ③ トッピング（テキスト重ね） -->
   <section class="tab" id="tab-topping">
     <div id="topping-empty" class="empty-state hidden">
       <div class="empty-icon">✍️</div>
-      <div class="empty-text">先に「プレビュー」タブで<br>画像を生成してください</div>
-      <button type="button" id="tp-storage-btn2" class="tp-store-open">💾 トッピングの保管・読み込み</button>
+      <div class="empty-text" data-i18n-html="tpEmpty">先に「プレビュー」タブで<br>画像を生成してください</div>
+      <button type="button" id="tp-storage-btn2" class="tp-store-open" data-i18n="tpStorageOpen">💾 トッピングの保管・読み込み</button>
     </div>
     <div id="topping-content" class="hidden">
       <div id="tp-canvas-wrap"><canvas id="topping-canvas"></canvas></div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:2px 0">
-        <button type="button" class="tp-add-btn" data-tp="text">✍️ テキスト</button>
-        <button type="button" class="tp-add-btn" data-tp="image">🖼️ 画像</button>
+        <button type="button" class="tp-add-btn" data-tp="text" data-i18n="tpAddText">✍️ テキスト</button>
+        <button type="button" class="tp-add-btn" data-tp="image" data-i18n="tpAddImage">🖼️ 画像</button>
         <input type="file" id="tp-image-input" accept="image/*" style="display:none">
         <select class="adj-select tp-cat-sel" id="tp-sel-line" style="max-width:120px;flex:0 0 auto">
-          <option value="">— 線・矢印</option>
-          <option value="line">— 直線</option>
-          <option value="arrow">→ 矢印</option>
-          <option value="draw-line">✏️ フリー</option>
-          <option value="burst">💥 集中線</option>
+          <option value="" data-i18n="grpLines">— 線・矢印</option>
+          <option value="line" data-i18n="tp_line">— 直線</option>
+          <option value="arrow" data-i18n="tp_arrow">→ 矢印</option>
+          <option value="draw-line" data-i18n="tp_drawFree">✏️ フリー</option>
+          <option value="burst" data-i18n="tp_burst">💥 集中線</option>
         </select>
         <select class="adj-select tp-cat-sel" id="tp-sel-shape" style="max-width:110px;flex:0 0 auto">
-          <option value="">□ 図形</option>
-          <option value="rect">□ 四角形</option>
-          <option value="ellipse">○ 楕円</option>
-          <option value="poly">⬟ 多角形</option>
+          <option value="" data-i18n="grpShapes">□ 図形</option>
+          <option value="rect" data-i18n="tp_rect">□ 四角形</option>
+          <option value="ellipse" data-i18n="tp_ellipse">○ 楕円</option>
+          <option value="poly" data-i18n="tp_poly">⬟ 多角形</option>
         </select>
         <select class="adj-select tp-cat-sel" id="tp-sel-filter" style="max-width:130px;flex:0 0 auto">
-          <option value="">🫧 フィルタ</option>
-          <optgroup label="ぼかし">
-            <option value="blur-rect">🫧□ ぼかし 四角</option>
-            <option value="blur-ellipse">🫧○ ぼかし 楕円</option>
-            <option value="blur-poly">🫧⬟ ぼかし 多角</option>
-            <option value="draw-blur">✏️ フリー</option>
+          <option value="" data-i18n="grpFilters">🫧 フィルタ</option>
+          <optgroup label="ぼかし" data-i18n-label="grpBlur">
+            <option value="blur-rect" data-i18n="tp_blurRect">🫧□ ぼかし 四角</option>
+            <option value="blur-ellipse" data-i18n="tp_blurEllipse">🫧○ ぼかし 楕円</option>
+            <option value="blur-poly" data-i18n="tp_blurPoly">🫧⬟ ぼかし 多角</option>
+            <option value="draw-blur" data-i18n="tp_drawFree">✏️ フリー</option>
           </optgroup>
-          <optgroup label="モザイク">
-            <option value="mosaic-rect">⬛□ モザイク 四角</option>
-            <option value="mosaic-ellipse">⬛○ モザイク 楕円</option>
-            <option value="mosaic-poly">⬛⬟ モザイク 多角</option>
-            <option value="draw-mosaic">✏️ フリー</option>
+          <optgroup label="モザイク" data-i18n-label="grpMosaic">
+            <option value="mosaic-rect" data-i18n="tp_mosaicRect">⬛□ モザイク 四角</option>
+            <option value="mosaic-ellipse" data-i18n="tp_mosaicEllipse">⬛○ モザイク 楕円</option>
+            <option value="mosaic-poly" data-i18n="tp_mosaicPoly">⬛⬟ モザイク 多角</option>
+            <option value="draw-mosaic" data-i18n="tp_drawFree">✏️ フリー</option>
           </optgroup>
         </select>
-        <button type="button" id="tp-undo" class="tp-ud-btn" disabled title="元に戻す">↩<span class="tp-ud-badge" id="tp-undo-badge"></span></button>
-        <button type="button" id="tp-redo" class="tp-ud-btn" disabled title="やり直し">↪<span class="tp-ud-badge" id="tp-redo-badge"></span></button>
-        <button type="button" id="tp-storage-btn" class="tp-store-open" title="トッピングの保管・読み込み">💾 保管</button>
+        <button type="button" id="tp-undo" class="tp-ud-btn" disabled data-i18n-title="tpUndo" title="元に戻す">↩<span class="tp-ud-badge" id="tp-undo-badge"></span></button>
+        <button type="button" id="tp-redo" class="tp-ud-btn" disabled data-i18n-title="tpRedo" title="やり直し">↪<span class="tp-ud-badge" id="tp-redo-badge"></span></button>
+        <button type="button" id="tp-storage-btn" class="tp-store-open" data-i18n="tpStorageShort" data-i18n-title="tpStorageTitle" title="トッピングの保管・読み込み">💾 保管</button>
       </div>
       <div id="tp-selected-panel"></div>
       <div id="topping-list"></div>
       <div style="margin-top:22px;padding-top:14px;border-top:1px solid var(--border);text-align:center;">
-        <button type="button" id="tp-clear-all-btn" style="background:none;border:none;color:var(--muted);font-size:11px;text-decoration:underline;cursor:pointer;padding:6px;">🗑️ トッピングを全て消去</button>
+        <button type="button" id="tp-clear-all-btn" data-i18n="tpClearAll" style="background:none;border:none;color:var(--muted);font-size:11px;text-decoration:underline;cursor:pointer;padding:6px;">🗑️ トッピングを全て消去</button>
       </div>
     </div>
   </section>
@@ -540,28 +544,28 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
   <!-- ④ 保存 -->
   <section class="tab" id="tab-save">
     <div class="card">
-      <div class="card-head">📦 編集データごと保存</div>
+      <div class="card-head" data-i18n="saveDataHead">📦 編集データごと保存</div>
       <div class="card-body" style="gap:8px">
-        <div style="font-size:12.5px;color:var(--muted);line-height:1.6">画像そのもの・トリミングやトッピングなどの編集内容・配置を全て含んだ、あとで再編集できる独自形式（.namaco）で保存します。トッピングだけの .namatop は、別の画像に同じトッピングを載せたい時に使えます（読み込みは「トッピング」タブの「💾 保管」から）。</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6" data-i18n="saveDataDesc">画像そのもの・トリミングやトッピングなどの編集内容・配置を全て含んだ、あとで再編集できる独自形式（.namaco）で保存します。トッピングだけの .namatop は、別の画像に同じトッピングを載せたい時に使えます（読み込みは「トッピング」タブの「💾 保管」から）。</div>
         <div style="display:flex;gap:8px;">
-          <button type="button" class="btn" style="flex:1;background:var(--violet);color:#fff;font-size:13px;padding-left:4px;padding-right:4px" id="btn-save-namaco">📦 .namaco形式で保存</button>
-          <button type="button" class="btn" style="flex:1;background:var(--violet);color:#fff;font-size:13px;padding-left:4px;padding-right:4px" id="btn-save-namatop">🏷️ .namatop形式で保存</button>
+          <button type="button" class="btn" style="flex:1;background:var(--violet);color:#fff;font-size:13px;padding-left:4px;padding-right:4px" id="btn-save-namaco" data-i18n="btnSaveNamaco">📦 .namaco形式で保存</button>
+          <button type="button" class="btn" style="flex:1;background:var(--violet);color:#fff;font-size:13px;padding-left:4px;padding-right:4px" id="btn-save-namatop" data-i18n="btnSaveNamatop">🏷️ .namatop形式で保存</button>
         </div>
       </div>
     </div>
-    <div id="save-empty" class="empty-state hidden"><div class="empty-icon">💾</div><div class="empty-text">先に「プレビュー」タブで<br>画像を生成してください</div></div>
+    <div id="save-empty" class="empty-state hidden"><div class="empty-icon">💾</div><div class="empty-text" data-i18n-html="tpEmpty">先に「プレビュー」タブで<br>画像を生成してください</div></div>
     <div id="save-content" class="hidden">
       <div id="warn-size-danger" class="alert alert-danger hidden"><span class="alert-icon">🚫</span><span id="warn-size-danger-text"></span></div>
       <div id="warn-size-warn" class="alert alert-warn hidden"><span class="alert-icon">⚠️</span><span id="warn-size-warn-text"></span></div>
       <div class="card">
-        <div class="card-head"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>出力設定</div>
+        <div class="card-head"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span data-i18n="saveOutputHead">出力設定</span></div>
         <div class="card-body">
           <div class="row" style="border-bottom:none">
-            <div class="row-label">最大ピクセル数（上限）<div class="row-sub">超えた場合は縮小して保存</div></div>
+            <div class="row-label"><span data-i18n="maxPx">最大ピクセル数（上限）</span><div class="row-sub" data-i18n="maxPxSub">超えた場合は縮小して保存</div></div>
             <select id="s-max-pixels">
               <option value="1000000">1MP</option><option value="2000000">2MP</option>
               <option value="4000000">4MP</option><option value="8000000">8MP</option>
-              <option value="16000000">16MP</option><option value="0" selected>無制限</option>
+              <option value="16000000">16MP</option><option value="0" selected data-i18n="unlimited">無制限</option>
             </select>
           </div>
         </div>
@@ -569,7 +573,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
       <div id="save-size-ok" class="alert alert-ok hidden"><span class="alert-icon">✅</span><span id="save-size-ok-text"></span></div>
       <div class="save-summary" id="save-summary"></div>
       <div class="card">
-        <div class="card-head">保存形式</div>
+        <div class="card-head" data-i18n="saveFormatHead">保存形式</div>
         <div class="card-body" style="gap:12px">
           <div class="format-pills">
             <div class="format-pill active" data-fmt="jpeg">JPEG</div>
@@ -577,25 +581,25 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
             <div class="format-pill" data-fmt="webp">WebP</div>
           </div>
           <div id="save-quality-row" class="range-block" style="border-bottom:none;padding-bottom:0">
-            <div class="range-header"><span class="range-label">品質</span><span class="range-val" id="save-quality-val">92</span></div>
+            <div class="range-header"><span class="range-label" data-i18n="quality">品質</span><span class="range-val" id="save-quality-val">92</span></div>
             <input type="range" id="save-quality" min="1" max="100" value="92">
           </div>
         </div>
       </div>
       <div class="card">
-        <div class="card-head">📁 保存先フォルダ</div>
+        <div class="card-head" data-i18n="saveDirHead">📁 保存先フォルダ</div>
         <div class="card-body" style="gap:8px">
           <div id="save-dir-status" style="font-size:12.5px;color:var(--muted);line-height:1.6"></div>
           <div style="display:flex;gap:8px;">
-            <button type="button" class="btn" style="flex:1;background:var(--surf2);color:var(--text);border:1px solid var(--border2)" id="btn-pick-savedir">📁 フォルダを選択</button>
-            <button type="button" class="btn hidden" style="flex:0 0 auto;background:var(--surf2);color:var(--muted);border:1px solid var(--border2)" id="btn-clear-savedir">解除</button>
+            <button type="button" class="btn" style="flex:1;background:var(--surf2);color:var(--text);border:1px solid var(--border2)" id="btn-pick-savedir" data-i18n="btnPickDir">📁 フォルダを選択</button>
+            <button type="button" class="btn hidden" style="flex:0 0 auto;background:var(--surf2);color:var(--muted);border:1px solid var(--border2)" id="btn-clear-savedir" data-i18n="btnClearDir">解除</button>
           </div>
-          <div id="save-dir-unsupported" class="hidden" style="font-size:11.5px;color:var(--muted2);line-height:1.6">💡 このブラウザ／端末では保存先フォルダの指定に対応していません（Safari・iOS・Firefoxなど）。通常通りダウンロードフォルダに保存されます。</div>
+          <div id="save-dir-unsupported" class="hidden" style="font-size:11.5px;color:var(--muted2);line-height:1.6" data-i18n="dirUnsupported">💡 このブラウザ／端末では保存先フォルダの指定に対応していません（Safari・iOS・Firefoxなど）。通常通りダウンロードフォルダに保存されます。</div>
         </div>
       </div>
-      <button type="button" class="btn btn-primary btn-full btn-lg" id="btn-download">⬇️ ダウンロード</button>
-      <div class="alert alert-info"><span class="alert-icon">💡</span><span>プレビュー＋トッピングの内容がダウンロードされます。</span></div>
-      <div class="alert alert-warn"><span class="alert-icon">📱</span><div><strong>PWA・ブラウザの注意</strong><br>縦横16,000px超やメモリ超過でエラーになることがあります。</div></div>
+      <button type="button" class="btn btn-primary btn-full btn-lg" id="btn-download" data-i18n="btnDownload">⬇️ ダウンロード</button>
+      <div class="alert alert-info"><span class="alert-icon">💡</span><span data-i18n="saveNote">プレビュー＋トッピングの内容がダウンロードされます。</span></div>
+      <div class="alert alert-warn"><span class="alert-icon">📱</span><div><strong data-i18n="pwaWarnTitle">PWA・ブラウザの注意</strong><br><span data-i18n="pwaWarnBody">縦横16,000px超やメモリ超過でエラーになることがあります。</span></div></div>
     </div>
   </section>
 </div>
@@ -604,19 +608,19 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 <nav id="nav">
   <button class="nav-btn active" data-tab="images">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-    画像
+    <span data-i18n="navImages">画像</span>
   </button>
   <button class="nav-btn" data-tab="preview">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-    プレビュー
+    <span data-i18n="navPreview">プレビュー</span>
   </button>
   <button class="nav-btn" data-tab="topping">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-    トッピング
+    <span data-i18n="navTopping">トッピング</span>
   </button>
   <button class="nav-btn" data-tab="save">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-    保存
+    <span data-i18n="navSave">保存</span>
   </button>
 </nav>
 
@@ -629,41 +633,41 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 
 <!-- コンテキストメニュー -->
 <div id="ctx-menu" class="hidden">
-  <button type="button" class="ctx-item" id="ctx-replace">🔄 画像の変更</button>
+  <button type="button" class="ctx-item" id="ctx-replace" data-i18n="ctxReplace">🔄 画像の変更</button>
   <div class="ctx-sep"></div>
-  <button type="button" class="ctx-item" id="ctx-trim">✂️ トリミング</button>
+  <button type="button" class="ctx-item" id="ctx-trim" data-i18n="ctxTrim">✂️ トリミング</button>
   <div class="ctx-sep"></div>
-  <button type="button" class="ctx-item" id="ctx-cutv">✄ 中抜き（縦）</button>
-  <button type="button" class="ctx-item" id="ctx-cuth">✂️ 中抜き（横）</button>
+  <button type="button" class="ctx-item" id="ctx-cutv" data-i18n="ctxCutV">✄ 中抜き（縦）</button>
+  <button type="button" class="ctx-item" id="ctx-cuth" data-i18n="ctxCutH">✂️ 中抜き（横）</button>
   <div class="ctx-sep"></div>
-  <button type="button" class="ctx-item" id="ctx-rot-cw">↻ 右90°回転</button>
-  <button type="button" class="ctx-item" id="ctx-rot-ccw">↺ 左90°回転</button>
-  <button type="button" class="ctx-item" id="ctx-flip-h">↔ 左右反転</button>
-  <button type="button" class="ctx-item" id="ctx-flip-v">↕ 上下反転</button>
+  <button type="button" class="ctx-item" id="ctx-rot-cw" data-i18n="ctxRotCw">↻ 右90°回転</button>
+  <button type="button" class="ctx-item" id="ctx-rot-ccw" data-i18n="ctxRotCcw">↺ 左90°回転</button>
+  <button type="button" class="ctx-item" id="ctx-flip-h" data-i18n="ctxFlipH">↔ 左右反転</button>
+  <button type="button" class="ctx-item" id="ctx-flip-v" data-i18n="ctxFlipV">↕ 上下反転</button>
   <div class="ctx-sep"></div>
-  <button type="button" class="ctx-item" id="ctx-color">🎨 カラー調整</button>
+  <button type="button" class="ctx-item" id="ctx-color" data-i18n="ctxColor">🎨 カラー調整</button>
   <div class="ctx-sep"></div>
-  <button type="button" class="ctx-item ctx-item-danger" id="ctx-reset-img">↺ 編集をリセット</button>
+  <button type="button" class="ctx-item ctx-item-danger" id="ctx-reset-img" data-i18n="ctxReset">↺ 編集をリセット</button>
   <div class="ctx-sep" id="ctx-span-sep"></div>
-  <button type="button" class="ctx-item" id="ctx-span-extend">⤵ 下の行と結合（縦またぎ）</button>
-  <button type="button" class="ctx-item" id="ctx-span-release">⤴ 縦またぎを解除</button>
+  <button type="button" class="ctx-item" id="ctx-span-extend" data-i18n="ctxSpanExtend">⤵ 下の行と結合（縦またぎ）</button>
+  <button type="button" class="ctx-item" id="ctx-span-release" data-i18n="ctxSpanRelease">⤴ 縦またぎを解除</button>
 </div>
 
 <!-- トリミングモーダル -->
 <div id="trim-modal" class="hidden">
   <div id="trim-header">
-    <span id="trim-title">トリミング</span>
-    <button type="button" class="trim-hbtn" id="trim-reset-btn" style="background:var(--surf2);color:var(--muted)">リセット</button>
-    <button type="button" class="trim-hbtn" id="trim-apply-btn" style="background:var(--prime);color:#fff">適用</button>
-    <button type="button" class="trim-hbtn" id="trim-cancel-btn" style="background:var(--surf2);color:var(--muted)">✕ キャンセル</button>
+    <span id="trim-title" data-i18n="trimTitle">トリミング</span>
+    <button type="button" class="trim-hbtn" id="trim-reset-btn" data-i18n="reset" style="background:var(--surf2);color:var(--muted)">リセット</button>
+    <button type="button" class="trim-hbtn" id="trim-apply-btn" data-i18n="apply" style="background:var(--prime);color:#fff">適用</button>
+    <button type="button" class="trim-hbtn" id="trim-cancel-btn" data-i18n="trimCancel" style="background:var(--surf2);color:var(--muted)">✕ キャンセル</button>
   </div>
   <div id="trim-canvas-wrap"><canvas id="trim-canvas"></canvas></div>
   <div id="trim-footer">
     <div class="trim-inputs">
-      <div class="trim-inp-wrap"><div class="trim-inp-label">X (左)</div><input class="trim-inp" type="number" id="ti-x" min="0"></div>
-      <div class="trim-inp-wrap"><div class="trim-inp-label">Y (上)</div><input class="trim-inp" type="number" id="ti-y" min="0"></div>
-      <div class="trim-inp-wrap"><div class="trim-inp-label">幅 W</div><input class="trim-inp" type="number" id="ti-w" min="1"></div>
-      <div class="trim-inp-wrap"><div class="trim-inp-label">高さ H</div><input class="trim-inp" type="number" id="ti-h" min="1"></div>
+      <div class="trim-inp-wrap"><div class="trim-inp-label" data-i18n="tiX">X (左)</div><input class="trim-inp" type="number" id="ti-x" min="0"></div>
+      <div class="trim-inp-wrap"><div class="trim-inp-label" data-i18n="tiY">Y (上)</div><input class="trim-inp" type="number" id="ti-y" min="0"></div>
+      <div class="trim-inp-wrap"><div class="trim-inp-label" data-i18n="tiW">幅 W</div><input class="trim-inp" type="number" id="ti-w" min="1"></div>
+      <div class="trim-inp-wrap"><div class="trim-inp-label" data-i18n="tiH">高さ H</div><input class="trim-inp" type="number" id="ti-h" min="1"></div>
     </div>
     <div class="trim-info" id="trim-info"></div>
   </div>
@@ -674,21 +678,21 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
   <div class="modal-box">
     <div class="modal-title" id="modal-title"></div>
     <div class="modal-body" id="modal-body"></div>
-    <button type="button" class="modal-close" id="modal-close">閉じる</button>
+    <button type="button" class="modal-close" id="modal-close" data-i18n="close">閉じる</button>
   </div>
 </div>
 
 <!-- 画像タブ: 原寸表示ビューア -->
 <div id="img-viewer-modal">
   <div id="img-viewer-wrap"><canvas id="img-viewer-canvas"></canvas></div>
-  <div id="img-viewer-hint">ドラッグで移動 ・ タップで閉じる</div>
+  <div id="img-viewer-hint" data-i18n="zoomHint">ドラッグで移動 ・ タップで閉じる</div>
   <button type="button" id="img-viewer-close">✕</button>
 </div>
 
 <!-- カスタムカラーピッカー（Windows ペイント風） -->
 <div id="ccm-modal">
   <div class="ccm-box">
-    <div class="ccm-title">色を選択</div>
+    <div class="ccm-title" data-i18n="ccmTitle">色を選択</div>
     <div class="ccm-presets" id="ccm-presets"></div>
     <div class="ccm-custom-row">
       <div style="position:relative;">
@@ -710,7 +714,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
       <div class="ccm-field-row"><label>B</label><input type="number" id="ccm-b" min="0" max="255"></div>
     </div>
     <div class="ccm-btns">
-      <button type="button" id="ccm-cancel">キャンセル</button>
+      <button type="button" id="ccm-cancel" data-i18n="cancel">キャンセル</button>
       <button type="button" id="ccm-ok">OK</button>
     </div>
   </div>
@@ -719,11 +723,11 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 <!-- .namaco読み込み確認モーダル -->
 <div id="load-namaco-modal" style="display:none;position:fixed;inset:0;background:rgba(0,20,60,0.45);z-index:999;align-items:center;justify-content:center;padding:20px;">
   <div class="modal-box">
-    <div class="modal-title">読み込みますか？</div>
-    <div class="modal-body">現在編集中のデータは破棄されます。よろしいですか？</div>
+    <div class="modal-title" data-i18n="loadNamacoTitle">読み込みますか？</div>
+    <div class="modal-body" data-i18n="loadNamacoBody">現在編集中のデータは破棄されます。よろしいですか？</div>
     <div style="display:flex;gap:8px;margin-top:20px;">
-      <button type="button" id="load-namaco-cancel" style="flex:1;padding:12px;border-radius:9px;border:1px solid var(--border2);background:var(--surf2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;">キャンセル</button>
-      <button type="button" id="load-namaco-confirm" style="flex:1;padding:12px;border-radius:9px;border:none;background:var(--violet);color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">読み込む</button>
+      <button type="button" id="load-namaco-cancel" data-i18n="cancel" style="flex:1;padding:12px;border-radius:9px;border:1px solid var(--border2);background:var(--surf2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;">キャンセル</button>
+      <button type="button" id="load-namaco-confirm" data-i18n="loadConfirm" style="flex:1;padding:12px;border-radius:9px;border:none;background:var(--violet);color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">読み込む</button>
     </div>
   </div>
 </div>
@@ -731,11 +735,11 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 <!-- トッピング全消去 確認モーダル -->
 <div id="tp-clear-modal" style="display:none;position:fixed;inset:0;background:rgba(0,20,60,0.45);z-index:999;align-items:center;justify-content:center;padding:20px;">
   <div class="modal-box">
-    <div class="modal-title">トッピングを全て消去しますか？</div>
-    <div class="modal-body">テキスト・図形・フィルタ・フリーハンド描画など、追加した全てのトッピングが削除されます。（実行後は「↩元に戻す」ボタンで復元できます）</div>
+    <div class="modal-title" data-i18n="tpClearTitle">トッピングを全て消去しますか？</div>
+    <div class="modal-body" data-i18n="tpClearBody">テキスト・図形・フィルタ・フリーハンド描画など、追加した全てのトッピングが削除されます。（実行後は「↩元に戻す」ボタンで復元できます）</div>
     <div style="display:flex;gap:8px;margin-top:20px;">
-      <button type="button" id="tp-clear-cancel" style="flex:1;padding:12px;border-radius:9px;border:1px solid var(--border2);background:var(--surf2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;">キャンセル</button>
-      <button type="button" id="tp-clear-confirm" style="flex:1;padding:12px;border-radius:9px;border:none;background:#e53935;color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">全て消去</button>
+      <button type="button" id="tp-clear-cancel" data-i18n="cancel" style="flex:1;padding:12px;border-radius:9px;border:1px solid var(--border2);background:var(--surf2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;">キャンセル</button>
+      <button type="button" id="tp-clear-confirm" data-i18n="clearAllBtn" style="flex:1;padding:12px;border-radius:9px;border:none;background:#e53935;color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">全て消去</button>
     </div>
   </div>
 </div>
@@ -743,15 +747,15 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 <!-- 全削除 確認モーダル -->
 <div id="clear-all-modal" style="display:none;position:fixed;inset:0;background:rgba(0,20,60,0.45);z-index:999;align-items:center;justify-content:center;padding:20px;">
   <div class="modal-box">
-    <div class="modal-title">全ての画像を削除しますか？</div>
+    <div class="modal-title" data-i18n="clearAllTitle">全ての画像を削除しますか？</div>
     <div class="modal-body" id="clear-all-body"></div>
     <label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13.5px;font-weight:600;color:var(--text);cursor:pointer">
-      <input type="checkbox" id="clear-also-toppings" style="width:17px;height:17px;accent-color:#e53935"> トッピングも全削除する
+      <input type="checkbox" id="clear-also-toppings" style="width:17px;height:17px;accent-color:#e53935"> <span data-i18n="clearAlsoTp">トッピングも全削除する</span>
     </label>
-    <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.6">トッピングは通常、画像を消しても残ります。チェックした場合のみ一緒に消去します（「💾 保管」に保存したセットは消えません）。</div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.6" data-i18n="clearAlsoNote">トッピングは通常、画像を消しても残ります。チェックした場合のみ一緒に消去します（「💾 保管」に保存したセットは消えません）。</div>
     <div style="display:flex;gap:8px;margin-top:20px;">
-      <button type="button" id="clear-all-cancel" style="flex:1;padding:12px;border-radius:9px;border:1px solid var(--border2);background:var(--surf2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;">キャンセル</button>
-      <button type="button" id="clear-all-confirm" style="flex:1;padding:12px;border-radius:9px;border:none;background:#e53935;color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">全削除</button>
+      <button type="button" id="clear-all-cancel" data-i18n="cancel" style="flex:1;padding:12px;border-radius:9px;border:1px solid var(--border2);background:var(--surf2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;">キャンセル</button>
+      <button type="button" id="clear-all-confirm" data-i18n="deleteAllBtn" style="flex:1;padding:12px;border-radius:9px;border:none;background:#e53935;color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">全削除</button>
     </div>
   </div>
 </div>
@@ -759,33 +763,33 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 <!-- トッピング保管モーダル -->
 <div id="tp-storage-modal" style="display:none;position:fixed;inset:0;background:rgba(0,20,60,0.45);z-index:999;align-items:center;justify-content:center;padding:20px;">
   <div class="modal-box modal-scroll">
-    <div class="modal-title">💾 トッピングの保管</div>
-    <div style="font-size:12px;font-weight:700;color:var(--muted);margin:4px 0 8px;">ファイル（.namatop）</div>
+    <div class="modal-title" data-i18n="tpStorageHead">💾 トッピングの保管</div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin:4px 0 8px;" data-i18n="tpFileSection">ファイル（.namatop）</div>
     <div style="display:flex;gap:8px;">
-      <button type="button" id="tp-store-export" class="tp-store-btn" style="flex:1;padding:10px;">📤 ファイルに保存</button>
-      <button type="button" id="tp-store-import" class="tp-store-btn" style="flex:1;padding:10px;">📥 ファイルから読み込み</button>
+      <button type="button" id="tp-store-export" class="tp-store-btn" data-i18n="tpStoreExport" style="flex:1;padding:10px;">📤 ファイルに保存</button>
+      <button type="button" id="tp-store-import" class="tp-store-btn" data-i18n="tpStoreImport" style="flex:1;padding:10px;">📥 ファイルから読み込み</button>
     </div>
     <input type="file" id="namatop-file-input" accept=".namatop,.json" style="display:none">
-    <div style="font-size:12px;font-weight:700;color:var(--muted);margin:18px 0 8px;">アプリ内保管</div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin:18px 0 8px;" data-i18n="tpAppSection">アプリ内保管</div>
     <div style="display:flex;gap:8px;">
-      <input type="text" id="tp-set-name" placeholder="セット名（例: 実況用テロップ）" style="flex:1;min-width:0;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;background:var(--surf2);color:var(--text);font-size:13px;-webkit-user-select:text;user-select:text">
-      <button type="button" id="tp-set-save" class="tp-store-btn" style="background:var(--violet);color:#fff;border:none;padding:9px 12px;">現在のトッピングを保管</button>
+      <input type="text" id="tp-set-name" data-i18n-ph="tpSetNamePh" placeholder="セット名（例: 実況用テロップ）" style="flex:1;min-width:0;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;background:var(--surf2);color:var(--text);font-size:13px;-webkit-user-select:text;user-select:text">
+      <button type="button" id="tp-set-save" class="tp-store-btn" data-i18n="tpSetSave" style="background:var(--violet);color:#fff;border:none;padding:9px 12px;">現在のトッピングを保管</button>
     </div>
     <div id="tp-set-list" style="display:flex;flex-direction:column;gap:6px;margin-top:10px;"></div>
-    <button type="button" class="modal-close" id="tp-storage-close" style="background:var(--surf2);color:var(--text);border:1px solid var(--border2);">閉じる</button>
+    <button type="button" class="modal-close" id="tp-storage-close" data-i18n="close" style="background:var(--surf2);color:var(--text);border:1px solid var(--border2);">閉じる</button>
   </div>
 </div>
 
 <!-- トッピング読み込み確認モーダル -->
 <div id="tp-load-modal" style="display:none;position:fixed;inset:0;background:rgba(0,20,60,0.45);z-index:1000;align-items:center;justify-content:center;padding:20px;">
   <div class="modal-box modal-scroll">
-    <div class="modal-title">トッピングを読み込みますか？</div>
+    <div class="modal-title" data-i18n="tpLoadTitle">トッピングを読み込みますか？</div>
     <div class="modal-body" id="tp-load-summary"></div>
     <div style="margin-top:12px;"><canvas id="tp-load-preview" width="16" height="16"></canvas></div>
-    <div style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.6">※ プレビューは現在の画像に重ねたイメージです（画像がない場合は仮の背景で表示）。現在のトッピングは上書きされますが、読み込み後に「↩ 元に戻す」で戻せます。</div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.6" data-i18n="tpLoadNote">※ プレビューは現在の画像に重ねたイメージです（画像がない場合は仮の背景で表示）。現在のトッピングは上書きされますが、読み込み後に「↩ 元に戻す」で戻せます。</div>
     <div style="display:flex;gap:8px;margin-top:16px;">
-      <button type="button" id="tp-load-cancel" style="flex:1;padding:12px;border-radius:9px;border:1px solid var(--border2);background:var(--surf2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;">キャンセル</button>
-      <button type="button" id="tp-load-confirm" style="flex:1;padding:12px;border-radius:9px;border:none;background:var(--violet);color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">上書きして読み込む</button>
+      <button type="button" id="tp-load-cancel" data-i18n="cancel" style="flex:1;padding:12px;border-radius:9px;border:1px solid var(--border2);background:var(--surf2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;">キャンセル</button>
+      <button type="button" id="tp-load-confirm" data-i18n="tpLoadConfirm" style="flex:1;padding:12px;border-radius:9px;border:none;background:var(--violet);color:#fff;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">上書きして読み込む</button>
     </div>
   </div>
 </div>
@@ -793,35 +797,35 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 <!-- カラー調整モーダル -->
 <div id="color-modal" class="hidden">
   <div id="color-header">
-    <span id="color-title" style="flex:1;font-size:15px;font-weight:700;color:var(--text)">カラー調整</span>
-    <button type="button" class="trim-hbtn" id="color-reset-btn" style="background:var(--surf2);color:var(--muted)">リセット</button>
-    <button type="button" class="trim-hbtn" id="color-apply-btn" style="background:var(--prime);color:#fff">適用</button>
+    <span id="color-title" data-i18n="colorTitle" style="flex:1;font-size:15px;font-weight:700;color:var(--text)">カラー調整</span>
+    <button type="button" class="trim-hbtn" id="color-reset-btn" data-i18n="reset" style="background:var(--surf2);color:var(--muted)">リセット</button>
+    <button type="button" class="trim-hbtn" id="color-apply-btn" data-i18n="apply" style="background:var(--prime);color:#fff">適用</button>
     <button type="button" class="trim-hbtn" id="color-cancel-btn" style="background:var(--surf2);color:var(--muted)">✕</button>
   </div>
   <div id="color-canvas-wrap"><canvas id="color-canvas"></canvas></div>
   <div id="color-footer">
-    <div class="ca-row"><span class="ca-label">露出</span><input type="range" class="ca-slider" id="ca-exp" min="-100" max="100" value="0"><span class="ca-val" id="ca-exp-val">0</span></div>
-    <div class="ca-row"><span class="ca-label">明度</span><input type="range" class="ca-slider" id="ca-bri" min="-100" max="100" value="0"><span class="ca-val" id="ca-bri-val">0</span></div>
-    <div class="ca-row"><span class="ca-label">対比</span><input type="range" class="ca-slider" id="ca-con" min="-100" max="100" value="0"><span class="ca-val" id="ca-con-val">0</span></div>
-    <div class="ca-row"><span class="ca-label">彩度</span><input type="range" class="ca-slider" id="ca-sat" min="-100" max="100" value="0"><span class="ca-val" id="ca-sat-val">0</span></div>
-    <div class="ca-row" style="border-top:1px solid var(--border);padding-top:6px;margin-top:2px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text)"><input type="checkbox" id="ca-preview" checked style="accent-color:var(--prime);width:16px;height:16px"> プレビュー（外すと元画像と比較）</label></div>
+    <div class="ca-row"><span class="ca-label" data-i18n="caExposure">露出</span><input type="range" class="ca-slider" id="ca-exp" min="-100" max="100" value="0"><span class="ca-val" id="ca-exp-val">0</span></div>
+    <div class="ca-row"><span class="ca-label" data-i18n="caBrightness">明度</span><input type="range" class="ca-slider" id="ca-bri" min="-100" max="100" value="0"><span class="ca-val" id="ca-bri-val">0</span></div>
+    <div class="ca-row"><span class="ca-label" data-i18n="caContrast">対比</span><input type="range" class="ca-slider" id="ca-con" min="-100" max="100" value="0"><span class="ca-val" id="ca-con-val">0</span></div>
+    <div class="ca-row"><span class="ca-label" data-i18n="caSaturation">彩度</span><input type="range" class="ca-slider" id="ca-sat" min="-100" max="100" value="0"><span class="ca-val" id="ca-sat-val">0</span></div>
+    <div class="ca-row" style="border-top:1px solid var(--border);padding-top:6px;margin-top:2px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text)"><input type="checkbox" id="ca-preview" checked style="accent-color:var(--prime);width:16px;height:16px"> <span data-i18n="caPreview">プレビュー（外すと元画像と比較）</span></label></div>
   </div>
 </div>
 
 <!-- 中抜きカットモーダル -->
 <div id="cutout-modal" class="hidden">
   <div id="cutout-header">
-    <span id="cutout-title" style="flex:1;font-size:15px;font-weight:700;color:var(--text)">中抜きカット</span>
-    <button type="button" class="trim-hbtn" id="cutout-reset-btn" style="background:var(--surf2);color:var(--muted)">リセット</button>
-    <button type="button" class="trim-hbtn" id="cutout-apply-btn" style="background:var(--prime);color:#fff">適用</button>
+    <span id="cutout-title" data-i18n="cutoutTitle" style="flex:1;font-size:15px;font-weight:700;color:var(--text)">中抜きカット</span>
+    <button type="button" class="trim-hbtn" id="cutout-reset-btn" data-i18n="reset" style="background:var(--surf2);color:var(--muted)">リセット</button>
+    <button type="button" class="trim-hbtn" id="cutout-apply-btn" data-i18n="apply" style="background:var(--prime);color:#fff">適用</button>
     <button type="button" class="trim-hbtn" id="cutout-cancel-btn" style="background:var(--surf2);color:var(--muted)">✕</button>
   </div>
   <div id="cutout-canvas-wrap"><canvas id="cutout-canvas"></canvas></div>
   <div id="cutout-footer">
     <div style="display:flex;gap:6px;align-items:center;font-size:12px;flex-wrap:wrap">
-      <span style="color:var(--muted)">除去領域</span>
+      <span style="color:var(--muted)" data-i18n="cuLabel">除去領域</span>
       <span id="cutout-info" style="font-weight:700;color:var(--prime)"></span>
-      <button type="button" id="cu-add" style="margin-left:auto;background:var(--prime);color:#fff;border:none;border-radius:7px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation">＋ 追加</button>
+      <button type="button" id="cu-add" data-i18n="cuAdd" style="margin-left:auto;background:var(--prime);color:#fff;border:none;border-radius:7px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation">＋ 追加</button>
     </div>
     <div style="display:flex;gap:8px;align-items:stretch;">
       <div id="cu-regions" style="flex:1;min-width:0;"></div>
@@ -830,7 +834,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
         <button type="button" id="cu-nav-down" class="cu-nav-btn">▼</button>
       </div>
     </div>
-    <div style="font-size:11px;color:var(--muted)">💡 ラインをドラッグまたはスライダーで調整。▲▼で領域切り替え。</div>
+    <div style="font-size:11px;color:var(--muted)" data-i18n="cuHint">💡 ラインをドラッグまたはスライダーで調整。▲▼で領域切り替え。</div>
   </div>
 </div>
 <script>
@@ -859,6 +863,268 @@ const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'
 const flatImages = () => state.grid.flat().filter(Boolean); // 縦またぎで覆われたセルは null（位置合わせ用）なので除外
 const maxCols = () => Math.max(0, ...state.grid.map(r => r.length));
 
+// ===== 多言語（日本語／English） =====
+// 言語は IndexedDB の meta に保存し、アプリの言語設定として保持する。
+// 初回は端末の言語から決める。文言は STRINGS のキーが正で、tr() で引く。
+const STRINGS = {
+ja: {
+  subName: 'ナマコ — 画像結合ツール',
+  install: '📲 インストール', installTitle: 'アプリとしてインストール',
+  installed: '☑️ インストール済み', installedTitle: 'すでにアプリとしてインストールされています',
+  navImages: '画像', navPreview: 'プレビュー', navTopping: 'トッピング', navSave: '保存',
+  countBadge: '{0}枚',
+  dzTitle: '画像を追加してください',
+  dzSub: 'ドラッグ＆ドロップ、またはタップで追加<br>長押しで各画像のメニューを表示',
+  btnAddFirst: '＋ 画像を選択', btnAddMore: '＋ 追加', btnClear: '🗑 全削除',
+  gvGuide: '💡 画像を長押し（または右クリック）で加工メニュー',
+  btnLoadNamaco: '📦 オリジナル保存形式(.namaco)読み込み',
+  gvCountInfo: '{0}枚 / {1}行 × {2}列', gvCovered: '結合中', gvSpanBadge: '縦またぎ×{0}',
+  gvEdited: '編集済み', gvDelete: '削除', gvAddRow: '＋ 行を追加', gvAddHere: 'ここに追加',
+  zoomHint: 'ドラッグで移動 ・ タップで閉じる',
+  ctxReplace: '🔄 画像の変更', ctxTrim: '✂️ トリミング', ctxCutV: '✄ 中抜き（縦）', ctxCutH: '✂️ 中抜き（横）',
+  ctxRotCw: '↻ 右90°回転', ctxRotCcw: '↺ 左90°回転', ctxFlipH: '↔ 左右反転', ctxFlipV: '↕ 上下反転',
+  ctxColor: '🎨 カラー調整', ctxReset: '↺ 編集をリセット',
+  ctxSpanExtend: '⤵ 下の行と結合（縦またぎ）', ctxSpanExtendMore: '⤵ 縦またぎを伸ばす', ctxSpanRelease: '⤴ 縦またぎを解除',
+  previewEmpty: '「画像」タブで画像を追加してから<br>下のボタンでプレビューを生成してください',
+  canvasTitle: 'タップで拡大表示', loading: '合成中...',
+  adj_normalization: '統一', adj_normalization_width: '横幅', adj_normalization_height: '高さ', adj_normalization_longSide: '長辺', adj_normalization_shortSide: '短辺', adj_normalization_none: 'なし',
+  adj_reference: '基準', adj_reference_max: '最大', adj_reference_min: '最小', adj_reference_first: '先頭', adj_reference_custom: '指定px',
+  adjLastRow: '最終行', opt_distribute: '均等配置', opt_span: '最後を拡大', opt_empty: '空白のまま',
+  adjAlign: '配置', opt_center: '中央揃え', opt_start: '左揃え', opt_end: '右揃え',
+  adjGap: '間隔', adjPad: '余白', adjBg: '背景色', adjTransparent: '透明', adjOuter: '外枠', adjCell: 'セル枠',
+  btnPickCanvas: '🎨 画像から背景色を取得', pickCancel: '✕ キャンセル', btnEyedrop: '💉 スクリーンスポイト',
+  btnCompose: '🔄 プレビューを生成／更新',
+  previewInfo: '{0}枚 / {1}行×{2}列', gridRC: '{0}行×{1}列', svGridVal: '{0}枚 / {1}',
+  norm_width: '横幅統一', norm_height: '高さ統一', norm_longSide: '長辺統一', norm_shortSide: '短辺統一', norm_none: 'そのまま',
+  tpEmpty: '先に「プレビュー」タブで<br>画像を生成してください',
+  tpStorageOpen: '💾 トッピングの保管・読み込み', tpStorageShort: '💾 保管',
+  tpAddText: '✍️ テキスト', tpAddImage: '🖼️ 画像',
+  grpLines: '— 線・矢印', tp_line: '— 直線', tp_arrow: '→ 矢印', tp_drawFree: '✏️ フリー', tp_burst: '💥 集中線',
+  grpShapes: '□ 図形', tp_rect: '□ 四角形', tp_ellipse: '○ 楕円', tp_poly: '⬟ 多角形',
+  grpFilters: '🫧 フィルタ', grpBlur: 'ぼかし', grpMosaic: 'モザイク',
+  tp_blurRect: '🫧□ ぼかし 四角', tp_blurEllipse: '🫧○ ぼかし 楕円', tp_blurPoly: '🫧⬟ ぼかし 多角',
+  tp_mosaicRect: '⬛□ モザイク 四角', tp_mosaicEllipse: '⬛○ モザイク 楕円', tp_mosaicPoly: '⬛⬟ モザイク 多角',
+  tpUndo: '元に戻す', tpRedo: 'やり直し', tpStorageTitle: 'トッピングの保管・読み込み',
+  tpClearAll: '🗑️ トッピングを全て消去',
+  tpl_text: '✍️ テキスト', tpl_image: '🖼️ 画像', tpl_line: '— 直線', tpl_arrow: '→ 矢印', tpl_rect: '□ 四角形', tpl_ellipse: '○ 楕円', tpl_poly: '⬟ 多角形',
+  tpl_blurRect: '🫧□ ぼかし', tpl_blurEllipse: '🫧○ ぼかし', tpl_blurPoly: '🫧⬟ ぼかし', tpl_mosaicRect: '⬛□ モザイク', tpl_mosaicEllipse: '⬛○ モザイク', tpl_mosaicPoly: '⬛⬟ モザイク', tpl_drawLine: '✏️ 線描画', tpl_drawBlur: '🫧 ぼかし描画', tpl_drawMosaic: '⬛ モザイク描画', tpl_burst: '💥 集中線',
+  tpSettings: '{0} の設定', tpDefaultText: 'テキスト',
+  cOutline: '縁取り', cShadow: '影', cBlur: 'ぼかし', cColor: '色', cWidth: '太さ', cFill: '塗り', cOpacity: '透明度',
+  cShapeOps: '整形', cMakeH: '水平にする', cMakeV: '垂直にする', cSnap45: '45°刻みの最寄りの角度にする', cSwapEnds: '始点と終点を入れ替える',
+  cEraser: '消しゴム', cOn: 'オン', cEraserDraw: 'このアイテムに消しゴムで描く', cHeadBoth: '始点にも矢じりを付ける', cWpct: '幅%', cHpct: '高%', cHpctTitle: '幅と同じ単位（画像幅の%）', cSize: 'サイズ', cTextColor: '文字色', cAlign: '配置',
+  cCenter: '中央', cLeft: '左', cRight: '右', cFont: 'フォント', cFontSansGroup: 'ゴシック', cFontDefault: 'ゴシック（標準）',
+  cStartX: '始X', cStartY: '始Y', cEndX: '終X', cEndY: '終Y', cHead: '矢じり', cHeadSize: '大きさ', cHeadAngle: '角度', cBothEnds: '両端',
+  cBorderColor: '枠線色', cWidthPct: '横幅%', cHeightPct: '縦幅%', cInnerRatio: '内側比率', cWidthIn: '太さ(内)', cWidthOut: '太さ(外)',
+  cVariance: 'バラつき', cCount: '本数', cReshuffle: '🔀 バラつきを再抽選', cPoint: '頂点{0}', cAddPoint: '＋ 頂点追加', cDelPoint: '－ 末尾削除',
+  cBlock: 'ブロック', cBrushWidth: '太さ（筆）', cBlurStrength: 'ぼかし強度', cMosaicStrength: 'モザイク強度', cRotate: '回転',
+  tpDrag: 'ドラッグで並べ替え', tpVis: '表示/非表示', tpDup: '複製', tpDel: '削除',
+  saveDataHead: '📦 編集データごと保存',
+  saveDataDesc: '画像そのもの・トリミングやトッピングなどの編集内容・配置を全て含んだ、あとで再編集できる独自形式（.namaco）で保存します。トッピングだけの .namatop は、別の画像に同じトッピングを載せたい時に使えます（読み込みは「トッピング」タブの「💾 保管」から）。',
+  btnSaveNamaco: '📦 .namaco形式で保存', btnSaveNamatop: '🏷️ .namatop形式で保存',
+  maxPx: '最大ピクセル数（上限）', maxPxSub: '超えた場合は縮小して保存', unlimited: '無制限',
+  saveFormatHead: '保存形式', saveOutputHead: '出力設定', pwaWarnTitle: 'PWA・ブラウザの注意', pwaWarnBody: '縦横16,000px超やメモリ超過でエラーになることがあります。', quality: '品質',
+  saveDirHead: '📁 保存先フォルダ', btnPickDir: '📁 フォルダを選択', btnClearDir: '解除',
+  dirUnsupported: '💡 このブラウザ／端末では保存先フォルダの指定に対応していません（Safari・iOS・Firefoxなど）。通常通りダウンロードフォルダに保存されます。',
+  dirDefault: '保存先: ダウンロード フォルダ（既定）', dirPicked: '保存先: 📁 {0}', dirPickedFallback: '選択済みフォルダ',
+  btnDownload: '⬇️ ダウンロード', generating: '⏳ 生成中…', savedTo: '✅ {0}に保存しました', folderWord: 'フォルダ',
+  saveNote: 'プレビュー＋トッピングの内容がダウンロードされます。',
+  svResolution: '解像度', svPixels: 'ピクセル数', svGrid: 'グリッド', svFormat: '形式', svTexts: 'テキスト', svItems: '{0}件',
+  svMaxPx: '最大ピクセル適用', svShrunk: '縮小あり', svEstSize: '保存後サイズ目安', svComputing: '計算中…', svApprox: '~{0} (概算)', svQualityIn: ' 品質:{0}', svUnknown: '不明',
+  warnDanger: '縦横いずれかが16,384px超（{0}×{1}）。「最大ピクセル数」で制限を。', warnBig: '{0}MP と大きな画像です。', warnOk: '問題なくダウンロードできる見込みです。',
+  close: '閉じる', cancel: 'キャンセル', okBtn: 'OK', reset: 'リセット', apply: '適用', trimCancel: '✕ キャンセル',
+  trimTitle: 'トリミング', trimTitleName: 'トリミング — {0}', tiX: 'X (左)', tiY: 'Y (上)', tiW: '幅 W', tiH: '高さ H',
+  trimInfo: '元画像: {0}×{1}px  |  クロップ後: {2}×{3}px',
+  colorTitle: 'カラー調整', colorTitleName: 'カラー調整 — {0}',
+  caExposure: '露出', caBrightness: '明度', caContrast: '対比', caSaturation: '彩度', caPreview: 'プレビュー（外すと元画像と比較）',
+  cutoutTitle: '中抜きカット', cutoutV: '中抜き（縦方向）', cutoutH: '中抜き（横方向）',
+  cuLabel: '除去領域', cuAdd: '＋ 追加', cuHint: '💡 ラインをドラッグまたはスライダーで調整。▲▼で領域切り替え。',
+  cuRegion: '除去 {0} / {1}', cuStart: '開始', cuEnd: '終了', cuInfo: '除去計:{0}% / 残:{1}%',
+  ccmTitle: '色を選択',
+  loadNamacoTitle: '読み込みますか？', loadNamacoBody: '現在編集中のデータは破棄されます。よろしいですか？', loadConfirm: '読み込む', tpLoadConfirm: '上書きして読み込む',
+  tpClearTitle: 'トッピングを全て消去しますか？',
+  tpClearBody: 'テキスト・図形・フィルタ・フリーハンド描画など、追加した全てのトッピングが削除されます。（実行後は「↩元に戻す」ボタンで復元できます）',
+  clearAllBtn: '全て消去',
+  clearAllTitle: '全ての画像を削除しますか？', clearAllBody: '{0}枚の画像をすべて削除します。',
+  clearAlsoTp: 'トッピングも全削除する',
+  clearAlsoNote: 'トッピングは通常、画像を消しても残ります。チェックした場合のみ一緒に消去します（「💾 保管」に保存したセットは消えません）。',
+  deleteAllBtn: '全削除',
+  tpStorageHead: '💾 トッピングの保管', tpFileSection: 'ファイル（.namatop）',
+  tpStoreExport: '📤 ファイルに保存', tpStoreImport: '📥 ファイルから読み込み', tpAppSection: 'アプリ内保管',
+  tpSetNamePh: 'セット名（例: 実況用テロップ）', tpSetSave: '現在のトッピングを保管',
+  tpLoadTitle: 'トッピングを読み込みますか？',
+  tpLoadNote: '※ プレビューは現在の画像に重ねたイメージです（画像がない場合は仮の背景で表示）。現在のトッピングは上書きされますが、読み込み後に「↩ 元に戻す」で戻せます。',
+  noImagesSave: '保存する画像がありません。', exporting: '書き出し中…',
+  saveFailed: '保存に失敗しました:\n{0}', loadFailed: '読み込みに失敗しました:\n{0}', readFailed: '読み取りに失敗しました',
+  badNamaco: '.namacoファイルとして認識できませんでした（形式不正）。', badNamatop: '.namatopファイルとして認識できませんでした（形式不正）。',
+  noTpTitle: 'トッピングなし', noTpSave: '保存できるトッピングがありません。', noTpStore: '保管できるトッピングがありません。', noTpClear: '消去できるトッピングがありません。',
+  storeFailedTitle: '保管に失敗しました', loadFailedTitle: '読み込みに失敗しました', saveFailedTitle: '保存に失敗しました',
+  tpTotal: '全{0}件', tpJoin: '、', tpPartsOpen: '（', tpPartsClose: '）', tpCountItem: '{0} {1}件', tpOverwriteNote: '現在のトッピング（{0}件）は上書きされます。',
+  loadedTitle: '読み込みました', tpOverwritten: 'トッピングを上書きしました。元に戻す時は「↩ 元に戻す」ボタンが使えます。',
+  fromFile: 'ファイル「{0}」', fromSet: '保管セット「{0}」', untitled: '無題',
+  noSets: '保管されたセットはまだありません', setMeta: '{0} ・ {1}件', setLoad: '読み込み', setDelete: '削除', setDelConfirm: '本当に削除？',
+  defaultSetName: 'トッピング {0}',
+  installDoneTitle: 'インストール済み', installDoneBody: 'NamaCollage はすでにアプリとしてインストールされています。',
+  iosInstallTitle: 'iOSへのインストール方法',
+  iosInstallBody: '<p>Safariでこのページを開いてください。</p><ol><li>画面下部の <strong>共有ボタン（□↑）</strong> をタップ</li><li>「<strong>ホーム画面に追加</strong>」を選択</li><li>右上の「<strong>追加</strong>」をタップ</li></ol><p style="margin-top:8px;font-size:11px;color:#888">※ Chrome・Firefoxでは対応していません。</p>',
+  installHowTitle: 'インストール方法',
+  installHowBody: '<ol><li><b>Chrome：</b>アドレスバー右端の「⊕」または「⋮」→「インストール」</li><li><b>Edge：</b>「…」→「アプリ」→「このサイトをアプリとしてインストール」</li><li><b>Safari (Mac)：</b>File → Add to Dock</li></ol><p style="margin-top:8px;font-size:11px;color:#888">Firefox はPWA未対応です。</p>',
+  fileLoadFailed: '読込失敗: {0}', alertLoadFailed: '読み込み失敗:\n{0}',
+  spanGuardTitle: '操作できません', spanGuardBody: '縦またぎがある行では、この操作はできません。先に結合を解除してください。',
+  changeImgFailed: '画像の変更に失敗しました。\n{0}', composeFailed: 'プレビューの生成に失敗しました。\n{0}', fullViewFailed: '原寸表示の生成に失敗しました。\n{0}',
+  eyedropperNg: 'Chrome 95以降でのみ使えます。', pickImageFile: '画像ファイルを選んでください。',
+  unloadableImage: 'この画像は読み込めませんでした（非対応の形式の可能性があります）。', addImageFailed: '画像の追加に失敗しました:\n{0}',
+  noMoreRegions: 'これ以上追加できません', composeFirst: '先にプレビューを生成してください。', downloadFailed: 'ダウンロードに失敗しました。\n{0}',
+  scaleActual: '等倍', scaleUp: '×{0} 拡大', scaleDown: '×{0} 縮小',
+  swUpdated: '🔄 アプリが更新されました ', swReload: '再読込'
+},
+en: {
+  subName: 'NamaCo — Image Joiner',
+  install: '📲 Install', installTitle: 'Install as an app',
+  installed: '☑️ Installed', installedTitle: 'Already installed as an app',
+  navImages: 'Images', navPreview: 'Preview', navTopping: 'Toppings', navSave: 'Save',
+  countBadge: '{0}',
+  dzTitle: 'Add images',
+  dzSub: 'Drag & drop, or tap to add<br>Long-press an image for its menu',
+  btnAddFirst: '＋ Choose images', btnAddMore: '＋ Add', btnClear: '🗑 Clear all',
+  gvGuide: '💡 Long-press (or right-click) an image for the edit menu',
+  btnLoadNamaco: '📦 Load .namaco file',
+  gvCountInfo: '{0} images, {1} by {2}', gvCovered: 'Joined', gvSpanBadge: 'Span ×{0}',
+  gvEdited: 'Edited', gvDelete: 'Delete', gvAddRow: '＋ Add row', gvAddHere: 'Add here',
+  zoomHint: 'Drag to move · Tap to close',
+  ctxReplace: '🔄 Replace image', ctxTrim: '✂️ Trim', ctxCutV: '✄ Cut out (vert.)', ctxCutH: '✂️ Cut out (horiz.)',
+  ctxRotCw: '↻ Rotate 90° R', ctxRotCcw: '↺ Rotate 90° L', ctxFlipH: '↔ Flip horiz.', ctxFlipV: '↕ Flip vert.',
+  ctxColor: '🎨 Color adjust', ctxReset: '↺ Reset edits',
+  ctxSpanExtend: '⤵ Join row below (span)', ctxSpanExtendMore: '⤵ Extend span', ctxSpanRelease: '⤴ Release span',
+  previewEmpty: 'Add images in the Images tab,<br>then generate a preview below',
+  canvasTitle: 'Tap to enlarge', loading: 'Composing...',
+  adj_normalization: 'Match', adj_normalization_width: 'Width', adj_normalization_height: 'Height', adj_normalization_longSide: 'Long', adj_normalization_shortSide: 'Short', adj_normalization_none: 'None',
+  adj_reference: 'Base', adj_reference_max: 'Max', adj_reference_min: 'Min', adj_reference_first: 'First', adj_reference_custom: 'Custom px',
+  adjLastRow: 'Last row', opt_distribute: 'Distribute', opt_span: 'Stretch last', opt_empty: 'Leave empty',
+  adjAlign: 'Align', opt_center: 'Center', opt_start: 'Left', opt_end: 'Right',
+  adjGap: 'Gap', adjPad: 'Pad', adjBg: 'BG', adjTransparent: 'Clear', adjOuter: 'Outer', adjCell: 'Cell',
+  btnPickCanvas: '🎨 Pick BG from image', pickCancel: '✕ Cancel', btnEyedrop: '💉 Eyedropper',
+  btnCompose: '🔄 Generate / Update preview',
+  previewInfo: '{0} images, {1} by {2}', gridRC: '{0} by {1}', svGridVal: '{0} images, {1}',
+  norm_width: 'Matched by width', norm_height: 'Matched by height', norm_longSide: 'Matched by long side', norm_shortSide: 'Matched by short side', norm_none: 'As-is',
+  tpEmpty: 'Generate an image first<br>in the Preview tab',
+  tpStorageOpen: '💾 Save / Load toppings', tpStorageShort: '💾 Store',
+  tpAddText: '✍️ Text', tpAddImage: '🖼️ Image',
+  grpLines: '— Lines & arrows', tp_line: '— Line', tp_arrow: '→ Arrow', tp_drawFree: '✏️ Freehand', tp_burst: '💥 Burst lines',
+  grpShapes: '□ Shapes', tp_rect: '□ Rectangle', tp_ellipse: '○ Ellipse', tp_poly: '⬟ Polygon',
+  grpFilters: '🫧 Filters', grpBlur: 'Blur', grpMosaic: 'Mosaic',
+  tp_blurRect: '🫧□ Blur rect', tp_blurEllipse: '🫧○ Blur ellipse', tp_blurPoly: '🫧⬟ Blur poly',
+  tp_mosaicRect: '⬛□ Mosaic rect', tp_mosaicEllipse: '⬛○ Mosaic ellipse', tp_mosaicPoly: '⬛⬟ Mosaic poly',
+  tpUndo: 'Undo', tpRedo: 'Redo', tpStorageTitle: 'Save / Load toppings',
+  tpClearAll: '🗑️ Delete all toppings',
+  tpl_text: '✍️ Text', tpl_image: '🖼️ Image', tpl_line: '— Line', tpl_arrow: '→ Arrow', tpl_rect: '□ Rectangle', tpl_ellipse: '○ Ellipse', tpl_poly: '⬟ Polygon',
+  tpl_blurRect: '🫧□ Blur', tpl_blurEllipse: '🫧○ Blur', tpl_blurPoly: '🫧⬟ Blur', tpl_mosaicRect: '⬛□ Mosaic', tpl_mosaicEllipse: '⬛○ Mosaic', tpl_mosaicPoly: '⬛⬟ Mosaic', tpl_drawLine: '✏️ Freehand line', tpl_drawBlur: '🫧 Blur draw', tpl_drawMosaic: '⬛ Mosaic draw', tpl_burst: '💥 Burst lines',
+  tpSettings: '{0} settings', tpDefaultText: 'Text',
+  cOutline: 'Outline', cShadow: 'Shadow', cBlur: 'Blur', cColor: 'Color', cWidth: 'Width', cFill: 'Fill', cOpacity: 'Opacity',
+  cShapeOps: 'Shape', cMakeH: 'Make horizontal', cMakeV: 'Make vertical', cSnap45: 'Snap to nearest 45°', cSwapEnds: 'Swap start / end',
+  cEraser: 'Eraser', cOn: 'On', cEraserDraw: 'Draw with the eraser on this item', cHeadBoth: 'Arrowhead at start too', cWpct: 'W %', cHpct: 'H %', cHpctTitle: 'Same unit as width (% of image width)', cSize: 'Size', cTextColor: 'Text color', cAlign: 'Align',
+  cCenter: 'Center', cLeft: 'Left', cRight: 'Right', cFont: 'Font', cFontSansGroup: 'Sans-serif', cFontDefault: 'Sans (default)',
+  cStartX: 'Start X', cStartY: 'Start Y', cEndX: 'End X', cEndY: 'End Y', cHead: 'Arrowhead', cHeadSize: 'Size', cHeadAngle: 'Angle', cBothEnds: 'Both ends',
+  cBorderColor: 'Border color', cWidthPct: 'Width %', cHeightPct: 'Height %', cInnerRatio: 'Inner ratio', cWidthIn: 'Width (in)', cWidthOut: 'Width (out)',
+  cVariance: 'Variance', cCount: 'Lines', cReshuffle: '🔀 Re-roll variance', cPoint: 'Point {0}', cAddPoint: '＋ Add point', cDelPoint: '－ Remove last',
+  cBlock: 'Block size', cBrushWidth: 'Brush width', cBlurStrength: 'Blur strength', cMosaicStrength: 'Mosaic strength', cRotate: 'Rotate',
+  tpDrag: 'Drag to reorder', tpVis: 'Show / Hide', tpDup: 'Duplicate', tpDel: 'Delete',
+  saveDataHead: '📦 Save with edit data',
+  saveDataDesc: 'Save in the .namaco format, which keeps everything — the images, edits like trimming and toppings, and the layout — so you can re-edit later. The toppings-only .namatop is for putting the same toppings on a different image (load it from "💾 Store" in the Toppings tab).',
+  btnSaveNamaco: '📦 Save as .namaco', btnSaveNamatop: '🏷️ Save as .namatop',
+  maxPx: 'Max pixels (cap)', maxPxSub: 'Shrinks the image if exceeded', unlimited: 'Unlimited',
+  saveFormatHead: 'Format', saveOutputHead: 'Output settings', pwaWarnTitle: 'PWA / browser notes', pwaWarnBody: 'Images over 16,000 px on a side, or memory limits, can cause errors.', quality: 'Quality',
+  saveDirHead: '📁 Save folder', btnPickDir: '📁 Choose folder', btnClearDir: 'Clear',
+  dirUnsupported: '💡 This browser/device cannot choose a save folder (Safari, iOS, Firefox, etc.). Files go to the usual Downloads folder.',
+  dirDefault: 'Save to: Downloads folder (default)', dirPicked: 'Save to: 📁 {0}', dirPickedFallback: 'Selected folder',
+  btnDownload: '⬇️ Download', generating: '⏳ Generating…', savedTo: '✅ Saved to {0}', folderWord: 'folder',
+  saveNote: 'The preview + toppings will be downloaded.',
+  svResolution: 'Resolution', svPixels: 'Pixels', svGrid: 'Grid', svFormat: 'Format', svTexts: 'Toppings', svItems: '{0}',
+  svMaxPx: 'Max-pixel cap', svShrunk: 'Shrunk', svEstSize: 'Est. size', svComputing: 'Computing…', svApprox: '~{0} (est.)', svQualityIn: ' · Quality {0}', svUnknown: 'Unknown',
+  warnDanger: 'One side exceeds 16,384 px ({0}×{1}). Set a max-pixel cap.', warnBig: 'A large image at {0} MP.', warnOk: 'Looks fine to download.',
+  close: 'Close', cancel: 'Cancel', okBtn: 'OK', reset: 'Reset', apply: 'Apply', trimCancel: '✕ Cancel',
+  trimTitle: 'Trim', trimTitleName: 'Trim — {0}', tiX: 'X (left)', tiY: 'Y (top)', tiW: 'Width W', tiH: 'Height H',
+  trimInfo: 'Original: {0}×{1}px  |  Cropped: {2}×{3}px',
+  colorTitle: 'Color adjust', colorTitleName: 'Color adjust — {0}',
+  caExposure: 'Exposure', caBrightness: 'Brightness', caContrast: 'Contrast', caSaturation: 'Saturation', caPreview: 'Preview (uncheck to compare)',
+  cutoutTitle: 'Cut out', cutoutV: 'Cut out (vertical)', cutoutH: 'Cut out (horizontal)',
+  cuLabel: 'Remove regions', cuAdd: '＋ Add', cuHint: '💡 Drag the lines or use the sliders. ▲▼ switches regions.',
+  cuRegion: 'Region {0} / {1}', cuStart: 'Start', cuEnd: 'End', cuInfo: 'Removed: {0}% / Left: {1}%',
+  ccmTitle: 'Pick a color',
+  loadNamacoTitle: 'Load this file?', loadNamacoBody: 'Your current edits will be discarded. Continue?', loadConfirm: 'Load', tpLoadConfirm: 'Replace & load',
+  tpClearTitle: 'Delete all toppings?',
+  tpClearBody: 'All added toppings — text, shapes, filters, freehand drawings — will be deleted. (You can restore them with the "↩ Undo" button.)',
+  clearAllBtn: 'Delete all',
+  clearAllTitle: 'Delete all images?', clearAllBody: 'All {0} images will be deleted.',
+  clearAlsoTp: 'Also delete all toppings',
+  clearAlsoNote: 'Toppings normally stay even when images are deleted. Check this to delete them together (sets saved in "💾 Store" are kept).',
+  deleteAllBtn: 'Delete all',
+  tpStorageHead: '💾 Topping storage', tpFileSection: 'File (.namatop)',
+  tpStoreExport: '📤 Save to file', tpStoreImport: '📥 Load from file', tpAppSection: 'In-app storage',
+  tpSetNamePh: 'Set name (e.g. Commentary set)', tpSetSave: 'Store current toppings',
+  tpLoadTitle: 'Load these toppings?',
+  tpLoadNote: 'Note: the preview overlays your current image (a placeholder background is used if there is none). Your current toppings will be replaced, but you can undo after loading.',
+  noImagesSave: 'There are no images to save.', exporting: 'Exporting…',
+  saveFailed: 'Save failed:\n{0}', loadFailed: 'Load failed:\n{0}', readFailed: 'Failed to read the file',
+  badNamaco: 'This file could not be recognized as a .namaco file (invalid format).', badNamatop: 'This file could not be recognized as a .namatop file (invalid format).',
+  noTpTitle: 'No toppings', noTpSave: 'There are no toppings to save.', noTpStore: 'There are no toppings to store.', noTpClear: 'There are no toppings to delete.',
+  storeFailedTitle: 'Storage failed', loadFailedTitle: 'Load failed', saveFailedTitle: 'Save failed',
+  tpTotal: '{0} total', tpJoin: ', ', tpPartsOpen: ' (', tpPartsClose: ')', tpCountItem: '{0} ×{1}', tpOverwriteNote: 'Your current toppings ({0}) will be replaced.',
+  loadedTitle: 'Loaded', tpOverwritten: 'Toppings were replaced. Use the "↩ Undo" button to go back.',
+  fromFile: 'File "{0}"', fromSet: 'Stored set "{0}"', untitled: 'Untitled',
+  noSets: 'No stored sets yet', setMeta: '{0} · {1}', setLoad: 'Load', setDelete: 'Delete', setDelConfirm: 'Really delete?',
+  defaultSetName: 'Toppings {0}',
+  installDoneTitle: 'Installed', installDoneBody: 'NamaCollage is already installed as an app.',
+  iosInstallTitle: 'How to install on iOS',
+  iosInstallBody: '<p>Open this page in Safari.</p><ol><li>Tap the <strong>Share button (□↑)</strong> at the bottom</li><li>Choose "<strong>Add to Home Screen</strong>"</li><li>Tap "<strong>Add</strong>" at the top right</li></ol><p style="margin-top:8px;font-size:11px;color:#888">Note: not supported in Chrome or Firefox.</p>',
+  installHowTitle: 'How to install',
+  installHowBody: '<ol><li><b>Chrome:</b> the "⊕" at the right of the address bar, or "⋮" → "Install"</li><li><b>Edge:</b> "…" → "Apps" → "Install this site as an app"</li><li><b>Safari (Mac):</b> File → Add to Dock</li></ol><p style="margin-top:8px;font-size:11px;color:#888">Firefox does not support PWAs.</p>',
+  fileLoadFailed: 'Load failed: {0}', alertLoadFailed: 'Load failed:\n{0}',
+  spanGuardTitle: 'Not available', spanGuardBody: 'This action is not available in a row with a vertical span. Release the span first.',
+  changeImgFailed: 'Failed to replace the image.\n{0}', composeFailed: 'Failed to generate the preview.\n{0}', fullViewFailed: 'Failed to generate the full-size view.\n{0}',
+  eyedropperNg: 'Available in Chrome 95 or later.', pickImageFile: 'Please choose an image file.',
+  unloadableImage: 'This image could not be loaded (possibly an unsupported format).', addImageFailed: 'Failed to add the image:\n{0}',
+  noMoreRegions: 'No more regions can be added.', composeFirst: 'Generate a preview first.', downloadFailed: 'Download failed.\n{0}',
+  scaleActual: 'Actual size', scaleUp: '×{0} enlarged', scaleDown: '×{0} reduced',
+  swUpdated: '🔄 The app was updated ', swReload: 'Reload'
+}
+};
+let lang = (() => { try { return (navigator.language || 'ja').indexOf('en') === 0 ? 'en' : 'ja'; } catch (e) { return 'ja'; } })();
+const tr = k => (STRINGS[lang] && STRINGS[lang][k]) || STRINGS.ja[k] || k;
+const trf = (k, ...a) => tr(k).replace(/\{(\d+)\}/g, (m, n) => a[+n] != null ? a[+n] : m);
+function applyLang() {
+  document.documentElement.lang = lang;
+  const sn = $('sub-name'); if (sn) sn.textContent = tr('subName');
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = tr(el.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = tr(el.getAttribute('data-i18n-html')); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = tr(el.getAttribute('data-i18n-title')); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = tr(el.getAttribute('data-i18n-ph')); });
+  document.querySelectorAll('[data-i18n-label]').forEach(el => { el.label = tr(el.getAttribute('data-i18n-label')); });
+  document.querySelectorAll('.adj-btn[data-s][data-v]').forEach(b => { b.textContent = tr('adj_' + b.getAttribute('data-s') + '_' + b.getAttribute('data-v')); });
+  const lj = $('lang-ja'), le = $('lang-en');
+  if (lj && le) { lj.classList.toggle('active', lang === 'ja'); le.classList.toggle('active', lang === 'en'); }
+  const ib = $('btn-install');
+  if (ib) { if (ib.classList.contains('installed')) { ib.textContent = tr('installed'); ib.title = tr('installedTitle'); } else { ib.textContent = tr('install'); ib.title = tr('installTitle'); } }
+  if (typeof updateCountBadge === 'function') updateCountBadge();
+  if (typeof updateSaveDirUI === 'function') updateSaveDirUI();
+  if (typeof renderGridView === 'function' && state.grid && state.grid.length) renderGridView();
+  if (typeof updateSaveTab === 'function' && state.composed) updateSaveTab();
+  if (typeof renderToppingList === 'function' && state.toppings && state.toppings.length) { renderToppingList(); if (typeof renderSelectedPanel === 'function') renderSelectedPanel(); }
+}
+function setLang(l) {
+  if (l !== 'en' && l !== 'ja') return;
+  lang = l;
+  try { dbTxW('meta', s => s.put(l, 'lang')); } catch (e) {}
+  applyLang();
+}
+async function restoreLang() {
+  try {
+    const v = await dbGet('meta', 'lang');
+    if ((v === 'en' || v === 'ja') && v !== lang) { lang = v; applyLang(); }
+  } catch (e) {}
+}
+{ const lj=$('lang-ja'), le=$('lang-en'); if(lj) lj.addEventListener('click',()=>setLang('ja')); if(le) le.addEventListener('click',()=>setLang('en')); }
+
+
 // 変数宣言（TDZ防止のため冒頭）
 let composeTimer = null;
 let saveFormat = 'jpeg', saveQuality = 92, sizeEstTimer = null;
@@ -883,6 +1149,7 @@ let idb = null;
     await restoreFromDB();
     await loadPendingShares();
     await restoreSaveDirHandle();
+    await restoreLang();
   }catch(e){ idb=null; console.warn('IDB:',e); }
 })();
 
@@ -901,7 +1168,7 @@ function updateSaveDirUI(){
   const pickBtn=$('btn-pick-savedir'), clearBtn=$('btn-clear-savedir');
   if(!statusEl) return;
   if(!FS_ACCESS_SUPPORTED){
-    statusEl.textContent='保存先: ダウンロード フォルダ（既定）';
+    statusEl.textContent=tr('dirDefault');
     unsupEl?.classList.remove('hidden');
     if(pickBtn) pickBtn.disabled=true;
     clearBtn?.classList.add('hidden');
@@ -910,10 +1177,10 @@ function updateSaveDirUI(){
   unsupEl?.classList.add('hidden');
   if(pickBtn) pickBtn.disabled=false;
   if(saveDirHandle){
-    statusEl.textContent='保存先: 📁 '+(saveDirHandle.name||'選択済みフォルダ');
+    statusEl.textContent=trf('dirPicked', saveDirHandle.name||tr('dirPickedFallback'));
     clearBtn?.classList.remove('hidden');
   }else{
-    statusEl.textContent='保存先: ダウンロード フォルダ（既定）';
+    statusEl.textContent=tr('dirDefault');
     clearBtn?.classList.add('hidden');
   }
 }
@@ -1027,9 +1294,9 @@ async function loadPendingShares(){
 const NAMACO_MAGIC='NAMACO1\0';
 async function exportNamacoFile(){
   const imgs=flatImages();
-  if(!imgs.length){ alert('保存する画像がありません。'); return; }
+  if(!imgs.length){ alert(tr('noImagesSave')); return; }
   const btn=$('btn-save-namaco'); const origText=btn.textContent;
-  btn.disabled=true; btn.textContent='書き出し中…';
+  btn.disabled=true; btn.textContent=tr('exporting');
   try{
     const blobs=await Promise.all(imgs.map(img=>fetch(img.url).then(r=>r.blob())));
     // 画像トッピングの画像（使用中のもののみ）。画像本体の後ろに続けて格納する
@@ -1069,7 +1336,7 @@ async function exportNamacoFile(){
     setTimeout(()=>URL.revokeObjectURL(url),8000);
   }catch(e){
     console.warn('namaco export error:',e);
-    alert('保存に失敗しました:\n'+e.message);
+    alert(trf('saveFailed', e.message));
   }finally{
     btn.disabled=false; btn.textContent=origText;
   }
@@ -1078,11 +1345,11 @@ async function importNamacoFile(file){
   const buf=await file.arrayBuffer();
   const dv=new DataView(buf);
   const magic=new TextDecoder().decode(new Uint8Array(buf,0,8));
-  if(magic!==NAMACO_MAGIC) throw new Error('.namacoファイルとして認識できませんでした（形式不正）。');
+  if(magic!==NAMACO_MAGIC) throw new Error(tr('badNamaco'));
   let off=8;
   const jsonLen=dv.getUint32(off,true); off+=4;
   const meta=JSON.parse(new TextDecoder().decode(new Uint8Array(buf,off,jsonLen))); off+=jsonLen;
-  if(meta.format!=='namaco') throw new Error('.namacoファイルとして認識できませんでした（形式不正）。');
+  if(meta.format!=='namaco') throw new Error(tr('badNamaco'));
   const blobMap=new Map(); // id → Blob
   for(const im of meta.images){
     const len=dv.getUint32(off,true); off+=4;
@@ -1155,7 +1422,7 @@ $('load-namaco-confirm').addEventListener('click',()=>{
 $('namaco-file-input').addEventListener('change',async e=>{
   const file=e.target.files[0]; if(!file)return;
   try{ await importNamacoFile(file); }
-  catch(err){ console.warn('namaco import error:',err); alert('読み込みに失敗しました:\n'+err.message); }
+  catch(err){ console.warn('namaco import error:',err); alert(trf('loadFailed', err.message)); }
 });
 
 // ===== トッピングのみ保存 .namatop / 保管 =====
@@ -1166,7 +1433,7 @@ function blobToBase64(blob){
   return new Promise((res,rej)=>{
     const r=new FileReader();
     r.onload=()=>res(String(r.result).split(',')[1]||'');
-    r.onerror=()=>rej(r.error||new Error('読み取りに失敗しました'));
+    r.onerror=()=>rej(r.error||new Error(tr('readFailed')));
     r.readAsDataURL(blob);
   });
 }
@@ -1191,7 +1458,7 @@ async function buildTpPayload(){
   };
 }
 async function exportNamatopFile(){
-  if(!state.toppings.length){ showModal('トッピングなし','保存できるトッピングがありません。'); return; }
+  if(!state.toppings.length){ showModal(tr('noTpTitle'),tr('noTpSave')); return; }
   try{
     const payload=await buildTpPayload();
     // 種別は .namaco と同じ application/octet-stream にする。
@@ -1202,11 +1469,11 @@ async function exportNamatopFile(){
     a.href=url; a.download='namacollage_toppings_'+Date.now()+'.namatop';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),8000);
-  }catch(e){ console.warn('namatop export error:',e); showModal('保存に失敗しました',escHtml(String(e.message||e))); }
+  }catch(e){ console.warn('namatop export error:',e); showModal(tr('saveFailedTitle'),escHtml(String(e.message||e))); }
 }
 // .namatop / 保管セットの共通データを、適用可能な形（toppingImages は Blob 化）へ変換する
 function parseTpPayload(obj){
-  if(!obj||obj.format!=='namatop'||!Array.isArray(obj.toppings)) throw new Error('.namatopファイルとして認識できませんでした（形式不正）。');
+  if(!obj||obj.format!=='namatop'||!Array.isArray(obj.toppings)) throw new Error(tr('badNamatop'));
   return {
     toppings:obj.toppings.map(t=>({...t,type:t.type||'text'})),
     nextToppingId:obj.nextToppingId||1,
@@ -1241,13 +1508,13 @@ async function buildTpPreview(data){
 }
 function tpSummaryText(data){
   const counts={};
-  data.toppings.forEach(t=>{const lb=TP_LABELS[t.type||'text']||(t.type||'text'); counts[lb]=(counts[lb]||0)+1;});
-  const parts=Object.entries(counts).map(([k,v])=>k+' '+v+'件');
-  return '全'+data.toppings.length+'件'+(parts.length?'（'+parts.join('、')+'）':'');
+  data.toppings.forEach(t=>{const lb=tpLabel(t.type||'text'); counts[lb]=(counts[lb]||0)+1;});
+  const parts=Object.entries(counts).map(([k,v])=>trf('tpCountItem', k, v));
+  return trf('tpTotal', data.toppings.length)+(parts.length?tr('tpPartsOpen')+parts.join(tr('tpJoin'))+tr('tpPartsClose'):'');
 }
 async function openTpLoadConfirm(data,label){
   _tpPending={data,label,addedKeys:[]};
-  $('tp-load-summary').innerHTML='<b>'+escHtml(label)+'</b><br>'+escHtml(tpSummaryText(data))+'<br>現在のトッピング（'+state.toppings.length+'件）は上書きされます。';
+  $('tp-load-summary').innerHTML='<b>'+escHtml(label)+'</b><br>'+escHtml(tpSummaryText(data))+'<br>'+trf('tpOverwriteNote', state.toppings.length);
   $('tp-storage-modal').style.display='none';
   $('tp-load-modal').style.display='flex';
   try{ await buildTpPreview(data); }catch(e){ console.warn('tp preview error:',e); }
@@ -1282,7 +1549,7 @@ $('tp-load-confirm').addEventListener('click',async()=>{
   const data=_tpPending.data; _tpPending=null;
   $('tp-load-modal').style.display='none';
   await applyTpData(data);
-  showModal('読み込みました','トッピングを上書きしました。元に戻す時は「↩ 元に戻す」ボタンが使えます。');
+  showModal(tr('loadedTitle'),tr('tpOverwritten'));
 });
 // ---- 保管モーダル ----
 function openTpStorage(){ renderTpSetList(); $('tp-storage-modal').style.display='flex'; }
@@ -1299,40 +1566,40 @@ $('namatop-file-input').addEventListener('change',async e=>{
   try{
     const obj=JSON.parse(await file.text());
     const data=parseTpPayload(obj);
-    await openTpLoadConfirm(data,'ファイル「'+file.name+'」');
-  }catch(err){ console.warn('namatop import error:',err); showModal('読み込みに失敗しました',escHtml(String(err.message||err))); }
+    await openTpLoadConfirm(data,trf('fromFile', file.name));
+  }catch(err){ console.warn('namatop import error:',err); showModal(tr('loadFailedTitle'),escHtml(String(err.message||err))); }
 });
 // ---- アプリ内保管セット（IndexedDB 'tpsets' ストア） ----
 async function renderTpSetList(){
   const list=$('tp-set-list'); if(!list) return;
   let sets=[];
   try{ sets=(await dbGetAll('tpsets')).sort((a,b)=>(b.savedAt||0)-(a.savedAt||0)); }catch(e){ sets=[]; }
-  if(!sets.length){ list.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:6px;">保管されたセットはまだありません</div>'; return; }
+  if(!sets.length){ list.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:6px;">'+tr('noSets')+'</div>'; return; }
   list.innerHTML='';
   sets.forEach(set=>{
     const row=document.createElement('div'); row.className='tp-store-row';
     const d=set.savedAt?new Date(set.savedAt):null;
     const dstr=d?(d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')):'';
-    row.innerHTML='<span class="tp-store-name">'+escHtml(set.name||'無題')+'</span><span class="tp-store-meta">'+dstr+' ・ '+((set.toppings||[]).length)+'件</span>';
-    const loadBtn=document.createElement('button'); loadBtn.type='button'; loadBtn.className='tp-store-btn'; loadBtn.textContent='読み込み';
+    row.innerHTML='<span class="tp-store-name">'+escHtml(set.name||tr('untitled'))+'</span><span class="tp-store-meta">'+trf('setMeta', dstr, (set.toppings||[]).length)+'</span>';
+    const loadBtn=document.createElement('button'); loadBtn.type='button'; loadBtn.className='tp-store-btn'; loadBtn.textContent=tr('setLoad');
     loadBtn.addEventListener('click',async()=>{
       try{
         const data=parseTpPayload({format:'namatop',toppings:set.toppings,nextToppingId:set.nextToppingId,toppingImages:set.toppingImages||[]});
-        await openTpLoadConfirm(data,'保管セット「'+(set.name||'無題')+'」');
-      }catch(err){ showModal('読み込みに失敗しました',escHtml(String(err.message||err))); }
+        await openTpLoadConfirm(data,trf('fromSet', set.name||tr('untitled')));
+      }catch(err){ showModal(tr('loadFailedTitle'),escHtml(String(err.message||err))); }
     });
-    const delBtn=document.createElement('button'); delBtn.type='button'; delBtn.className='tp-store-btn danger'; delBtn.textContent='削除';
+    const delBtn=document.createElement('button'); delBtn.type='button'; delBtn.className='tp-store-btn danger'; delBtn.textContent=tr('setDelete');
     delBtn.addEventListener('click',async()=>{
       if(delBtn.dataset.armed){ await dbTxW('tpsets',s=>s.delete(set.id)); renderTpSetList(); }
-      else{ delBtn.dataset.armed='1'; delBtn.textContent='本当に削除？'; setTimeout(()=>{ if(delBtn.isConnected){ delete delBtn.dataset.armed; delBtn.textContent='削除'; } },3000); }
+      else{ delBtn.dataset.armed='1'; delBtn.textContent=tr('setDelConfirm'); setTimeout(()=>{ if(delBtn.isConnected){ delete delBtn.dataset.armed; delBtn.textContent=tr('setDelete'); } },3000); }
     });
     row.appendChild(loadBtn); row.appendChild(delBtn);
     list.appendChild(row);
   });
 }
 $('tp-set-save').addEventListener('click',async()=>{
-  if(!state.toppings.length){ showModal('トッピングなし','保管できるトッピングがありません。'); return; }
-  const name=$('tp-set-name').value.trim()||('トッピング '+new Date().toLocaleString('ja-JP'));
+  if(!state.toppings.length){ showModal(tr('noTpTitle'),tr('noTpStore')); return; }
+  const name=$('tp-set-name').value.trim()||trf('defaultSetName', new Date().toLocaleString(lang==='en'?'en-US':'ja-JP'));
   try{
     const payload=await buildTpPayload();
     const rec={ id:'set'+Date.now().toString(36)+Math.random().toString(36).slice(2,7), name, savedAt:Date.now(),
@@ -1340,7 +1607,7 @@ $('tp-set-save').addEventListener('click',async()=>{
     await dbTxW('tpsets',s=>s.put(rec));
     $('tp-set-name').value='';
     renderTpSetList();
-  }catch(e){ console.warn('tpset save error:',e); showModal('保管に失敗しました',escHtml(String(e.message||e))); }
+  }catch(e){ console.warn('tpset save error:',e); showModal(tr('storeFailedTitle'),escHtml(String(e.message||e))); }
 });
 
 // メッセージ処理は init 内に統合
@@ -1428,8 +1695,8 @@ const isStandalone=window.matchMedia('(display-mode: standalone)').matches||('st
 if(isStandalone){
   const btn=$('btn-install');
   btn.classList.add('installed');
-  btn.textContent='☑️ インストール済み';
-  btn.title='すでにアプリとしてインストールされています';
+  btn.textContent=tr('installed');
+  btn.title=tr('installedTitle');
 }
 window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredInstall=e; });
 window.addEventListener('appinstalled',()=>{ deferredInstall=null; });
@@ -1437,12 +1704,12 @@ function showModal(t,b){ $('modal-title').textContent=t; $('modal-body').innerHT
 $('modal-close').addEventListener('click',()=>$('install-modal').classList.remove('open'));
 $('install-modal').addEventListener('click',e=>{ if(e.target===$('install-modal'))$('install-modal').classList.remove('open'); });
 $('btn-install').addEventListener('click',async()=>{
-  if(isStandalone){ showModal('インストール済み','NamaCollage はすでにアプリとしてインストールされています。'); return; }
+  if(isStandalone){ showModal(tr('installDoneTitle'),tr('installDoneBody')); return; }
   if(deferredInstall){ deferredInstall.prompt(); const{outcome}=await deferredInstall.userChoice; if(outcome==='accepted') deferredInstall=null; return; }
-  if(isIOS){ showModal('iOSへのインストール方法',
-    '<p>Safariでこのページを開いてください。</p><ol><li>画面下部の <strong>共有ボタン（□↑）</strong> をタップ</li><li>「<strong>ホーム画面に追加</strong>」を選択</li><li>右上の「<strong>追加</strong>」をタップ</li></ol><p style="margin-top:8px;font-size:11px;color:#888">※ Chrome・Firefoxでは対応していません。</p>'); return; }
-  showModal('インストール方法',
-    '<ol><li><b>Chrome：</b>アドレスバー右端の「⊕」または「⋮」→「インストール」</li><li><b>Edge：</b>「…」→「アプリ」→「このサイトをアプリとしてインストール」</li><li><b>Safari (Mac)：</b>File → Add to Dock</li></ol><p style="margin-top:8px;font-size:11px;color:#888">Firefox はPWA未対応です。</p>');
+  if(isIOS){ showModal(tr('iosInstallTitle'),
+    tr('iosInstallBody')); return; }
+  showModal(tr('installHowTitle'),
+    tr('installHowBody'));
 });
 
 // ===== 画像読み込み =====
@@ -1450,7 +1717,7 @@ async function loadImageFile(file){
   return new Promise((res,rej)=>{
     const url=URL.createObjectURL(file),el=new Image();
     el.onload=()=>res({id:state.nextId++,name:file.name,imgEl:el,url,w:el.naturalWidth,h:el.naturalHeight,cropData:null,transform:null,colorAdjust:null,cutoutData:null,thumbUrl:null});
-    el.onerror=()=>rej(new Error('読込失敗: '+file.name)); el.src=url;
+    el.onerror=()=>rej(new Error(trf('fileLoadFailed', file.name))); el.src=url;
   });
 }
 async function insertFilesAt(pa,files){
@@ -1464,11 +1731,11 @@ async function insertFilesAt(pa,files){
     else{ if(pa.rowIdx>=state.grid.length) state.grid.push(loaded); else state.grid[pa.rowIdx].splice(pa.colIdx,0,...loaded); }
     state.previewDirty=true; renderGridView(); updateCountBadge();
     persistNewImages(loaded).then(()=>persistLayout());
-  }catch(err){ alert('読み込み失敗:\n'+err.message); }
+  }catch(err){ alert(trf('alertLoadFailed', err.message)); }
 }
 
 // ===== グリッド操作 =====
-function updateCountBadge(){ const n=flatImages().length,b=$('count-badge'); if(n>0){b.textContent=n+'枚';b.style.display='inline-block';}else b.style.display='none'; }
+function updateCountBadge(){ const n=flatImages().length,b=$('count-badge'); if(n>0){b.textContent=trf('countBadge', n);b.style.display='inline-block';}else b.style.display='none'; }
 // ===== 縦またぎ（rowSpan） =====
 const SPAN_MAX=3;
 function spanOfImg(img,ri){ return Math.max(1,Math.min(img.rowSpan||1,state.grid.length-ri)); }
@@ -1481,7 +1748,7 @@ function rowSpanRestricted(ri){
   }
   return false;
 }
-function spanGuardNotify(){ showModal('操作できません','縦またぎがある行では、この操作はできません。先に結合を解除してください。'); }
+function spanGuardNotify(){ showModal(tr('spanGuardTitle'),tr('spanGuardBody')); }
 // 結合可否: 1回で+1行（最大3行・残り行数まで）。新たに覆う行で、その列が「行の末尾ちょうど」か「既存の null」の時はそのまま、
 // 実画像がある時は、その行に null が無く・その列以降にまたぎ画像が無ければ、null を差し込んで右へずらす形で可（左端の画像もまたげるようにするため）
 function canExtendSpan(img,ri,ci){
@@ -1547,7 +1814,7 @@ function moveCellV(ri,ci,dir){
 }
 function clearAll(){
   if(!flatImages().length) return;
-  $('clear-all-body').textContent=flatImages().length+'枚の画像をすべて削除します。';
+  $('clear-all-body').textContent=trf('clearAllBody', flatImages().length);
   $('clear-also-toppings').checked=false; // 初期状態はオフ（モーダルを開くたびにリセット）
   $('clear-all-modal').style.display='flex';
 }
@@ -1585,7 +1852,7 @@ function renderGridView(){
   if(!n){gv.style.display='none';tb.style.display='none';em.classList.remove('hidden');return;}
   em.classList.add('hidden');gv.style.display='';tb.style.display='';
   const guide=$('gv-guide');if(guide)guide.style.display='';
-  const cols=maxCols(); $('gv-count-info').textContent=n+'枚 / '+state.grid.length+'行 × '+cols+'列';
+  const cols=maxCols(); $('gv-count-info').textContent=trf('gvCountInfo', n, state.grid.length, cols);
   const nat=calcNaturalDimensions();
   const cW=(gv.parentElement?.offsetWidth||360)-28;
   const cdW=Math.min(CELL_MAX_W,Math.max(CELL_MIN_W,Math.floor((cW-(cols+1)*28-8)/cols)));
@@ -1603,7 +1870,7 @@ function renderGridView(){
         let pW=Math.max(CELL_MIN_W,Math.round(nCW/(nTW||1)*rDW)); if(!Number.isFinite(pW))pW=cdW;
         const ph=document.createElement('div'); ph.className='gv-cell gv-covered';
         ph.style.cssText='width:'+pW+'px;height:68px;';
-        ph.innerHTML='<div class="gv-covered-label">結合中</div>';
+        ph.innerHTML='<div class="gv-covered-label">'+tr('gvCovered')+'</div>';
         rowDiv.appendChild(ph);
         return;
       }
@@ -1620,20 +1887,20 @@ function renderGridView(){
       if(!Number.isFinite(dH)||dH<=0)dH=Math.round(dW*(eh&&ew?eh/ew:1))||dW;
       const gn=imgNo;
       const sx=ne?ne.sw/(ew||1):1;
-      const ss=Math.abs(sx-1)<0.005?'等倍':(sx>1?'×'+sx.toFixed(2)+' 拡大':'×'+sx.toFixed(2)+' 縮小');
+      const ss=Math.abs(sx-1)<0.005?tr('scaleActual'):(sx>1?trf('scaleUp', sx.toFixed(2)):trf('scaleDown', sx.toFixed(2)));
       const nm=img.name.length>14?img.name.substring(0,12)+'…':img.name;
       const mvDis=spanning?' disabled':''; // またぎ画像は移動ボタン無効
       const cell=document.createElement('div'); cell.className='gv-cell'; cell.style.cssText='width:'+dW+'px;height:'+dH+'px;';
       const thumbSrc=img.thumbUrl||img.url;
-      cell.innerHTML=(img.cropData||img.cutoutData||img.transform||img.colorAdjust?'<div class="gv-crop-badge" title="編集済み">✏️</div>':'')+
-        (spanning?'<div class="gv-span-badge">縦またぎ×'+(img.rowSpan||1)+'</div>':'')+
+      cell.innerHTML=(img.cropData||img.cutoutData||img.transform||img.colorAdjust?'<div class="gv-crop-badge" title="'+tr('gvEdited')+'">✏️</div>':'')+
+        (spanning?'<div class="gv-span-badge">'+trf('gvSpanBadge', img.rowSpan||1)+'</div>':'')+
         '<img src="'+thumbSrc+'" alt="" draggable="false">'+
         '<div class="gv-overlay"><div class="gv-num">#'+gn+'</div><div>'+escHtml(nm)+'</div>'+
         '<div>'+(img.cropData?img.cropData.cw+'×'+img.cropData.ch+' ✂':img.w+'×'+img.h)+' '+ss+'</div>'+
         '<div class="gv-moves">'+
         '<button class="gv-move-btn" data-mv="u"'+mvDis+'>↑</button><button class="gv-move-btn" data-mv="l"'+(ci===0?' disabled':mvDis)+'>←</button>'+
         '<button class="gv-move-btn" data-mv="r"'+(ci===row.length-1?' disabled':mvDis)+'>→</button><button class="gv-move-btn" data-mv="d"'+mvDis+'>↓</button>'+
-        '</div></div><button class="gv-del" title="削除">×</button>';
+        '</div></div><button class="gv-del" title="'+tr('gvDelete')+'">×</button>';
       cell.querySelector('.gv-del').onclick=e=>{e.stopPropagation();if(ivIsBlocking())return;deleteCell(ri,ci);};
       cell.querySelectorAll('.gv-move-btn').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();if(ivIsBlocking())return;
         const mv=btn.dataset.mv; if(mv==='l')moveCellH(ri,ci,-1);else if(mv==='r')moveCellH(ri,ci,1);else if(mv==='u')moveCellV(ri,ci,-1);else moveCellV(ri,ci,1);};});
@@ -1676,7 +1943,7 @@ function fixupGridOverlaps(){
 }
 function makeGvAddRow(idx){
   const d=document.createElement('div'); d.className='gv-add-row';
-  d.innerHTML='<div class="gv-line"></div><div class="gv-row-label">＋ 行を追加</div><div class="gv-line"></div>';
+  d.innerHTML='<div class="gv-line"></div><div class="gv-row-label">'+tr('gvAddRow')+'</div><div class="gv-line"></div>';
   const pa={type:'row',rowIdx:idx}; d.onclick=()=>{if(ivIsBlocking())return;if(gvInsertBlocked(pa)){spanGuardNotify();return;}state.pendingAdd=pa;$('file-input').click();};
   d.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();d.classList.add('drag-target');});
   d.addEventListener('dragleave',()=>d.classList.remove('drag-target'));
@@ -1684,7 +1951,7 @@ function makeGvAddRow(idx){
   return d;
 }
 function makeGvAddCol(ri,ci){
-  const d=document.createElement('div'); d.className='gv-add-col'; d.textContent='＋'; d.title='ここに追加';
+  const d=document.createElement('div'); d.className='gv-add-col'; d.textContent='＋'; d.title=tr('gvAddHere');
   const pa={type:'col',rowIdx:ri,colIdx:ci}; d.onclick=()=>{if(ivIsBlocking())return;if(gvInsertBlocked(pa)){spanGuardNotify();return;}state.pendingAdd=pa;$('file-input').click();};
   d.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();d.classList.add('drag-target');});
   d.addEventListener('dragleave',()=>d.classList.remove('drag-target'));
@@ -1899,7 +2166,7 @@ function showCtxMenu(e,ri,ci){
   ext.style.display=canExt?'':'none';
   rel.style.display=canRel?'':'none';
   sep.style.display=(canExt||canRel)?'':'none';
-  if(canExt) ext.textContent=(img.rowSpan||1)<=1?'⤵ 下の行と結合（縦またぎ）':'⤵ 縦またぎを伸ばす';
+  if(canExt) ext.textContent=(img.rowSpan||1)<=1?tr('ctxSpanExtend'):tr('ctxSpanExtendMore');
   m.style.left='0px'; m.style.top='-9999px';
   m.classList.remove('hidden');
   const mW=m.offsetWidth||180, mH=m.offsetHeight||320;
@@ -1930,7 +2197,7 @@ $('ctx-replace').addEventListener('click',()=>{
       const blob=await fetch(url).then(r=>r.blob());
       await dbTxW('imgs',s=>s.put({id:oldImg.id,name:file.name,blob}));
       updateImgThumb(state.grid[ri][ci]).then(()=>{renderGridView();persistLayout();});
-    }catch(err){alert('画像の変更に失敗しました。\n'+err.message);}
+    }catch(err){alert(trf('changeImgFailed', err.message));}
   };
   fi.click();
 });
@@ -2132,7 +2399,7 @@ async function doCompose(){
     // トッピングタブが開いていれば更新
     if($('tab-topping').classList.contains('active')) renderToppingCanvas();
     else updateToppingEmptyState();
-  }catch(err){ console.error(err); alert('プレビューの生成に失敗しました。\n'+err.message); }
+  }catch(err){ console.error(err); alert(trf('composeFailed', err.message)); }
   $('preview-loading').classList.add('hidden');
 }
 function updatePreviewInfo(nat){
@@ -2140,8 +2407,8 @@ function updatePreviewInfo(nat){
   $('preview-dim-chip').textContent=W+' × '+H;
   $('preview-mp-chip').textContent=mp+'MP';
   $('preview-mem-chip').textContent='~'+mem+'MB';
-  $('preview-imgs-info').textContent=flatImages().length+'枚 / '+nat.numRows+'行×'+nat.numCols+'列';
-  const nm={width:'横幅統一',height:'高さ統一',longSide:'長辺統一',shortSide:'短辺統一',none:'そのまま'};
+  $('preview-imgs-info').textContent=trf('previewInfo', flatImages().length, nat.numRows, nat.numCols);
+  const nm={width:tr('norm_width'),height:tr('norm_height'),longSide:tr('norm_longSide'),shortSide:tr('norm_shortSide'),none:tr('norm_none')};
   $('preview-scale-info').textContent='('+(nm[settings.normalization]||'')+')';
 }
 $('btn-compose').addEventListener('click',()=>{ if(!flatImages().length){showTab('images');return;} doCompose(); });
@@ -2180,7 +2447,7 @@ async function openZoom(){
     Z.ptrs.clear(); Z.panStart=null; Z.moved=false;
     updateZoomTransform(); updateZoomInfo();
     $('zoom-overlay').classList.add('open');
-  }catch(err){ console.error(err); alert('原寸表示の生成に失敗しました。\n'+err.message); }
+  }catch(err){ console.error(err); alert(trf('fullViewFailed', err.message)); }
   finally{ zoomLoading=false; pc.style.cursor=prevCursor; }
 }
 function closeZoom(){ $('zoom-overlay').classList.remove('open'); blockUIBriefly(400); }
@@ -2235,7 +2502,7 @@ $('btn-pick-canvas').addEventListener('click',()=>{
   state.pickColorMode=!state.pickColorMode;
   $('btn-pick-canvas').classList.toggle('active',state.pickColorMode);
   $('preview-canvas').classList.toggle('picking',state.pickColorMode);
-  $('btn-pick-canvas').textContent=state.pickColorMode?'✕ キャンセル':'🎨 画像から背景色を取得';
+  $('btn-pick-canvas').textContent=state.pickColorMode?tr('pickCancel'):tr('btnPickCanvas');
 });
 $('preview-canvas').addEventListener('click',e=>{
   if(!state.pickColorMode) return;
@@ -2245,22 +2512,23 @@ $('preview-canvas').addEventListener('click',e=>{
   const hex='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');
   settings.bgColor=hex; $('adj-bg-color').value=hex;
   state.pickColorMode=false; $('btn-pick-canvas').classList.remove('active'); $('preview-canvas').classList.remove('picking');
-  $('btn-pick-canvas').textContent='🎨 画像から背景色を取得';
+  $('btn-pick-canvas').textContent=tr('btnPickCanvas');
   dirtyCompose(100);
 });
 $('btn-eyedrop').addEventListener('click',async()=>{
-  if(!('EyeDropper' in window)){alert('Chrome 95以降でのみ使えます。');return;}
+  if(!('EyeDropper' in window)){alert(tr('eyedropperNg'));return;}
   try{const{sRGBHex}=await new EyeDropper().open();settings.bgColor=sRGBHex;$('adj-bg-color').value=sRGBHex;dirtyCompose(100);}catch(e){}
 });
 
 // ===== トッピングタブ =====
 
-const TP_LABELS={text:'✍️ テキスト',image:'🖼️ 画像',line:'— 直線',arrow:'→ 矢印',rect:'□ 四角形',ellipse:'○ 楕円',poly:'⬟ 多角形','blur-rect':'🫧□ ぼかし','blur-ellipse':'🫧○ ぼかし','blur-poly':'🫧⬟ ぼかし','mosaic-rect':'⬛□ モザイク','mosaic-ellipse':'⬛○ モザイク','mosaic-poly':'⬛⬟ モザイク','draw-line':'✏️ 線描画','draw-blur':'🫧 ぼかし描画','draw-mosaic':'⬛ モザイク描画',burst:'💥 集中線'};
+const TP_LABEL_KEYS={text:'tpl_text',image:'tpl_image',line:'tpl_line',arrow:'tpl_arrow',rect:'tpl_rect',ellipse:'tpl_ellipse',poly:'tpl_poly','blur-rect':'tpl_blurRect','blur-ellipse':'tpl_blurEllipse','blur-poly':'tpl_blurPoly','mosaic-rect':'tpl_mosaicRect','mosaic-ellipse':'tpl_mosaicEllipse','mosaic-poly':'tpl_mosaicPoly','draw-line':'tpl_drawLine','draw-blur':'tpl_drawBlur','draw-mosaic':'tpl_drawMosaic',burst:'tpl_burst'};
+const tpLabel = ty => { const k = TP_LABEL_KEYS[ty]; return k ? tr(k) : ty; };
 
 function createToppingItem(type){
   const base={id:state.nextToppingId++,type,rotation:0,hidden:false,stroke2Enabled:false,stroke2Color:'#ffffff',stroke2Width:3,shadowEnabled:false,shadowColor:'#000000',shadowBlur:8,shadowX:3,shadowY:3};
   switch(type){
-    case 'text':  return{...base,text:'テキスト',x:50,y:50,fontSize:80,color:'#ffffff',textAlign:'center',strokeWidth:3,strokeColor:'#000000',shadowEnabled:true,shadowColor:'#000000',shadowBlur:6,shadowX:2,shadowY:2};
+    case 'text':  return{...base,text:tr('tpDefaultText'),x:50,y:50,fontSize:80,color:'#ffffff',textAlign:'center',strokeWidth:3,strokeColor:'#000000',shadowEnabled:true,shadowColor:'#000000',shadowBlur:6,shadowX:2,shadowY:2};
     case 'image': return{...base,imgKey:'',name:'',x:30,y:30,w:40,h:40,color:'#ffffff',strokeWidth:0,opacity:100,lockAspect:true,_ar:1};
     case 'line':  return{...base,x:20,y:50,x2:80,y2:50,color:'#ff4444',strokeWidth:4};
     case 'arrow': return{...base,x:20,y:50,x2:80,y2:50,color:'#ff4444',strokeWidth:4,headSize:40,headAngle:30};
@@ -2327,7 +2595,7 @@ $('tp-redo').addEventListener('click',()=>{if(TH.idx<TH.stack.length-1){DRAW.act
 
 // ===== トッピング全消去 =====
 $('tp-clear-all-btn').addEventListener('click',()=>{
-  if(!state.toppings.length){showModal('トッピングなし','消去できるトッピングがありません。');return;}
+  if(!state.toppings.length){showModal(tr('noTpTitle'),tr('noTpClear'));return;}
   $('tp-clear-modal').style.display='flex';
 });
 $('tp-clear-cancel').addEventListener('click',()=>{$('tp-clear-modal').style.display='none';});
@@ -2530,11 +2798,11 @@ $$('.tp-add-btn').forEach(btn=>btn.addEventListener('click',()=>{
 }));
 // 画像トッピング: ローカル画像を読み込んで、プレビュー画像の中央に収まる大きさで追加する
 async function addImageTopping(file){
-  if(!file||!(file.type||'').startsWith('image/'))throw new Error('画像ファイルを選んでください。');
+  if(!file||!(file.type||'').startsWith('image/'))throw new Error(tr('pickImageFile'));
   const key='tp'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
   const blob=file.slice(0,file.size,file.type);
   const rec=await tpImgRegister(key,file.name,blob);
-  if(!rec.w||!rec.h){URL.revokeObjectURL(rec.url);TPIMG.delete(key);throw new Error('この画像は読み込めませんでした（非対応の形式の可能性があります）。');}
+  if(!rec.w||!rec.h){URL.revokeObjectURL(rec.url);TPIMG.delete(key);throw new Error(tr('unloadableImage'));}
   const item=createToppingItem('image');
   item.imgKey=key;item.name=file.name;
   // h は「画像幅基準の%」。元画像の縦横比を保ち、キャンバスの80%以内に収める
@@ -2556,7 +2824,7 @@ async function addImageTopping(file){
 $('tp-image-input').addEventListener('change',async e=>{
   const file=e.target.files[0];if(!file)return;
   try{await addImageTopping(file);}
-  catch(err){console.warn('image topping error:',err);alert('画像の追加に失敗しました:\n'+err.message);}
+  catch(err){console.warn('image topping error:',err);alert(trf('addImageFailed', err.message));}
 });
 document.addEventListener('change',e=>{
   if(e.target.classList.contains('tp-cat-sel')&&e.target.value){
@@ -3103,48 +3371,48 @@ function adjRowHTML(lbl,cls,mn,mx,val,valCls,step){
     '<span class="adj-val '+valCls+'">'+fmtNum(v)+'</span></div>';
 }
 function strokeShadowHTML(s,shadowOnly){
-  const stroke2Row=shadowOnly?'':'<div class="adj-row"><span class="adj-label">縁取り</span>'+
-    '<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="tp-stroke2-en"'+(s.stroke2Enabled?' checked':'')+'> オン</label>'+
+  const stroke2Row=shadowOnly?'':'<div class="adj-row"><span class="adj-label">'+tr('cOutline')+'</span>'+
+    '<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="tp-stroke2-en"'+(s.stroke2Enabled?' checked':'')+'> '+tr('cOn')+'</label>'+
     '<input type="color" class="tp-stroke2c tp-color-inp" value="'+(s.stroke2Color||'#ffffff')+'">'+
     '<input type="number" class="tp-stroke2w tp-num-inp" min="0" max="30" value="'+(s.stroke2Width||3)+'"></div>';
   return stroke2Row+
-    '<div class="adj-row"><span class="adj-label">影</span>'+
-    '<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="tp-sha"'+(s.shadowEnabled?' checked':'')+'> オン</label>'+
+    '<div class="adj-row"><span class="adj-label">'+tr('cShadow')+'</span>'+
+    '<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="tp-sha"'+(s.shadowEnabled?' checked':'')+'> '+tr('cOn')+'</label>'+
     '<input type="color" class="tp-shc tp-color-inp" value="'+(s.shadowColor||'#000000')+'">'+
-    '<span style="font-size:10px">ぼかし</span><input type="number" class="tp-shb tp-num-inp" min="0" max="50" value="'+(s.shadowBlur||8)+'"></div>';
+    '<span style="font-size:10px">'+tr('cBlur')+'</span><input type="number" class="tp-shb tp-num-inp" min="0" max="50" value="'+(s.shadowBlur||8)+'"></div>';
 }
 // opt.label: 色ラベル名 / opt.allowZero: 太さ0（線なし）を許可
 function colorLineHTML(s,opt){
   opt=opt||{};
-  const lbl=opt.label||'色',az=!!opt.allowZero;
+  const lbl=opt.label||tr('cColor'),az=!!opt.allowZero;
   const swv=az?(s.strokeWidth!=null?s.strokeWidth:4):(s.strokeWidth||4);
   return '<div class="adj-row"><span class="adj-label">'+lbl+'</span><input type="color" class="tp-color-inp tp-mainc" value="'+s.color+'">'+
-    '<span class="adj-label" style="margin-left:auto">太さ</span>'+
+    '<span class="adj-label" style="margin-left:auto">'+tr('cWidth')+'</span>'+
     '<input type="number" class="tp-sw tp-num-inp" min="'+(az?0:1)+'" max="50" value="'+swv+'"></div>';
 }
 function fillHTML(s){
-  return '<div class="adj-row"><span class="adj-label">塗り</span>'+
-    '<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="tp-fill"'+(s.fillEnabled?' checked':'')+'> オン</label>'+
+  return '<div class="adj-row"><span class="adj-label">'+tr('cFill')+'</span>'+
+    '<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="tp-fill"'+(s.fillEnabled?' checked':'')+'> '+tr('cOn')+'</label>'+
     '<input type="color" class="tp-fillc tp-color-inp" value="'+(s.fillColor||'#ff4444')+'"></div>'+
-    '<div class="adj-row"><span class="adj-label">透明度</span>'+
+    '<div class="adj-row"><span class="adj-label">'+tr('cOpacity')+'</span>'+
     '<input type="range" class="adj-slider tp-fillop" min="0" max="100" value="'+(s.fillOpacity!=null?s.fillOpacity:30)+'">'+
     '<span class="adj-val tp-fillop-val">'+(s.fillOpacity!=null?s.fillOpacity:30)+'</span></div>';
 }
 // 線・矢印の整形メニュー（コンパクトな1行）
 function lineOpsHTML(){
   const b=(op,label,title)=>'<button type="button" class="adj-btn tp-line-op" data-op="'+op+'" title="'+title+'">'+label+'</button>';
-  return '<div class="adj-row"><span class="adj-label">整形</span><div class="adj-btns">'+
-    b('h','─','水平にする')+b('v','│','垂直にする')+b('snap','45°','45°刻みの最寄りの角度にする')+b('swap','⇄','始点と終点を入れ替える')+
+  return '<div class="adj-row"><span class="adj-label">'+tr('cShapeOps')+'</span><div class="adj-btns">'+
+    b('h','─',tr('cMakeH'))+b('v','│',tr('cMakeV'))+b('snap','45°',tr('cSnap45'))+b('swap','⇄',tr('cSwapEnds'))+
     '</div></div>';
 }
 function opacityHTML(s){
-  return '<div class="adj-row"><span class="adj-label">透明度</span>'+
+  return '<div class="adj-row"><span class="adj-label">'+tr('cOpacity')+'</span>'+
     '<input type="range" class="adj-slider tp-opacity" min="0" max="100" value="'+(s.opacity!=null?s.opacity:100)+'">'+
     '<span class="adj-val tp-opacity-val">'+(s.opacity!=null?s.opacity:100)+'</span></div>';
 }
 function eraserHTML(s){
-  return '<div class="adj-row"><span class="adj-label">消しゴム</span>'+
-    '<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" class="tp-erase-mode"'+(s.eraseMode?' checked':'')+'> このアイテムに消しゴムで描く</label></div>';
+  return '<div class="adj-row"><span class="adj-label">'+tr('cEraser')+'</span>'+
+    '<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" class="tp-erase-mode"'+(s.eraseMode?' checked':'')+'> '+tr('cEraserDraw')+'</label></div>';
 }
 // 画像トッピングの高さ(%)の上限（画像幅基準%。縦長キャンバスでは100を超えられるようにする）
 function tpMaxH(t){
@@ -3156,11 +3424,11 @@ function sizeLockHTML(s,hMax){
   hMax=hMax||100;
   const locked=s.lockAspect;
   return '<div class="tp-size-grid">'+
-    '<span class="adj-label">幅%</span>'+
+    '<span class="adj-label">'+tr('cWpct')+'</span>'+
     '<input type="range" class="adj-slider tp-w" min="1" max="100" value="'+Math.round(s.w||40)+'">'+
     '<span class="adj-val tp-w-val">'+Math.round(s.w||40)+'</span>'+
     '<button type="button" class="tp-lock-btn'+(locked?' locked':'')+'">'+( locked?'🔒':'🔓')+'</button>'+
-    '<span class="adj-label" title="幅と同じ単位（画像幅の%）">高%</span>'+
+    '<span class="adj-label" title="'+tr('cHpctTitle')+'">'+tr('cHpct')+'</span>'+
     '<input type="range" class="adj-slider tp-h" min="1" max="'+hMax+'" value="'+Math.round(s.h||40)+'">'+
     '<span class="adj-val tp-h-val">'+Math.round(s.h||40)+'</span>'+
     '</div>';
@@ -3170,79 +3438,79 @@ function renderToppingControlsHTML(t){
   const type=t.type||'text';
   if(type==='text'){
     return '<textarea class="tp-textarea" rows="2">'+escHtml(t.text||'')+'</textarea>'+
-      adjRowHTML('サイズ','tp-size',8,500,t.fontSize,'tp-size-val')+
+      adjRowHTML(tr('cSize'),'tp-size',8,500,t.fontSize,'tp-size-val')+
       adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val',0.1)+
-      '<div class="adj-row"><span class="adj-label">文字色</span><input type="color" class="tp-color-inp tp-mainc" value="'+t.color+'">'+
-      '<span class="adj-label" style="margin-left:auto">配置</span>'+
-      '<select class="tp-align tp-select"><option value="center"'+(t.textAlign==='center'?' selected':'')+'>中央</option>'+
-      '<option value="left"'+(t.textAlign==='left'?' selected':'')+'>左</option>'+
-      '<option value="right"'+(t.textAlign==='right'?' selected':'')+'>右</option></select></div>'+
-      '<div class="adj-row"><span class="adj-label">フォント</span>'+'<select class="tp-font tp-select" style="flex:1;max-width:200px"><optgroup label="ゴシック">'
-+'<option value="sans-serif"'+((!t.fontFamily||t.fontFamily==="sans-serif")?" selected":"")+">ゴシック（標準）</option>"
+      '<div class="adj-row"><span class="adj-label">'+tr('cTextColor')+'</span><input type="color" class="tp-color-inp tp-mainc" value="'+t.color+'">'+
+      '<span class="adj-label" style="margin-left:auto">'+tr('cAlign')+'</span>'+
+      '<select class="tp-align tp-select"><option value="center"'+(t.textAlign==='center'?' selected':'')+'>'+tr('cCenter')+'</option>'+
+      '<option value="left"'+(t.textAlign==='left'?' selected':'')+'>'+tr('cLeft')+'</option>'+
+      '<option value="right"'+(t.textAlign==='right'?' selected':'')+'>'+tr('cRight')+'</option></select></div>'+
+      '<div class="adj-row"><span class="adj-label">'+tr('cFont')+'</span>'+'<select class="tp-font tp-select" style="flex:1;max-width:200px"><optgroup label="'+tr('cFontSansGroup')+'">'
++'<option value="sans-serif"'+((!t.fontFamily||t.fontFamily==="sans-serif")?" selected":"")+">"+tr('cFontDefault')+"</option>"
 +'<option value="Noto Sans JP"'+(t.fontFamily==="Noto Sans JP"?" selected":"")+">Noto Sans JP</option>"
 +'<option value="Dela Gothic One"'+(t.fontFamily==="Dela Gothic One"?" selected":"")+">Dela Gothic One</option>"
 +'<option value="Mochiy Pop One"'+(t.fontFamily==="Mochiy Pop One"?" selected":"")+">Mochiy Pop One</option>"
 +'<option value="Noto Serif JP"'+(t.fontFamily==="Noto Serif JP"?" selected":"")+">Noto Serif JP</option>"
 +'<option value="Kaisei Decol"'+(t.fontFamily==="Kaisei Decol"?" selected":"")+">Kaisei Decol</option>"
 +'<option value="Yomogi"'+(t.fontFamily==="Yomogi"?" selected":"")+">Yomogi</option>"+'</optgroup></select></div>'+
-      '<div class="adj-row"><span class="adj-label">縁取り</span>'+
+      '<div class="adj-row"><span class="adj-label">'+tr('cOutline')+'</span>'+
       '<input type="number" class="tp-sw tp-num-inp" min="0" max="50" value="'+t.strokeWidth+'">'+
       '<span style="font-size:10px">px</span><input type="color" class="tp-color-inp tp-sc" value="'+t.strokeColor+'"></div>'+
-      '<div class="adj-row"><span class="adj-label">影</span>'+
-      '<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="tp-sha"'+(t.shadowEnabled?' checked':'')+'> オン</label>'+
+      '<div class="adj-row"><span class="adj-label">'+tr('cShadow')+'</span>'+
+      '<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="tp-sha"'+(t.shadowEnabled?' checked':'')+'> '+tr('cOn')+'</label>'+
       '<input type="color" class="tp-shc tp-color-inp" value="'+t.shadowColor+'">'+
-      '<span style="font-size:10px;margin-left:4px">ぼかし</span><input type="number" class="tp-shb tp-num-inp" min="0" max="50" value="'+t.shadowBlur+'"></div>';
+      '<span style="font-size:10px;margin-left:4px">'+tr('cBlur')+'</span><input type="number" class="tp-shb tp-num-inp" min="0" max="50" value="'+t.shadowBlur+'"></div>';
   }
   if(type==='line'){
-    return lineOpsHTML()+adjRowHTML('始X','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('始Y','tp-y',0,100,t.y,'tp-y-val',0.1)+
-      adjRowHTML('終X','tp-x2',0,100,t.x2,'tp-x2-val',0.1)+adjRowHTML('終Y','tp-y2',0,100,t.y2,'tp-y2-val',0.1)+
+    return lineOpsHTML()+adjRowHTML(tr('cStartX'),'tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML(tr('cStartY'),'tp-y',0,100,t.y,'tp-y-val',0.1)+
+      adjRowHTML(tr('cEndX'),'tp-x2',0,100,t.x2,'tp-x2-val',0.1)+adjRowHTML(tr('cEndY'),'tp-y2',0,100,t.y2,'tp-y2-val',0.1)+
       colorLineHTML(t)+strokeShadowHTML(t);
   }
   if(type==='arrow'){
-    return lineOpsHTML()+adjRowHTML('始X','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('始Y','tp-y',0,100,t.y,'tp-y-val',0.1)+
-      adjRowHTML('終X','tp-x2',0,100,t.x2,'tp-x2-val',0.1)+adjRowHTML('終Y','tp-y2',0,100,t.y2,'tp-y2-val',0.1)+
+    return lineOpsHTML()+adjRowHTML(tr('cStartX'),'tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML(tr('cStartY'),'tp-y',0,100,t.y,'tp-y-val',0.1)+
+      adjRowHTML(tr('cEndX'),'tp-x2',0,100,t.x2,'tp-x2-val',0.1)+adjRowHTML(tr('cEndY'),'tp-y2',0,100,t.y2,'tp-y2-val',0.1)+
       colorLineHTML(t)+
-      '<div class="adj-row"><span class="adj-label">矢じり</span>'+
-      '<span style="font-size:11px">大きさ</span><input type="number" class="tp-headsize tp-num-inp" min="5" max="600" value="'+(t.headSize||40)+'">'+
-      '<span style="font-size:11px;margin-left:6px">角度</span><input type="number" class="tp-headangle tp-num-inp" min="5" max="80" value="'+(t.headAngle||30)+'">°</div>'+
-      '<div class="adj-row"><span class="adj-label">両端</span>'+
-      '<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="tp-headboth"'+(t.headBoth?' checked':'')+'> 始点にも矢じりを付ける</label></div>'+
+      '<div class="adj-row"><span class="adj-label">'+tr('cHead')+'</span>'+
+      '<span style="font-size:11px">'+tr('cHeadSize')+'</span><input type="number" class="tp-headsize tp-num-inp" min="5" max="600" value="'+(t.headSize||40)+'">'+
+      '<span style="font-size:11px;margin-left:6px">'+tr('cHeadAngle')+'</span><input type="number" class="tp-headangle tp-num-inp" min="5" max="80" value="'+(t.headAngle||30)+'">°</div>'+
+      '<div class="adj-row"><span class="adj-label">'+tr('cBothEnds')+'</span>'+
+      '<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="tp-headboth"'+(t.headBoth?' checked':'')+'> '+tr('cHeadBoth')+'</label></div>'+
       strokeShadowHTML(t);
   }
   if(type==='image'){
     // 四角形から「塗り」「縁取り」を除いたもの（枠線色・太さ・透明度・影・回転は残す）
     return adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val',0.1)+
-      sizeLockHTML(t,tpMaxH(t))+colorLineHTML(t,{label:'枠線色',allowZero:true})+opacityHTML(t)+strokeShadowHTML(t,true);
+      sizeLockHTML(t,tpMaxH(t))+colorLineHTML(t,{label:tr('cBorderColor'),allowZero:true})+opacityHTML(t)+strokeShadowHTML(t,true);
   }
   if(type==='rect'||type==='ellipse'){
     return adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val',0.1)+
-      sizeLockHTML(t)+colorLineHTML(t,{label:'枠線色',allowZero:true})+fillHTML(t)+strokeShadowHTML(t);
+      sizeLockHTML(t)+colorLineHTML(t,{label:tr('cBorderColor'),allowZero:true})+fillHTML(t)+strokeShadowHTML(t);
   }
   if(type==='burst'){
     return adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val',0.1)+
-      '<div class="adj-row"><span class="adj-label">横幅%</span><input type="range" class="adj-slider tp-bw" min="5" max="500" step="0.5" value="'+(t.bw!=null?t.bw:70)+'"><span class="adj-val tp-bw-val">'+fmtNum(t.bw!=null?t.bw:70)+'</span></div>'+
-      '<div class="adj-row"><span class="adj-label">縦幅%</span><input type="range" class="adj-slider tp-bh" min="5" max="500" step="0.5" value="'+(t.bh!=null?t.bh:70)+'"><span class="adj-val tp-bh-val">'+fmtNum(t.bh!=null?t.bh:70)+'</span></div>'+
-      '<div class="adj-row"><span class="adj-label">内側比率</span><input type="range" class="adj-slider tp-inner-ratio" min="0" max="95" value="'+(t.innerRatio!=null?t.innerRatio:20)+'"><span class="adj-val tp-inner-ratio-val">'+(t.innerRatio!=null?t.innerRatio:20)+'</span></div>'+
-      '<div class="adj-row"><span class="adj-label">色</span><input type="color" class="tp-color-inp tp-mainc" value="'+(t.color||'#000000')+'"></div>'+
-      '<div class="adj-row"><span class="adj-label">太さ(内)</span><input type="number" class="tp-iw tp-num-inp" min="0" max="100" value="'+(t.innerWidth!=null?t.innerWidth:1)+'"></div>'+
-      '<div class="adj-row"><span class="adj-label">太さ(外)</span><input type="number" class="tp-ow tp-num-inp" min="0.2" max="200" value="'+(t.outerWidth!=null?t.outerWidth:8)+'"></div>'+
-      '<div class="adj-row"><span class="adj-label">バラつき</span><input type="range" class="adj-slider tp-variance" min="0" max="100" value="'+(t.widthVariance!=null?t.widthVariance:35)+'"><span class="adj-val tp-variance-val">'+(t.widthVariance!=null?t.widthVariance:35)+'</span></div>'+
-      '<div class="adj-row"><span class="adj-label">本数</span><input type="range" class="adj-slider tp-count" min="8" max="400" value="'+(t.count||100)+'"><span class="adj-val tp-count-val">'+(t.count||100)+'</span></div>'+
-      '<div class="adj-row"><button type="button" class="tp-reshuffle adj-btn">🔀 バラつきを再抽選</button></div>'+
+      '<div class="adj-row"><span class="adj-label">'+tr('cWidthPct')+'</span><input type="range" class="adj-slider tp-bw" min="5" max="500" step="0.5" value="'+(t.bw!=null?t.bw:70)+'"><span class="adj-val tp-bw-val">'+fmtNum(t.bw!=null?t.bw:70)+'</span></div>'+
+      '<div class="adj-row"><span class="adj-label">'+tr('cHeightPct')+'</span><input type="range" class="adj-slider tp-bh" min="5" max="500" step="0.5" value="'+(t.bh!=null?t.bh:70)+'"><span class="adj-val tp-bh-val">'+fmtNum(t.bh!=null?t.bh:70)+'</span></div>'+
+      '<div class="adj-row"><span class="adj-label">'+tr('cInnerRatio')+'</span><input type="range" class="adj-slider tp-inner-ratio" min="0" max="95" value="'+(t.innerRatio!=null?t.innerRatio:20)+'"><span class="adj-val tp-inner-ratio-val">'+(t.innerRatio!=null?t.innerRatio:20)+'</span></div>'+
+      '<div class="adj-row"><span class="adj-label">'+tr('cColor')+'</span><input type="color" class="tp-color-inp tp-mainc" value="'+(t.color||'#000000')+'"></div>'+
+      '<div class="adj-row"><span class="adj-label">'+tr('cWidthIn')+'</span><input type="number" class="tp-iw tp-num-inp" min="0" max="100" value="'+(t.innerWidth!=null?t.innerWidth:1)+'"></div>'+
+      '<div class="adj-row"><span class="adj-label">'+tr('cWidthOut')+'</span><input type="number" class="tp-ow tp-num-inp" min="0.2" max="200" value="'+(t.outerWidth!=null?t.outerWidth:8)+'"></div>'+
+      '<div class="adj-row"><span class="adj-label">'+tr('cVariance')+'</span><input type="range" class="adj-slider tp-variance" min="0" max="100" value="'+(t.widthVariance!=null?t.widthVariance:35)+'"><span class="adj-val tp-variance-val">'+(t.widthVariance!=null?t.widthVariance:35)+'</span></div>'+
+      '<div class="adj-row"><span class="adj-label">'+tr('cCount')+'</span><input type="range" class="adj-slider tp-count" min="8" max="400" value="'+(t.count||100)+'"><span class="adj-val tp-count-val">'+(t.count||100)+'</span></div>'+
+      '<div class="adj-row"><button type="button" class="tp-reshuffle adj-btn">'+tr('cReshuffle')+'</button></div>'+
       opacityHTML(t)+strokeShadowHTML(t);
   }
   if(type==='poly'){
     let html=(t.points||[]).map((p,i)=>
-      '<div class="adj-row"><span class="adj-label">頂点'+(i+1)+'</span>'
+      '<div class="adj-row"><span class="adj-label">'+trf('cPoint', i+1)+'</span>'
       +'<input type="range" class="adj-slider tp-vx-'+i+'" min="0" max="100" value="'+Math.round(p.x)+'">'
       +'<span class="adj-val tp-vxv-'+i+'">'+Math.round(p.x)+'</span>'
       +'<input type="range" class="adj-slider tp-vy-'+i+'" min="0" max="100" value="'+Math.round(p.y)+'">'
       +'<span class="adj-val tp-vyv-'+i+'">'+Math.round(p.y)+'</span></div>'
     ).join('');
     html+='<div class="adj-row">'
-      +'<button type="button" class="tp-poly-add adj-btn">＋ 頂点追加</button>'
-      +((t.points||[]).length>3?'<button type="button" class="tp-poly-del adj-btn" style="margin-left:4px">－ 末尾削除</button>':'')+'</div>';
-    return html+colorLineHTML(t,{label:'枠線色',allowZero:true})+fillHTML(t)+strokeShadowHTML(t);
+      +'<button type="button" class="tp-poly-add adj-btn">'+tr('cAddPoint')+'</button>'
+      +((t.points||[]).length>3?'<button type="button" class="tp-poly-del adj-btn" style="margin-left:4px">'+tr('cDelPoint')+'</button>':'')+'</div>';
+    return html+colorLineHTML(t,{label:tr('cBorderColor'),allowZero:true})+fillHTML(t)+strokeShadowHTML(t);
   }
   if(type.startsWith('blur')||type.startsWith('mosaic')){
     const isBlur=type.startsWith('blur'),sh=type.split('-')[1];
@@ -3251,29 +3519,29 @@ function renderToppingControlsHTML(t){
       html=adjRowHTML('X%','tp-x',0,100,t.x,'tp-x-val',0.1)+adjRowHTML('Y%','tp-y',0,100,t.y,'tp-y-val',0.1)+sizeLockHTML(t);
     }else if(sh==='poly'){
       html=(t.points||[]).map((p,i)=>
-        '<div class="adj-row"><span class="adj-label">頂点'+(i+1)+'</span>'
+        '<div class="adj-row"><span class="adj-label">'+trf('cPoint', i+1)+'</span>'
         +'<input type="range" class="adj-slider tp-vx-'+i+'" min="0" max="100" value="'+Math.round(p.x)+'">'
         +'<span class="adj-val tp-vxv-'+i+'">'+Math.round(p.x)+'</span>'
         +'<input type="range" class="adj-slider tp-vy-'+i+'" min="0" max="100" value="'+Math.round(p.y)+'">'
         +'<span class="adj-val tp-vyv-'+i+'">'+Math.round(p.y)+'</span></div>'
       ).join('');
       html+='<div class="adj-row">'
-        +'<button type="button" class="tp-poly-add adj-btn">＋ 頂点追加</button>'
-        +((t.points||[]).length>3?'<button type="button" class="tp-poly-del adj-btn" style="margin-left:4px">－ 末尾削除</button>':'')+'</div>';
+        +'<button type="button" class="tp-poly-add adj-btn">'+tr('cAddPoint')+'</button>'
+        +((t.points||[]).length>3?'<button type="button" class="tp-poly-del adj-btn" style="margin-left:4px">'+tr('cDelPoint')+'</button>':'')+'</div>';
     }
-    html+=adjRowHTML(isBlur?'ぼかし':'ブロック','tp-intensity',2,100,t.intensity||20,'tp-intensity-val');
+    html+=adjRowHTML(isBlur?tr('cBlur'):tr('cBlock'),'tp-intensity',2,100,t.intensity||20,'tp-intensity-val');
     return html;
   }
   // フリーハンド描画型
   if(type==='draw-line'){
-    return '<div class="adj-row"><span class="adj-label">色</span>'+
+    return '<div class="adj-row"><span class="adj-label">'+tr('cColor')+'</span>'+
       '<input type="color" class="tp-color-inp tp-mainc" value="'+(t.color||'#ff4444')+'"></div>'+
-      adjRowHTML('太さ','tp-sw',2,200,t.strokeWidth||8,'tp-sw-val')+
+      adjRowHTML(tr('cWidth'),'tp-sw',2,200,t.strokeWidth||8,'tp-sw-val')+
       opacityHTML(t)+strokeShadowHTML(t)+eraserHTML(t);
   }
   if(type==='draw-blur'||type==='draw-mosaic'){
-    return adjRowHTML('太さ（筆）','tp-sw',5,300,t.strokeWidth||50,'tp-sw-val')+
-      adjRowHTML(type==='draw-blur'?'ぼかし強度':'モザイク強度','tp-intensity',1,50,t.intensity||15,'tp-intensity-val')+
+    return adjRowHTML(tr('cBrushWidth'),'tp-sw',5,300,t.strokeWidth||50,'tp-sw-val')+
+      adjRowHTML(type==='draw-blur'?tr('cBlurStrength'):tr('cMosaicStrength'),'tp-intensity',1,50,t.intensity||15,'tp-intensity-val')+
       opacityHTML(t)+strokeShadowHTML(t)+eraserHTML(t);
   }
   return '';
@@ -3640,12 +3908,12 @@ function renderToppingList(){
     const item=document.createElement('div');item.className='tp-item'+(isSelected?' selected':'');
     item.innerHTML=
       '<div class="tp-head">'+
-        '<span class="tp-handle" title="ドラッグで並べ替え">⠿</span>'+
-        '<span class="tp-num-label">'+(TP_LABELS[type]||type)+' #'+(idx+1)+'</span>'+
+        '<span class="tp-handle" title="'+tr('tpDrag')+'">⠿</span>'+
+        '<span class="tp-num-label">'+tpLabel(type)+' #'+(idx+1)+'</span>'+
         '<span class="tp-mini">'+toppingMiniPreview(t)+'</span>'+
-        '<button type="button" class="tp-vis'+(t.hidden?' is-hidden':'')+'" title="表示/非表示">👁</button>'+
-        '<button type="button" class="tp-dup" title="複製">⧉</button>'+
-        '<button type="button" class="tp-del" title="削除">✕</button>'+
+        '<button type="button" class="tp-vis'+(t.hidden?' is-hidden':'')+'" title="'+tr('tpVis')+'">👁</button>'+
+        '<button type="button" class="tp-dup" title="'+tr('tpDup')+'">⧉</button>'+
+        '<button type="button" class="tp-del" title="'+tr('tpDel')+'">✕</button>'+
       '</div>'+
 '';
 
@@ -4214,10 +4482,10 @@ function renderSelectedPanel(){
   const t=state.toppings.find(tp=>tp.id===state.selectedToppingId);
   if(!t){panel.innerHTML='';return;}
   const type=t.type||'text';
-  const rotHTML='<div class="adj-row"><span class="adj-label">回転</span>'+
+  const rotHTML='<div class="adj-row"><span class="adj-label">'+tr('cRotate')+'</span>'+
     '<input type="range" class="adj-slider tp-rotation" min="0" max="360" step="1" value="'+(t.rotation||0)+'">'+
     '<span class="adj-val tp-rotation-val">'+fmtNum(t.rotation||0)+'°</span></div>';
-  panel.innerHTML='<div class="tp-panel-head">'+TP_LABELS[type]+' の設定</div>'+
+  panel.innerHTML='<div class="tp-panel-head">'+trf('tpSettings', tpLabel(type))+'</div>'+
     '<div id="tp-panel-body">'+renderToppingControlsHTML(t)+rotHTML+'</div>';
   bindToppingControls(panel,t);
   enhanceColorInputs(panel);
@@ -4242,7 +4510,7 @@ function openColorModal(ri,ci){
     $('ca-'+k).value=CA.ca[map[k]]||0;$('ca-'+k+'-val').textContent=CA.ca[map[k]]||0;
   });
   drawColorPreview(img);
-  $('color-title').textContent='カラー調整 — '+img.name;
+  $('color-title').textContent=trf('colorTitleName', img.name);
   history.pushState({modal:'color'},'');
   $('color-modal').classList.remove('hidden'); resetColorZoom();
 }
@@ -4324,7 +4592,7 @@ function openCutoutModal(ri,ci,mode){
   // 元となるキャンバスの実ピクセル数が足りないとどれだけズームしても粗いまま）。
   cv.width=CU.imgW;cv.height=CU.imgH;
   cv.style.width=cssW+'px';cv.style.height=cssH+'px';
-  $('cutout-title').textContent=(mode==='v'?'中抜き（縦方向）':'中抜き（横方向）')+' — '+img.name;
+  $('cutout-title').textContent=(mode==='v'?tr('cutoutV'):tr('cutoutH'))+' — '+img.name;
   history.pushState({modal:'cutout'},'');
   renderCutoutRegions();updateCutoutInfo();drawCutout();
   $('cutout-modal').classList.remove('hidden'); resetCutoutZoom();
@@ -4341,11 +4609,11 @@ function renderCutoutRegions(){
     div.style.cssText='background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;';
     div.innerHTML=
       '<div style="display:flex;align-items:center;margin-bottom:4px">'+
-        '<span style="font-size:11px;font-weight:700;color:var(--prime)">除去 '+(i+1)+' / '+CU.regions.length+'</span>'+
+        '<span style="font-size:11px;font-weight:700;color:var(--prime)">'+trf('cuRegion', i+1, CU.regions.length)+'</span>'+
         (CU.regions.length>1?'<button type="button" class="cu-del-r" style="margin-left:auto;border:none;background:rgba(196,28,0,0.1);color:var(--danger);border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;font-weight:700;touch-action:manipulation">✕</button>':'')+
       '</div>'+
-      '<div class="ca-row"><span class="ca-label">開始</span><input type="range" class="ca-slider cu-rs" min="0" max="100" step="0.1" value="'+(r.start*100)+'"><span class="ca-val cu-rs-val">'+fmtNum(r.start*100)+'%</span></div>'+
-      '<div class="ca-row"><span class="ca-label">終了</span><input type="range" class="ca-slider cu-re" min="0" max="100" step="0.1" value="'+(r.end*100)+'"><span class="ca-val cu-re-val">'+fmtNum(r.end*100)+'%</span></div>';
+      '<div class="ca-row"><span class="ca-label">'+tr('cuStart')+'</span><input type="range" class="ca-slider cu-rs" min="0" max="100" step="0.1" value="'+(r.start*100)+'"><span class="ca-val cu-rs-val">'+fmtNum(r.start*100)+'%</span></div>'+
+      '<div class="ca-row"><span class="ca-label">'+tr('cuEnd')+'</span><input type="range" class="ca-slider cu-re" min="0" max="100" step="0.1" value="'+(r.end*100)+'"><span class="ca-val cu-re-val">'+fmtNum(r.end*100)+'%</span></div>';
     div.querySelector('.cu-rs').addEventListener('input',e=>{
       r.start=Math.min(parseFloat(e.target.value)/100,r.end-CU_MIN);
       e.target.value=r.start*100;div.querySelector('.cu-rs-val').textContent=fmtNum(r.start*100)+'%';
@@ -4369,7 +4637,7 @@ function renderCutoutRegions(){
 
 function updateCutoutInfo(){
   const tot=CU.regions.reduce((s,r)=>s+(r.end-r.start),0);
-  $('cutout-info').textContent='除去計:'+Math.round(tot*100)+'% / 残:'+Math.round((1-tot)*100)+'%';
+  $('cutout-info').textContent=trf('cuInfo', Math.round(tot*100), Math.round((1-tot)*100));
 }
 
 let _cuBlinkRAF=null;
@@ -4447,7 +4715,7 @@ function stopCutoutBlink(){
     const gaps=[];let pos=0;
     for(const rg of sorted){if(pos<rg.start-0.06)gaps.push({from:pos,to:rg.start});pos=rg.end;}
     if(pos<0.94)gaps.push({from:pos,to:1});
-    if(!gaps.length){alert('これ以上追加できません');return;}
+    if(!gaps.length){alert(tr('noMoreRegions'));return;}
     const big=gaps.reduce((a,b)=>(b.to-b.from)>(a.to-a.from)?b:a);
     const mid=(big.from+big.to)/2,h=Math.min((big.to-big.from)/4,0.12);
     CU.regions.push({start:Math.max(0,mid-h),end:Math.min(1,mid+h)});
@@ -4482,7 +4750,7 @@ function openTrimModal(ri,ci){
   // （以前はdevicePixelRatio×CSSサイズで頭打ちにしており、ピンチズーム時に文字が潰れていた）。
   tc.width=img.w; tc.height=img.h;
   tc.style.width=cssW+'px'; tc.style.height=cssH+'px';
-  $('trim-title').textContent='トリミング — '+img.name;
+  $('trim-title').textContent=trf('trimTitleName', img.name);
   history.pushState({modal:'trim'},'');
   $('trim-modal').classList.remove('hidden'); drawTrim(); updateTrimInputs(); resetTrimZoom();
 }
@@ -4519,7 +4787,7 @@ function drawTrim(){
 }
 function updateTrimInputs(){
   $('ti-x').value=Math.round(T.cx);$('ti-y').value=Math.round(T.cy);$('ti-w').value=Math.round(T.cw);$('ti-h').value=Math.round(T.ch);
-  $('trim-info').textContent='元画像: '+T.imgW+'×'+T.imgH+'px  |  クロップ後: '+Math.round(T.cw)+'×'+Math.round(T.ch)+'px';
+  $('trim-info').textContent=trf('trimInfo', T.imgW, T.imgH, Math.round(T.cw), Math.round(T.ch));
 }
 const clamp=(v,mn,mx)=>Math.max(mn,Math.min(mx,v));
 function getHandle(px,py){
@@ -4801,20 +5069,20 @@ function updateSaveTab(){
   updateSaveDirUI();
   let fW=Math.round(state.composedW),fH=Math.round(state.composedH),sd=false;
   if(settings.maxPixels>0&&fW*fH>settings.maxPixels){const s=Math.sqrt(settings.maxPixels/(fW*fH));fW=Math.round(fW*s);fH=Math.round(fH*s);sd=true;}
-  const mp=(fW*fH/1e6).toFixed(1),nat=state.previewNat,gi=nat?nat.numRows+'行×'+nat.numCols+'列':'';
+  const mp=(fW*fH/1e6).toFixed(1),nat=state.previewNat,gi=nat?trf('gridRC', nat.numRows, nat.numCols):'';
   $('warn-size-danger').classList.add('hidden');$('warn-size-warn').classList.add('hidden');$('save-size-ok').classList.add('hidden');
-  if(fW>16383||fH>16383){$('warn-size-danger').classList.remove('hidden');$('warn-size-danger-text').textContent='縦横いずれかが16,384px超（'+fW+'×'+fH+'）。「最大ピクセル数」で制限を。';}
-  else if(fW*fH>25000000){$('warn-size-warn').classList.remove('hidden');$('warn-size-warn-text').textContent=mp+'MP と大きな画像です。';}
-  else{$('save-size-ok').classList.remove('hidden');$('save-size-ok-text').textContent='問題なくダウンロードできる見込みです。';}
+  if(fW>16383||fH>16383){$('warn-size-danger').classList.remove('hidden');$('warn-size-danger-text').textContent=trf('warnDanger', fW, fH);}
+  else if(fW*fH>25000000){$('warn-size-warn').classList.remove('hidden');$('warn-size-warn-text').textContent=trf('warnBig', mp);}
+  else{$('save-size-ok').classList.remove('hidden');$('save-size-ok-text').textContent=tr('warnOk');}
   $('save-summary').innerHTML=
-    '<div class="save-row"><span class="save-key">解像度</span><span class="save-val">'+fW+' × '+fH+' px</span></div>'+
-    '<div class="save-row"><span class="save-key">ピクセル数</span><span class="save-val">'+mp+' MP</span></div>'+
-    '<div class="save-row"><span class="save-key">グリッド</span><span class="save-val">'+flatImages().length+'枚 / '+gi+'</span></div>'+
-    '<div class="save-row"><span class="save-key">形式</span><span class="save-val">'+saveFormat.toUpperCase()+(saveFormat!=='png'?' 品質:'+saveQuality:'')+'</span></div>'+
-    '<div class="save-row"><span class="save-key">テキスト</span><span class="save-val">'+state.toppings.length+'件</span></div>'+
-    (sd?'<div class="save-row"><span class="save-key">最大ピクセル適用</span><span class="save-val" style="color:var(--warn)">縮小あり</span></div>':'')+
-    '<div class="save-row"><span class="save-key">保存後サイズ目安</span><span class="save-val" id="size-est">計算中…</span></div>';
-  estimateDownloadSize().then(bytes=>{const el=$('size-est');if(el)el.textContent=bytes!==null?'~'+formatBytes(bytes)+' (概算)':'不明';});
+    '<div class="save-row"><span class="save-key">'+tr('svResolution')+'</span><span class="save-val">'+fW+' × '+fH+' px</span></div>'+
+    '<div class="save-row"><span class="save-key">'+tr('svPixels')+'</span><span class="save-val">'+mp+' MP</span></div>'+
+    '<div class="save-row"><span class="save-key">'+tr('svGrid')+'</span><span class="save-val">'+trf('svGridVal', flatImages().length, gi)+'</span></div>'+
+    '<div class="save-row"><span class="save-key">'+tr('svFormat')+'</span><span class="save-val">'+saveFormat.toUpperCase()+(saveFormat!=='png'?trf('svQualityIn', saveQuality):'')+'</span></div>'+
+    '<div class="save-row"><span class="save-key">'+tr('svTexts')+'</span><span class="save-val">'+trf('svItems', state.toppings.length)+'</span></div>'+
+    (sd?'<div class="save-row"><span class="save-key">'+tr('svMaxPx')+'</span><span class="save-val" style="color:var(--warn)">'+tr('svShrunk')+'</span></div>':'')+
+    '<div class="save-row"><span class="save-key">'+tr('svEstSize')+'</span><span class="save-val" id="size-est">'+tr('svComputing')+'</span></div>';
+  estimateDownloadSize().then(bytes=>{const el=$('size-est');if(el)el.textContent=bytes!==null?trf('svApprox', formatBytes(bytes)):tr('svUnknown');});
 }
 
 // ===== EXIF付加（DateTimeOriginal・保存の瞬間の日時）=====
@@ -4907,11 +5175,11 @@ async function addExifDateTime(blob,format){
 
 // ===== ダウンロード =====
 $('btn-download').addEventListener('click',async()=>{
-  if(!state.composed){alert('先にプレビューを生成してください。');return;}
+  if(!state.composed){alert(tr('composeFirst'));return;}
   const nat=state.previewNat; if(!nat) return;
   let dlScale=1;
   if(settings.maxPixels>0&&nat.totalW*nat.totalH>settings.maxPixels) dlScale=Math.sqrt(settings.maxPixels/(nat.totalW*nat.totalH));
-  const btn=$('btn-download'); btn.disabled=true; btn.textContent='⏳ 生成中…';
+  const btn=$('btn-download'); btn.disabled=true; btn.textContent=tr('generating');
 
   // フォルダ保存を使う場合は、時間のかかるcanvas生成より前に権限確認を済ませておく。
   // requestPermission()はクリック直後のユーザー操作コンテキストが必要なため、
@@ -4939,8 +5207,8 @@ $('btn-download').addEventListener('click',async()=>{
         const fileHandle=await saveDirHandle.getFileHandle(filename,{create:true});
         const writable=await fileHandle.createWritable();
         await writable.write(blob); await writable.close();
-        btn.textContent='✅ '+(saveDirHandle.name||'フォルダ')+'に保存しました';
-        setTimeout(()=>{btn.disabled=false;btn.innerHTML='⬇️ ダウンロード';},1800);
+        btn.textContent=trf('savedTo', saveDirHandle.name||tr('folderWord'));
+        setTimeout(()=>{btn.disabled=false;btn.innerHTML=tr('btnDownload');},1800);
         return;
       }catch(e){
         console.warn('directory write failed, falling back to download:',e);
@@ -4950,8 +5218,8 @@ $('btn-download').addEventListener('click',async()=>{
     const url=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=url;a.download=filename;a.click();
     setTimeout(()=>URL.revokeObjectURL(url),5000);
-  }catch(err){console.error(err);alert('ダウンロードに失敗しました。\n'+err.message);}
-  btn.disabled=false;btn.innerHTML='⬇️ ダウンロード';
+  }catch(err){console.error(err);alert(trf('downloadFailed', err.message));}
+  btn.disabled=false;btn.innerHTML=tr('btnDownload');
 });
 
 
@@ -5020,8 +5288,8 @@ document.addEventListener('touchmove',e=>{
 function showUpdateToast(){
   if(document.querySelector('.sw-toast'))return; // 二重表示防止
   const t=document.createElement('div');t.className='sw-toast';
-  t.innerHTML='🔄 アプリが更新されました&nbsp;'
-    +'<button class="sw-toast-reload">再読込</button>'
+  t.innerHTML=tr('swUpdated')+'&nbsp;'
+    +'<button class="sw-toast-reload">'+tr('swReload')+'</button>'
     +'<button class="sw-toast-close">✕</button>';
   t.querySelector('.sw-toast-reload').addEventListener('click',reloadApp);
   t.querySelector('.sw-toast-close').addEventListener('click',()=>t.remove());
@@ -5087,11 +5355,13 @@ window.addEventListener('pageshow',()=>{sessionStorage.removeItem('nc_reloading'
   }
   if(new URLSearchParams(location.search).get('share_pending')) history.replaceState({},'','./');
 })();
+applyLang();
 // ===== チュートリアル橋渡し（NamaTutorial キット用） =====
 // アプリは localStorage を使わず、状態はメモリと IndexedDB に持つ。
 // チュートリアルの実習ステップは永続データを書き換えない範囲に限るため、
 // スナップショット復元対象のキーは無し（空配列）を返す。
 window.NamaCollageTutorialBridge = {
+  language: function(){ return lang; },
   navigate: function(id){ showTab(id); },
   currentPage: function(){
     var b = document.querySelector('.nav-btn.active');
