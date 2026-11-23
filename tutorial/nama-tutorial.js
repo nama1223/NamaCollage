@@ -20,12 +20,63 @@
   var rec = loadRec();
   if (!rec.chapters) rec.chapters = {};
 
-  var ASSET_V = '20'; // 素材・キットの版。更新のたびに上げると端末側の古いキャッシュを確実に回避できる
+  /* ── 多言語（v24〜）: キット固定文は STRINGS、章データは config.en があれば差し替え。
+        言語の決め方: config.lang > 利用者の選択（rec.lang）> 端末の言語。── */
+  var STRINGS = {
+    ja: {
+      openLabel: 'チュートリアルを開く',
+      introTitle: '使い方のご案内',
+      introText: 'このアプリの使い方を、画面を触りながら案内します。',
+      introNote: 'あとからでも、画面{{btnPos}}の「生」アイコンからいつでも見られナマ。',
+      start: 'チュートリアルをはじめる', later: 'あとで見る',
+      menuTitle: 'チュートリアル',
+      menuSub: '見たい項目を選んでください。見終わった項目には ✓ が付きます。アプリが更新されると、新しい項目に NEW が付きます。',
+      chipDone: '✓ 完了', chipNew: 'NEW', chipUnseen: '未見', close: 'とじる',
+      skipNote: '（この項目は今の画面にないので、ここは飛ばしナマ）',
+      prev: '← もどる', next: 'つぎへ →', finish: 'おわる', cantNext: 'できない・つぎへ',
+      done: '完了', menuBtn: 'メニューへ',
+      finishText: function (t) { return '「' + t + '」はこれでおしまいナマ。おつかれナマ！'; }
+    },
+    en: {
+      openLabel: 'Open tutorial',
+      introTitle: 'How to use',
+      introText: 'I will show you how to use this app, right on the screen, nama.',
+      introNote: 'You can also watch it later, anytime, from the Nama icon at the {{btnPos}} of the screen, nama.',
+      start: 'Start the tutorial', later: 'Later',
+      menuTitle: 'Tutorial',
+      menuSub: 'Pick a topic to watch. Finished topics get a ✓, and new topics after an app update are marked NEW.',
+      chipDone: '✓ Done', chipNew: 'NEW', chipUnseen: 'Not yet', close: 'Close',
+      skipNote: '(This item is not on this screen, so I will skip it, nama.)',
+      prev: '← Back', next: 'Next →', finish: 'Finish', cantNext: "Can't — next",
+      done: 'Done', menuBtn: 'Menu',
+      finishText: function (t) { return '"' + t + '" is all done, nama. Well done, nama!'; }
+    }
+  };
+  function bridgeLang() {
+    try { var b = bridge(); if (b && b.language) { var l = b.language(); if (l === 'en' || l === 'ja') return l; } } catch (e) {}
+    return null;
+  }
+  function pickLang() {
+    if (cfg.lang === 'en' || cfg.lang === 'ja') return cfg.lang;
+    if (rec.lang === 'en' || rec.lang === 'ja') return rec.lang;
+    var bl = bridgeLang(); if (bl) return bl;
+    try { return (navigator.language || 'ja').indexOf('en') === 0 ? 'en' : 'ja'; } catch (e) { return 'ja'; }
+  }
+  var LANG = pickLang();
+  var S = STRINGS[LANG] || STRINGS.ja;
+  function CHAPTERS() { return (LANG === 'en' && cfg.en && cfg.en.chapters) ? cfg.en.chapters : cfg.chapters; }
+  function setLang(l) {
+    if (l !== 'en' && l !== 'ja') return;
+    LANG = l; S = STRINGS[l]; rec.lang = l; saveRec();
+    if (btn) btn.setAttribute('aria-label', S.openLabel);
+  }
+
+  var ASSET_V = '24'; // 素材・キットの版。更新のたびに上げると端末側の古いキャッシュを確実に回避できる
   function poseSrc(pose) { return IMG + 'N_' + pose + '.webp?v=' + ASSET_V; }
-  function chapterById(id) { for (var i = 0; i < cfg.chapters.length; i++) if (cfg.chapters[i].id === id) return cfg.chapters[i]; return null; }
+  function chapterById(id) { var cs = CHAPTERS(); for (var i = 0; i < cs.length; i++) if (cs[i].id === id) return cs[i]; return null; }
   function isDone(ch) { var r = rec.chapters[ch.id]; return !!(r && r.done && r.version >= (ch.since || 1)); }
   function isNew(ch) { var r = rec.chapters[ch.id]; return (ch.since || 1) > ((r && r.version) || 0); }
-  function newCount() { return cfg.chapters.filter(isNew).length; }
+  function newCount() { return CHAPTERS().filter(isNew).length; }
 
   /* ── DOM ── */
   var btn, root, shield, hl, dimSvg, dimPath, bubble, charImg, textEl, chapNameEl, counterEl, actionsEl, panel;
@@ -34,7 +85,7 @@
   function buildDom() {
     btn = el('button', 'nt-btn');
     btn.type = 'button';
-    btn.setAttribute('aria-label', 'チュートリアルを開く');
+    btn.setAttribute('aria-label', S.openLabel);
     var bi = document.createElement('img');
     bi.src = cfg.buttonImage ? cfg.buttonImage + '?v=' + ASSET_V : poseSrc('wave');
     bi.alt = '';
@@ -191,6 +242,8 @@
 
   /* ── パネル（初回案内 / 章メニュー） ── */
   function openPanel(intro) {
+    // アプリ側の言語設定に追従する（固定指定も利用者の選択も無い時だけ、開くたびに橋渡しへ聞き直す）
+    if (!cfg.lang && !rec.lang) { var bl2 = bridgeLang(); if (bl2 && bl2 !== LANG) { LANG = bl2; S = STRINGS[bl2]; } }
     stopPlayer(false);
     showRoot();
     bubble.style.display = 'none';
@@ -214,22 +267,23 @@
   function renderIntro() {
     panelMode = 'intro';
     panel.innerHTML =
-      '<h2>' + esc(cfg.introTitle || '使い方のご案内') + '</h2>' +
-      '<div class="nt-sub">' + esc(dynText(cfg.introText || 'このアプリの使い方を、画面を触りながら案内します。')) + '</div>' +
+      '<h2>' + esc((LANG === 'en' && cfg.en && cfg.en.introTitle) || cfg.introTitle || S.introTitle) + '</h2>' +
+      '<div class="nt-sub">' + esc(dynText((LANG === 'en' && cfg.en && cfg.en.introText) || cfg.introText || S.introText)) + '</div>' +
       '<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">' +
       '<img src="' + poseSrc('wave') + '" style="width:72px;height:72px;" alt="">' +
-      '<div style="font-size:13px;line-height:1.6;">' + esc(dynText('あとからでも、画面{{btnPos}}の「生」アイコンからいつでも見られナマ。')) + '</div></div>' +
+      '<div style="font-size:13px;line-height:1.6;">' + esc(dynText(S.introNote)) + '</div></div>' +
       '<div style="display:flex;gap:8px;">' +
-      '<button type="button" class="nt-tbtn nt-primary" id="nt-intro-start">チュートリアルをはじめる</button>' +
-      '<button type="button" class="nt-tbtn" id="nt-intro-later">あとで見る</button></div>';
+      '<button type="button" class="nt-tbtn nt-primary" id="nt-intro-start">' + S.start + '</button>' +
+      '<button type="button" class="nt-tbtn" id="nt-intro-later">' + S.later + '</button></div>';
     panel.querySelector('#nt-intro-start').addEventListener('click', function () {
       rec.introSeen = true; saveRec();
       // 設定があれば、初回は「今いる画面の章」へ直接入る（共有URLからプレイヤー直行した人などの初動を分かりやすく）
       if (cfg.startWithCurrentChapter && bridge().currentPage) {
         var cur = null;
         try { cur = bridge().currentPage(); } catch (e) {}
-        for (var i = 0; i < cfg.chapters.length; i++) {
-          if (cfg.chapters[i].page && cfg.chapters[i].page === cur) { renderMenu(); startChapter(cfg.chapters[i].id); return; }
+        var cs = CHAPTERS();
+        for (var i = 0; i < cs.length; i++) {
+          if (cs[i].page && cs[i].page === cur) { renderMenu(); startChapter(cs[i].id); return; }
         }
       }
       renderMenu();
@@ -238,21 +292,29 @@
   }
   function renderMenu() {
     panelMode = 'menu';
-    var html = '<h2>チュートリアル</h2><div class="nt-sub">見たい項目を選んでください。見終わった項目には ✓ が付きます。アプリが更新されると、新しい項目に NEW が付きます。</div>';
-    cfg.chapters.forEach(function (ch) {
+    var html = '<h2>' + S.menuTitle + '</h2><div class="nt-sub">' + S.menuSub + '</div>';
+    if (cfg.en && cfg.en.chapters) {
+      html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;"><span style="font-size:12px;">Language:</span>' +
+        '<button type="button" class="nt-tbtn nt-lang' + (LANG === 'ja' ? ' nt-primary' : '') + '" data-lang="ja" style="padding:2px 12px;">日本語</button>' +
+        '<button type="button" class="nt-tbtn nt-lang' + (LANG === 'en' ? ' nt-primary' : '') + '" data-lang="en" style="padding:2px 12px;">English</button></div>';
+    }
+    CHAPTERS().forEach(function (ch) {
       var done = isDone(ch), nw = isNew(ch) && !done;
-      var chip = done ? '<span class="nt-chip nt-done">✓ 完了</span>' : (nw ? '<span class="nt-chip nt-new">NEW</span>' : '<span class="nt-chip">未見</span>');
+      var chip = done ? '<span class="nt-chip nt-done">' + S.chipDone + '</span>' : (nw ? '<span class="nt-chip nt-new">' + S.chipNew + '</span>' : '<span class="nt-chip">' + S.chipUnseen + '</span>');
       html += '<button type="button" class="nt-chapter" data-ch="' + ch.id + '">' +
         '<img src="' + poseSrc(ch.icon || 'wave') + '" alt="">' +
         '<span class="nt-ch-main"><span class="nt-ch-title">' + esc(ch.title) + '</span>' +
         '<span class="nt-ch-desc" style="display:block;">' + esc(ch.desc || '') + '</span></span>' + chip + '</button>';
     });
-    html += '<div id="nt-close-row"><button type="button" class="nt-tbtn" id="nt-menu-close">とじる</button></div>';
+    html += '<div id="nt-close-row"><button type="button" class="nt-tbtn" id="nt-menu-close">' + S.close + '</button></div>';
     panel.innerHTML = html;
     Array.prototype.forEach.call(panel.querySelectorAll('.nt-chapter'), function (b) {
       b.addEventListener('click', function () { startChapter(b.getAttribute('data-ch')); });
     });
     panel.querySelector('#nt-menu-close').addEventListener('click', requestCloseAll);
+    Array.prototype.forEach.call(panel.querySelectorAll('.nt-lang'), function (b) {
+      b.addEventListener('click', function () { setLang(b.getAttribute('data-lang')); renderMenu(); });
+    });
   }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
@@ -400,7 +462,7 @@
     root.classList.remove('nt-passthrough');
     root.classList.add('nt-dim');
     charImg.src = poseSrc('wave');
-    textEl.textContent = '（この項目は今の画面にないので、ここは飛ばしナマ）';
+    textEl.textContent = S.skipNote;
     chapNameEl.textContent = player.ch.title;
     counterEl.textContent = (player.idx + 1) + ' / ' + player.ch.steps.length;
     actionsEl.innerHTML = '<button type="button" class="nt-tbtn nt-quiet" data-a="quit">✕</button>';
@@ -411,6 +473,17 @@
   }
 
   function btnPosLabel() {
+    if (LANG === 'en') {
+      if (!btn) return 'bottom-right';
+      var r0 = btn.getBoundingClientRect();
+      if (!r0.width) return 'bottom-right';
+      var cx0 = r0.left + r0.width / 2, cy0 = r0.top + r0.height / 2;
+      var t0 = window.innerWidth / 3, vt0 = window.innerHeight / 3;
+      var hh = cx0 < t0 ? 'left' : (cx0 > t0 * 2 ? 'right' : '');
+      var vv = cy0 < vt0 ? 'top' : (cy0 > vt0 * 2 ? 'bottom' : '');
+      if (vv && hh) return vv + '-' + hh;
+      return vv || hh || 'center';
+    }
     if (!btn) return '右下';
     var rect = btn.getBoundingClientRect();
     if (!rect.width) return '右下';
@@ -504,7 +577,7 @@
         if (player.operated || rid !== player.runId) return;
         player.operated = true;
         var nb = actionsEl.querySelector('[data-a="next"]');
-        if (nb) { nb.textContent = (player.idx >= player.ch.steps.length - 1) ? 'おわる' : 'つぎへ →'; nb.classList.add('nt-primary'); }
+        if (nb) { nb.textContent = (player.idx >= player.ch.steps.length - 1) ? S.finish : S.next; nb.classList.add('nt-primary'); }
       };
       targets.forEach(function (el) { el.addEventListener('pointerdown', player.tapHandler, true); });
     }
@@ -551,9 +624,9 @@
 
   function renderActions(step) {
     var html = '';
-    if (prevShownIdx() >= 0) html += '<button type="button" class="nt-tbtn" data-a="prev">← もどる</button>';
-    if (step.mode === 'tap') html += '<button type="button" class="nt-tbtn" data-a="next">できない・つぎへ</button>';
-    else html += '<button type="button" class="nt-tbtn nt-primary" data-a="next">' + (player.idx >= player.ch.steps.length - 1 ? 'おわる' : 'つぎへ →') + '</button>';
+    if (prevShownIdx() >= 0) html += '<button type="button" class="nt-tbtn" data-a="prev">' + S.prev + '</button>';
+    if (step.mode === 'tap') html += '<button type="button" class="nt-tbtn" data-a="next">' + S.cantNext + '</button>';
+    else html += '<button type="button" class="nt-tbtn nt-primary" data-a="next">' + (player.idx >= player.ch.steps.length - 1 ? S.finish : S.next) + '</button>';
     html += '<button type="button" class="nt-tbtn nt-quiet" data-a="quit">✕</button>';
     actionsEl.innerHTML = html;
     wireActions();
@@ -576,12 +649,12 @@
     bubble.style.display = 'block';
     bubble.style.top = Math.max(12, (window.innerHeight - 220) / 2) + 'px';
     charImg.src = poseSrc('thumbs_up');
-    textEl.textContent = '「' + ch.title + '」はこれでおしまいナマ。おつかれナマ！';
+    textEl.textContent = S.finishText(ch.title);
     chapNameEl.textContent = ch.title;
-    counterEl.textContent = '完了';
+    counterEl.textContent = S.done;
     actionsEl.innerHTML =
-      '<button type="button" class="nt-tbtn" data-a="menu">メニューへ</button>' +
-      '<button type="button" class="nt-tbtn nt-primary" data-a="close">とじる</button>';
+      '<button type="button" class="nt-tbtn" data-a="menu">' + S.menuBtn + '</button>' +
+      '<button type="button" class="nt-tbtn nt-primary" data-a="close">' + S.close + '</button>';
     Array.prototype.forEach.call(actionsEl.querySelectorAll('button'), function (b) {
       b.addEventListener('click', function () {
         if (b.getAttribute('data-a') === 'menu') requestCloseLayer(); // popstate で stopPlayer 済みの状態からメニューが出る
@@ -751,7 +824,9 @@
   window.NamaTutorial = {
     open: function () { openPanel(false); },
     setButtonVisible: function (v) { rec.btnOff = !v; saveRec(); applyBtn(); },
-    isButtonVisible: function () { return !rec.btnOff; }
+    isButtonVisible: function () { return !rec.btnOff; },
+    setLanguage: function (l) { setLang(l); },
+    language: function () { return LANG; }
   };
 
   /* ── 起動 ── */

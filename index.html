@@ -329,7 +329,8 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 #cutout-canvas{cursor:ns-resize;}
 #color-footer,#cutout-footer{position:absolute;bottom:0;left:0;right:0;z-index:10;height:130px;background:var(--surf);border-top:1px solid var(--border);padding:8px 14px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;touch-action:pan-y;}
 .ca-row{display:flex;align-items:center;gap:6px;}
-.ca-label{font-size:10.5px;font-weight:700;color:var(--muted);width:32px;flex-shrink:0;text-align:right;}
+.ca-label{font-size:10.5px;font-weight:700;color:var(--muted);width:32px;flex-shrink:0;text-align:right;white-space:nowrap;}
+html[lang="en"] .ca-label{width:64px;}
 .ca-slider{accent-color:var(--prime);flex:1;cursor:pointer;}
 .ca-val{font-size:11px;font-weight:700;color:var(--prime);width:28px;text-align:right;flex-shrink:0;}
 /* tp detail panel */
@@ -5371,9 +5372,9 @@ window.NamaCollageTutorialBridge = {
 };
 </script>
 
-<link rel="stylesheet" href="tutorial/nama-tutorial.css?v=20">
+<link rel="stylesheet" href="tutorial/nama-tutorial.css?v=24">
 <style>body #nt-btn{bottom:66px}/* チュートリアル呼び出しボタンの初期位置を、下部ナビ（約50px）の上へ逃がす。ドラッグ・保存位置が優先される */</style>
-<script src="tutorial/config.js?v=20"></script>
-<script src="tutorial/nama-tutorial.js?v=20"></script>
+<script src="tutorial/config.js?v=24"></script>
+<script src="tutorial/nama-tutorial.js?v=24"></script>
 </body>
 </html>
