@@ -5234,6 +5234,7 @@ $('btn-download').addEventListener('click',async()=>{
 // ===== スライダー値タップで直接入力 =====
 document.addEventListener('click',e=>{
   const span=e.target;
+  if(typeof span.className!=='string') return; // SVG要素は className が文字列でないため対象外
   if(!span.classList.contains('adj-val')&&!span.className.includes('-val')) return;
   const row=span.closest('.adj-row,.ca-row');
   if(!row) return;
