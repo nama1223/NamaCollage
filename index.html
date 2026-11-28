@@ -295,7 +295,7 @@ input[type="range"]{accent-color:var(--prime);width:100%;cursor:pointer;height:4
 /* Zoom overlay */
 .adj-val,.ca-val,.tp-x-val,.tp-y-val,.tp-x2-val,.tp-y2-val,.tp-size-val,.tp-w-val,.tp-h-val,.tp-fillop-val{cursor:pointer;text-decoration:underline dotted var(--muted2);min-width:28px;text-align:right;touch-action:manipulation;}
 .tp-inline-inp{width:48px;font-size:12px;font-weight:700;color:var(--prime);border:1px solid var(--prime);border-radius:5px;padding:1px 4px;text-align:center;background:var(--surf2);-webkit-user-select:text;user-select:text;}
-.sw-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(0);background:#1a1a2e;color:#fff;padding:10px 16px;border-radius:22px;font-size:13px;z-index:9990;box-shadow:0 3px 18px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;max-width:calc(100vw - 32px);animation:swToastIn .35s ease;}.sw-toast-reload{background:var(--prime);color:#fff;border:none;border-radius:9px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation;}.sw-toast-close{background:none;color:#aaa;border:none;font-size:18px;cursor:pointer;padding:0 4px;line-height:1;touch-action:manipulation;}@keyframes swToastIn{from{opacity:0;transform:translateX(-50%) translateY(16px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+.sw-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(0);background:#1a1a2e;color:#fff;padding:10px 16px;border-radius:22px;font-size:13px;z-index:9990;box-shadow:0 3px 18px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;max-width:calc(100vw - 32px);animation:swToastIn .35s ease;}.app-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(0);background:#1a1a2e;color:#fff;padding:10px 16px;border-radius:22px;font-size:13px;z-index:9991;box-shadow:0 3px 18px rgba(0,0,0,0.4);max-width:calc(100vw - 32px);overflow-wrap:anywhere;animation:swToastIn .35s ease;cursor:pointer;}.sw-toast-reload{background:var(--prime);color:#fff;border:none;border-radius:9px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation;}.sw-toast-close{background:none;color:#aaa;border:none;font-size:18px;cursor:pointer;padding:0 4px;line-height:1;touch-action:manipulation;}@keyframes swToastIn{from{opacity:0;transform:translateX(-50%) translateY(16px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
 #zoom-overlay{position:fixed;inset:0;background:#000;z-index:850;overflow:hidden;touch-action:none;display:none;}
 #zoom-overlay.open{display:block;}
 #zoom-img{position:absolute;top:0;left:0;transform-origin:0 0;display:block;pointer-events:none;max-width:none;}
@@ -1302,7 +1302,7 @@ async function loadPendingShares(){
 const NAMACO_MAGIC='NAMACO1\0';
 async function exportNamacoFile(){
   const imgs=flatImages();
-  if(!imgs.length){ alert(tr('noImagesSave')); return; }
+  if(!imgs.length){ showToast(tr('noImagesSave')); return; }
   const btn=$('btn-save-namaco'); const origText=btn.textContent;
   btn.disabled=true; btn.textContent=tr('exporting');
   try{
@@ -1344,7 +1344,7 @@ async function exportNamacoFile(){
     setTimeout(()=>URL.revokeObjectURL(url),8000);
   }catch(e){
     console.warn('namaco export error:',e);
-    alert(trf('saveFailed', e.message));
+    showToast(trf('saveFailed', e.message));
   }finally{
     btn.disabled=false; btn.textContent=origText;
   }
@@ -1430,7 +1430,7 @@ $('load-namaco-confirm').addEventListener('click',()=>{
 $('namaco-file-input').addEventListener('change',async e=>{
   const file=e.target.files[0]; if(!file)return;
   try{ await importNamacoFile(file); }
-  catch(err){ console.warn('namaco import error:',err); alert(trf('loadFailed', err.message)); }
+  catch(err){ console.warn('namaco import error:',err); showToast(trf('loadFailed', err.message)); }
 });
 
 // ===== トッピングのみ保存 .namatop / 保管 =====
@@ -1739,7 +1739,7 @@ async function insertFilesAt(pa,files){
     else{ if(pa.rowIdx>=state.grid.length) state.grid.push(loaded); else state.grid[pa.rowIdx].splice(pa.colIdx,0,...loaded); }
     state.previewDirty=true; renderGridView(); updateCountBadge();
     persistNewImages(loaded).then(()=>persistLayout());
-  }catch(err){ alert(trf('alertLoadFailed', err.message)); }
+  }catch(err){ showToast(trf('alertLoadFailed', err.message)); }
 }
 
 // ===== グリッド操作 =====
@@ -2205,7 +2205,7 @@ $('ctx-replace').addEventListener('click',()=>{
       const blob=await fetch(url).then(r=>r.blob());
       await dbTxW('imgs',s=>s.put({id:oldImg.id,name:file.name,blob}));
       updateImgThumb(state.grid[ri][ci]).then(()=>{renderGridView();persistLayout();});
-    }catch(err){alert(trf('changeImgFailed', err.message));}
+    }catch(err){showToast(trf('changeImgFailed', err.message));}
   };
   fi.click();
 });
@@ -2407,7 +2407,7 @@ async function doCompose(){
     // トッピングタブが開いていれば更新
     if($('tab-topping').classList.contains('active')) renderToppingCanvas();
     else updateToppingEmptyState();
-  }catch(err){ console.error(err); alert(trf('composeFailed', err.message)); }
+  }catch(err){ console.error(err); showToast(trf('composeFailed', err.message)); }
   $('preview-loading').classList.add('hidden');
 }
 function updatePreviewInfo(nat){
@@ -2455,7 +2455,7 @@ async function openZoom(){
     Z.ptrs.clear(); Z.panStart=null; Z.moved=false;
     updateZoomTransform(); updateZoomInfo();
     $('zoom-overlay').classList.add('open');
-  }catch(err){ console.error(err); alert(trf('fullViewFailed', err.message)); }
+  }catch(err){ console.error(err); showToast(trf('fullViewFailed', err.message)); }
   finally{ zoomLoading=false; pc.style.cursor=prevCursor; }
 }
 function closeZoom(){ $('zoom-overlay').classList.remove('open'); blockUIBriefly(400); }
@@ -2524,7 +2524,7 @@ $('preview-canvas').addEventListener('click',e=>{
   dirtyCompose(100);
 });
 $('btn-eyedrop').addEventListener('click',async()=>{
-  if(!('EyeDropper' in window)){alert(tr('eyedropperNg'));return;}
+  if(!('EyeDropper' in window)){showToast(tr('eyedropperNg'));return;}
   try{const{sRGBHex}=await new EyeDropper().open();settings.bgColor=sRGBHex;$('adj-bg-color').value=sRGBHex;dirtyCompose(100);}catch(e){}
 });
 
@@ -2832,7 +2832,7 @@ async function addImageTopping(file){
 $('tp-image-input').addEventListener('change',async e=>{
   const file=e.target.files[0];if(!file)return;
   try{await addImageTopping(file);}
-  catch(err){console.warn('image topping error:',err);alert(trf('addImageFailed', err.message));}
+  catch(err){console.warn('image topping error:',err);showToast(trf('addImageFailed', err.message));}
 });
 document.addEventListener('change',e=>{
   if(e.target.classList.contains('tp-cat-sel')&&e.target.value){
@@ -4723,7 +4723,7 @@ function stopCutoutBlink(){
     const gaps=[];let pos=0;
     for(const rg of sorted){if(pos<rg.start-0.06)gaps.push({from:pos,to:rg.start});pos=rg.end;}
     if(pos<0.94)gaps.push({from:pos,to:1});
-    if(!gaps.length){alert(tr('noMoreRegions'));return;}
+    if(!gaps.length){showToast(tr('noMoreRegions'));return;}
     const big=gaps.reduce((a,b)=>(b.to-b.from)>(a.to-a.from)?b:a);
     const mid=(big.from+big.to)/2,h=Math.min((big.to-big.from)/4,0.12);
     CU.regions.push({start:Math.max(0,mid-h),end:Math.min(1,mid+h)});
@@ -5183,7 +5183,7 @@ async function addExifDateTime(blob,format){
 
 // ===== ダウンロード =====
 $('btn-download').addEventListener('click',async()=>{
-  if(!state.composed){alert(tr('composeFirst'));return;}
+  if(!state.composed){showToast(tr('composeFirst'));return;}
   const nat=state.previewNat; if(!nat) return;
   let dlScale=1;
   if(settings.maxPixels>0&&nat.totalW*nat.totalH>settings.maxPixels) dlScale=Math.sqrt(settings.maxPixels/(nat.totalW*nat.totalH));
@@ -5226,7 +5226,7 @@ $('btn-download').addEventListener('click',async()=>{
     const url=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=url;a.download=filename;a.click();
     setTimeout(()=>URL.revokeObjectURL(url),5000);
-  }catch(err){console.error(err);alert(trf('downloadFailed', err.message));}
+  }catch(err){console.error(err);showToast(trf('downloadFailed', err.message));}
   btn.disabled=false;btn.innerHTML=tr('btnDownload');
 });
 
@@ -5291,6 +5291,15 @@ document.addEventListener('touchmove',e=>{
   if(_numSwipe)e.preventDefault();
 },{passive:false,capture:false});
 
+
+// ===== アプリ内通知 =====
+function showToast(msg){
+  document.querySelectorAll('.app-toast').forEach(t=>t.remove());
+  const t=document.createElement('div');t.className='app-toast';t.textContent=msg;
+  t.addEventListener('click',()=>t.remove());
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),4000);
+}
 
 // ===== SW更新通知 =====
 function showUpdateToast(){
